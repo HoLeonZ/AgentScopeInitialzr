@@ -1,0 +1,63 @@
+"""
+Main entry point for {{ name }} - Multi-Agent System.
+
+{{ description }}
+"""
+
+import asyncio
+from dotenv import load_dotenv
+
+from {{ package_name }}.config import settings, get_model
+from agentscope.agent import ReActAgent
+from agentscope.message import Msg
+from agentscope.pipeline import MsgHub, sequential_pipeline
+
+# Load environment variables
+load_dotenv()
+
+
+async def main():
+    """Main entry point for multi-agent system."""
+    # Create model instance
+    model = get_model()
+
+    # Create multiple agents
+    coordinator = ReActAgent(
+        name="Coordinator",
+        sys_prompt="You are a coordinator. You organize tasks and delegate work to other agents.",
+        model=model,
+    )
+
+    researcher = ReActAgent(
+        name="Researcher",
+        sys_prompt="You are a researcher. You gather information and provide detailed analysis.",
+        model=model,
+    )
+
+    writer = ReActAgent(
+        name="Writer",
+        sys_prompt="You are a writer. You synthesize information into clear, well-structured content.",
+        model=model,
+    )
+
+    # Start multi-agent conversation
+    print("🤖 Multi-Agent System Started")
+    print("   Agents: Coordinator, Researcher, Writer")
+    print()
+
+    async with MsgHub(
+        participants=[coordinator, researcher, writer],
+        announcement=Msg(
+            "system",
+            "Welcome to the multi-agent system. Introduce yourselves and your roles.",
+            "system"
+        ),
+    ) as hub:
+        # Sequential conversation
+        await sequential_pipeline([coordinator, researcher, writer])
+
+        print("\\n✅ Multi-agent conversation completed!")
+
+
+if __name__ == "__main__":
+    asyncio.run(main())

@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pip install:*)",
+      "Bash(agentscope-init wizard:*)",
+      "Bash(agentscope-init:*)",
+      "WebSearch",
+      "Bash(ls:*)",
+      "Bash(find . -name \"*.py\" -type f -exec grep -l \"agentscope\" {})",
+      "Bash(git add:*)",
+      "Bash(git check-ignore:*)",
+      "Bash(git commit:*)",
+      "Bash(python -m pytest tests/test_models.py -v)",
+      "Bash(python:*)",
+      "Bash(timeout 3 uvicorn initializr_web.api:app --host localhost --port 8765)",
+      "Bash(curl -s http://localhost:8765/docs)",
+      "Bash(pkill:*)",
+      "Bash(git init:*)"
+    ]
+  }
+}

@@ -1,0 +1,144 @@
+"""
+Pydantic models for API request/response validation.
+"""
+
+from typing import Optional, List, Dict, Any
+from pydantic import BaseModel, Field
+
+
+class ProjectRequest(BaseModel):
+    """Request model for project generation."""
+
+    # Basic settings
+    name: str = Field(..., min_length=1, max_length=100, description="Project name")
+    description: str = Field(default="", max_length=500, description="Project description")
+    author: str = Field(default="", max_length=100, description="Author name")
+
+    # Project structure
+    layout: str = Field(
+        default="standard",
+        pattern="^(standard|lightweight)$",
+        description="Project layout (standard or lightweight)"
+    )
+    agent_type: str = Field(default="basic", description="Agent type")
+    python_version: str = Field(
+        default="3.11",
+        pattern=r"^3\.(10|11|12)$",
+        description="Python version"
+    )
+
+    # Model configuration
+    model_provider: str = Field(default="openai", description="Model provider")
+    model_config: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Model configuration parameters"
+    )
+
+    # Extension points
+    enable_memory: bool = Field(default=True, description="Enable memory")
+    short_term_memory: Optional[str] = Field(default=None, description="Short-term memory type")
+    long_term_memory: Optional[str] = Field(default=None, description="Long-term memory type")
+
+    enable_tools: bool = Field(default=True, description="Enable tools")
+    tools: List[str] = Field(default_factory=list, description="Enabled tools")
+
+    enable_skills: bool = Field(default=False, description="Enable skills")
+    skills: List[str] = Field(default_factory=list, description="Enabled skills")
+
+    enable_hooks: bool = Field(default=False, description="Enable hooks")
+    hooks: List[str] = Field(default_factory=list, description="Enabled hooks")
+
+    enable_formatter: bool = Field(default=False, description="Enable formatter")
+    formatter: Optional[str] = Field(default=None, description="Formatter type")
+
+    enable_rag: bool = Field(default=False, description="Enable RAG")
+    rag_config: Optional[Dict[str, Any]] = Field(default=None, description="RAG configuration")
+
+    enable_pipeline: bool = Field(default=False, description="Enable pipeline")
+    pipeline_config: Optional[Dict[str, Any]] = Field(default=None, description="Pipeline configuration")
+
+    # Testing & evaluation
+    generate_tests: bool = Field(default=False, description="Generate test module")
+    generate_evaluation: bool = Field(default=False, description="Generate evaluation module")
+    evaluator_type: str = Field(default="general", description="Evaluator type")
+    enable_openjudge: bool = Field(default=False, description="Enable OpenJudge integration")
+    openjudge_graders: List[str] = Field(default_factory=list, description="OpenJudge graders")
+    initial_benchmark_tasks: int = Field(
+        default=0,
+        ge=0,
+        le=100,
+        description="Number of initial benchmark tasks"
+    )
+
+    model_config = {"json_schema_extra": {"examples": [{
+        "name": "my-agent",
+        "description": "My custom agent",
+        "layout": "standard",
+        "agent_type": "multi-agent",
+        "model_provider": "openai",
+        "model_config": {"model": "gpt-4", "temperature": 0.7},
+        "enable_memory": True,
+        "short_term_memory": "in-memory",
+        "long_term_memory": "mem0",
+    }]}}
+
+
+class ProjectResponse(BaseModel):
+    """Response model for project generation."""
+
+    success: bool = Field(..., description="Whether generation succeeded")
+    message: str = Field(..., description="Response message")
+    download_url: Optional[str] = Field(None, description="Download URL")
+    project_id: Optional[str] = Field(None, description="Project ID")
+
+
+class TemplateInfo(BaseModel):
+    """Information about a template."""
+
+    id: str = Field(..., description="Template ID")
+    name: str = Field(..., description="Template name")
+    description: str = Field(..., description="Template description")
+
+
+class TemplatesResponse(BaseModel):
+    """Response model for templates listing."""
+
+    templates: List[TemplateInfo] = Field(..., description="Available templates")
+
+
+class ModelProviderInfo(BaseModel):
+    """Information about a model provider."""
+
+    id: str = Field(..., description="Provider ID")
+    name: str = Field(..., description="Provider name")
+
+
+class ModelsResponse(BaseModel):
+    """Response model for models listing."""
+
+    providers: List[ModelProviderInfo] = Field(..., description="Available providers")
+
+
+class ExtensionsResponse(BaseModel):
+    """Response model for extensions listing."""
+
+    memory: Dict[str, List[str]] = Field(..., description="Memory options")
+    tools: Dict[str, str] = Field(..., description="Tools descriptions")
+    formatters: List[str] = Field(..., description="Available formatters")
+    evaluators: List[str] = Field(..., description="Available evaluators")
+    openjudge_graders: List[str] = Field(..., description="Available OpenJudge graders")
+
+
+class HealthResponse(BaseModel):
+    """Response model for health check."""
+
+    status: str = Field(..., description="Health status")
+    service: str = Field(..., description="Service name")
+    version: str = Field(..., description="Service version")
+
+
+class DetailedHealthResponse(HealthResponse):
+    """Detailed health check response with system metrics."""
+
+    system: Dict[str, float] = Field(..., description="System metrics")
+    projects: Dict[str, Any] = Field(..., description="Project statistics")

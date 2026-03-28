@@ -1,0 +1,16 @@
+[project]
+name = "agentscope-initializr-web"
+version = "0.2.0"
+description = "Web service for AgentScope Initializr"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "agentscope-initializr[web]",
+]
+
+[project.scripts]
+agentscope-web = "initializr_web.main:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

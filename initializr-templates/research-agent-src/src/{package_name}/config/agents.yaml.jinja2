@@ -1,0 +1,50 @@
+# AgentScope Research Agent Configuration
+# Generated for {{ name }}
+
+agents:
+  - name: {{ name }}
+    type: {{ agent_type.value }}
+    model_provider: {{ model_provider.value }}
+    {% if model_provider.value == "openai" %}
+    model: {{ openai_model | default("gpt-4") }}
+    {% elif model_provider.value == "dashscope" %}
+    model: {{ dashscope_model | default("qwen-max") }}
+    {% elif model_provider.value == "anthropic" %}
+    model: {{ anthropic_model | default("claude-3-5-sonnet-20241022") }}
+    {% elif model_provider.value == "gemini" %}
+    model: {{ gemini_model | default("gemini-pro") }}
+    {% endif %}
+    memory_type: {{ memory_type.value }}
+    system_prompt: |
+      You are a research agent specialized in finding and synthesizing information.
+
+models:
+  {{ model_provider.value }}:
+    {% if model_provider.value == "openai" %}
+    api_key_env: "OPENAI_API_KEY"
+    model: {{ openai_model | default("gpt-4") }}
+    {% elif model_provider.value == "dashscope" %}
+    api_key_env: "DASHSCOPE_API_KEY"
+    model: {{ dashscope_model | default("qwen-max") }}
+    {% elif model_provider.value == "anthropic" %}
+    api_key_env: "ANTHROPIC_API_KEY"
+    model: {{ anthropic_model | default("claude-3-5-sonnet-20241022") }}
+    {% elif model_provider.value == "gemini" %}
+    api_key_env: "GEMINI_API_KEY"
+    model: {{ gemini_model | default("gemini-pro") }}
+    {% endif %}
+
+search:
+  provider: "tavily"
+  api_key_env: "TAVILY_API_KEY"
+  max_results: {{ max_search_results | default(5) }}
+
+tools:
+  - name: web_search
+    enabled: true
+    config:
+      provider: tavily
+  - name: analyze_source
+    enabled: true
+  - name: synthesize_findings
+    enabled: true

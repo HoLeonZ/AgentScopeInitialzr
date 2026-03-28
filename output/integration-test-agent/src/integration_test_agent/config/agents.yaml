@@ -1,0 +1,21 @@
+# AgentScope Configuration
+# Generated for integration-test-agent
+
+agents:
+  - name: integration-test-agent
+    type: basic
+    model_provider: openai
+    model: gpt-4
+    memory_type: in-memory
+    system_prompt: "You are a helpful assistant."
+
+models:
+  openai:
+    api_key_env: "OPENAI_API_KEY"
+    model: gpt-4
+
+tools:
+  - name: calculate
+    enabled: true
+  - name: get_current_time
+    enabled: true

@@ -1,0 +1,87 @@
+"""
+Browser automation agent implementation.
+"""
+
+from typing import Optional
+from playwright.async_api import async_playwright, Browser, Page
+from agentscope.agent import ReActAgent
+from {{ package_name }}.config import get_model, get_memory, get_toolkit
+
+
+class BrowserAgent:
+    """
+    Browser automation agent for web interaction and data extraction.
+    """
+
+    def __init__(self):
+        """Initialize the browser agent."""
+        self.model = get_model()
+        self.memory = get_memory()
+        self.toolkit = get_toolkit()
+
+        self.agent = ReActAgent(
+            name="BrowserAgent",
+            sys_prompt="""
+            You are a browser automation agent specialized in web interaction.
+            Your capabilities include:
+            - Navigating to websites
+            - Interacting with web pages (clicking, typing, scrolling)
+            - Extracting data from web pages
+            - Taking screenshots
+            - Filling out forms
+            """,
+            model=self.model,
+            memory=self.memory,
+            toolkit=self.toolkit,
+        )
+
+        self.playwright = None
+        self.browser: Optional[Browser] = None
+        self.page: Optional[Page] = None
+
+    async def initialize(self):
+        """Initialize the browser."""
+        self.playwright = await async_playwright().start()
+        self.browser = await self.playwright.chromium.launch(headless=False)
+        self.page = await self.browser.new_page()
+
+    async def process(self, instruction: str) -> str:
+        """
+        Process a browser automation instruction.
+
+        Args:
+            instruction: Natural language instruction
+
+        Returns:
+            Result of the automation
+        """
+        # Parse the instruction using the agent
+        action_plan = await self.agent(
+            f"Parse this browser automation instruction and create an action plan: {instruction}"
+        )
+
+        # Execute the action plan
+        result = await self._execute_action_plan(action_plan)
+
+        return result
+
+    async def _execute_action_plan(self, action_plan: str) -> str:
+        """
+        Execute the parsed action plan.
+
+        Args:
+            action_plan: Parsed action plan
+
+        Returns:
+            Execution result
+        """
+        # This would contain the actual browser automation logic
+        # For now, return a placeholder
+        return f"Executed action plan: {action_plan}"
+
+    async def cleanup(self):
+        """Clean up browser resources."""
+        if self.browser:
+            await self.browser.close()
+        if self.playwright:
+            await self.playwright.stop()

@@ -1,0 +1,131 @@
+"""
+Configuration module for {{ name }} Research Agent.
+
+This module provides settings, model configuration, memory configuration,
+and toolkit configuration for the research agent.
+"""
+
+import os
+from typing import Optional
+from dotenv import load_dotenv
+
+from agentscope.models import OpenAIModel, DashScopeModel, AnthropicModel
+from agentscope.memory import Memory, LongTermMemory
+from agentscope.tools import Toolkit
+
+load_dotenv()
+
+
+class Settings:
+    """Application settings."""
+
+    # Agent Configuration
+    AGENT_NAME = "{{ name }}"
+    AGENT_TYPE = "{{ agent_type.value }}"
+    MODEL_PROVIDER = "{{ model_provider.value }}"
+    MEMORY_TYPE = "{{ memory_type.value }}"
+
+    # Model Configuration
+    {% if model_provider.value == "openai" %}
+    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+    OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4")
+    {% elif model_provider.value == "dashscope" %}
+    DASHSCOPE_API_KEY = os.getenv("DASHSCOPE_API_KEY")
+    DASHSCOPE_MODEL = os.getenv("DASHSCOPE_MODEL", "qwen-max")
+    {% elif model_provider.value == "anthropic" %}
+    ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
+    ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-3-5-sonnet-20241022")
+    {% elif model_provider.value == "gemini" %}
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+    GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-pro")
+    {% endif %}
+
+    # Search Configuration
+    TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
+    MAX_SEARCH_RESULTS = int(os.getenv("MAX_SEARCH_RESULTS", "5"))
+
+    # Memory Configuration
+    {% if memory_type.value == "long-term" %}
+    MEMORY_BACKEND = os.getenv("MEMORY_BACKEND", "mem0")
+    MEMORY_API_KEY = os.getenv("MEMORY_API_KEY")
+    {% endif %}
+
+    # System Prompts
+    RESEARCH_PROMPT = """
+    You are a research agent specialized in finding and synthesizing information.
+    Your capabilities include searching for current information, analyzing multiple
+    sources, synthesizing findings into coherent reports, and citing sources appropriately.
+    """
+
+
+settings = Settings()
+
+
+def get_model():
+    """
+    Get the configured model instance.
+
+    Returns:
+        Configured model instance
+    """
+    {% if model_provider.value == "openai" %}
+    return OpenAIModel(
+        config_name=settings.OPENAI_MODEL,
+        api_key=settings.OPENAI_API_KEY,
+    )
+    {% elif model_provider.value == "dashscope" %}
+    return DashScopeModel(
+        config_name=settings.DASHSCOPE_MODEL,
+        api_key=settings.DASHSCOPE_API_KEY,
+    )
+    {% elif model_provider.value == "anthropic" %}
+    return AnthropicModel(
+        config_name=settings.ANTHROPIC_MODEL,
+        api_key=settings.ANTHROPIC_API_KEY,
+    )
+    {% elif model_provider.value == "gemini" %}
+    return OpenAIModel(  # Placeholder
+        config_name=settings.GEMINI_MODEL,
+        api_key=settings.GEMINI_API_KEY,
+    )
+    {% else %}
+    raise ValueError(f"Unsupported model provider: {settings.MODEL_PROVIDER}")
+    {% endif %}
+
+
+def get_memory() -> Optional[Memory]:
+    """
+    Get the configured memory instance.
+
+    Returns:
+        Configured memory instance or None
+    """
+    {% if memory_type.value == "long-term" %}
+    return LongTermMemory(
+        backend=settings.MEMORY_BACKEND,
+        api_key=settings.MEMORY_API_KEY,
+    )
+    {% else %}
+    return Memory()
+    {% endif %}
+
+
+def get_toolkit() -> Toolkit:
+    """
+    Get the configured toolkit instance.
+
+    Returns:
+        Configured toolkit instance
+    """
+    from {{ package_name }}.tools.search_tools import (
+        web_search,
+        analyze_source,
+        synthesize_findings,
+    )
+
+    toolkit = Toolkit()
+    toolkit.add(web_search)
+    toolkit.add(analyze_source)
+    toolkit.add(synthesize_findings)
+
+    return toolkit

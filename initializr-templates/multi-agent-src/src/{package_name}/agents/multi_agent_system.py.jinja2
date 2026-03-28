@@ -1,0 +1,140 @@
+"""
+Multi-agent system implementation.
+"""
+
+from typing import List
+from agentscope.agent import ReActAgent
+from {{ package_name }}.config import get_model, get_memory, get_toolkit
+
+
+class MultiAgentSystem:
+    """
+    Multi-agent system for collaborative problem solving.
+    """
+
+    def __init__(self):
+        """Initialize the multi-agent system."""
+        self.model = get_model()
+        self.memory = get_memory()
+        self.toolkit = get_toolkit()
+
+        # Create specialized agents
+        self.coordinator = self._create_coordinator()
+        self.researcher = self._create_researcher()
+        self.analyst = self._create_analyst()
+        self.executor = self._create_executor()
+
+        self.agents = {
+            "coordinator": self.coordinator,
+            "researcher": self.researcher,
+            "analyst": self.analyst,
+            "executor": self.executor,
+        }
+
+    def _create_coordinator(self) -> ReActAgent:
+        """Create the coordinator agent."""
+        return ReActAgent(
+            name="Coordinator",
+            sys_prompt="""
+            You are a coordinator agent managing multiple specialized agents.
+            Your role is to:
+            1. Understand the user's request
+            2. Break down complex tasks into subtasks
+            3. Delegate subtasks to appropriate specialized agents
+            4. Synthesize results from multiple agents
+            5. Provide a cohesive final response
+            """,
+            model=self.model,
+            memory=self.memory,
+            toolkit=self.toolkit,
+        )
+
+    def _create_researcher(self) -> ReActAgent:
+        """Create the researcher agent."""
+        return ReActAgent(
+            name="Researcher",
+            sys_prompt="""
+            You are a research specialist. Your capabilities include:
+            - Finding and gathering information
+            - Analyzing data and sources
+            - Providing comprehensive research findings
+            - Citing sources when applicable
+            """,
+            model=self.model,
+            memory=self.memory,
+            toolkit=self.toolkit,
+        )
+
+    def _create_analyst(self) -> ReActAgent:
+        """Create the analyst agent."""
+        return ReActAgent(
+            name="Analyst",
+            sys_prompt="""
+            You are an analyst. Your capabilities include:
+            - Analyzing information and data
+            - Identifying patterns and insights
+            - Providing strategic recommendations
+            - Creating structured reports
+            """,
+            model=self.model,
+            memory=self.memory,
+            toolkit=self.toolkit,
+        )
+
+    def _create_executor(self) -> ReActAgent:
+        """Create the executor agent."""
+        return ReActAgent(
+            name="Executor",
+            sys_prompt="""
+            You are an executor. Your capabilities include:
+            - Executing specific tasks and actions
+            - Following instructions precisely
+            - Providing execution status updates
+            - Handling task completion
+            """,
+            model=self.model,
+            memory=self.memory,
+            toolkit=self.toolkit,
+        )
+
+    async def process(self, user_input: str) -> str:
+        """
+        Process user input through the multi-agent system.
+
+        Args:
+            user_input: User's input/request
+
+        Returns:
+            System response
+        """
+        # Step 1: Coordinator analyzes the request
+        coordination = await self.coordinator(
+            f"Analyze this request and determine which agents should handle it: {user_input}"
+        )
+
+        # Step 2: Researcher gathers information if needed
+        research = await self.researcher(
+            f"Research information for: {user_input}"
+        )
+
+        # Step 3: Analyst analyzes the research
+        analysis = await self.analyst(
+            f"Analyze this research: {research}"
+        )
+
+        # Step 4: Executor handles specific actions if needed
+        execution = await self.executor(
+            f"Execute the following task based on the analysis: {analysis}"
+        )
+
+        # Step 5: Coordinator synthesizes final response
+        final_response = await self.coordinator(
+            f"Synthesize a final response based on these results:\n"
+            f"Coordination: {coordination}\n"
+            f"Research: {research}\n"
+            f"Analysis: {analysis}\n"
+            f"Execution: {execution}\n"
+            f"Original request: {user_input}"
+        )
+
+        return final_response

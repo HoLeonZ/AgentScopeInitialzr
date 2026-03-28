@@ -1,0 +1,48 @@
+"""
+Collaboration tools for multi-agent system.
+"""
+
+from agentscope.tools import tool
+
+
+@tool("delegate_task")
+def delegate_task(agent_name: str, task: str) -> str:
+    """
+    Delegate a task to a specific agent.
+
+    Args:
+        agent_name: Name of the agent to delegate to
+        task: Task description
+
+    Returns:
+        Delegation result
+    """
+    return f"Task '{task}' delegated to {agent_name}"
+
+
+@tool("synthesize_results")
+def synthesize_results(results: list) -> str:
+    """
+    Synthesize results from multiple agents.
+
+    Args:
+        results: List of results from different agents
+
+    Returns:
+        Synthesized result
+    """
+    return f"Synthesized {len(results)} agent results"
+
+
+@tool("create_task_plan")
+def create_task_plan(goal: str) -> str:
+    """
+    Create a task execution plan.
+
+    Args:
+        goal: The goal to achieve
+
+    Returns:
+        Task plan
+    """
+    return f"Created task plan for: {goal}"

@@ -1,0 +1,76 @@
+"""
+Main entry point for {{ name }} - Research Agent.
+
+{{ description }}
+
+This agent specializes in deep research and information gathering.
+"""
+
+import asyncio
+from dotenv import load_dotenv
+
+from {{ package_name }}.config import settings, get_model, get_memory, get_toolkit
+from agentscope.agent import ReActAgent
+
+# Load environment variables
+load_dotenv()
+
+
+async def main():
+    """Main entry point for research agent."""
+    # Initialize configuration
+    model = get_model()
+    memory = get_memory()
+    toolkit = get_toolkit()
+
+    # Create research agent with specialized prompt
+    agent = ReActAgent(
+        name="{{ name }}",
+        sys_prompt="""You are a research agent specialized in deep information gathering and analysis.
+
+Your capabilities include:
+- Conducting comprehensive web searches
+- Analyzing multiple sources
+- Synthesizing complex information
+- Providing well-structured reports
+
+When given a research topic:
+1. Break down the topic into key questions
+2. Search for relevant information
+3. Analyze and cross-reference sources
+4. Synthesize findings into a coherent report
+
+Be thorough, objective, and cite sources when possible.""",
+        model=model,
+        toolkit=toolkit,
+        memory=memory,
+    )
+
+    # Start interaction
+    print(f"🔬 {{ name }} - Research Agent")
+    print("   Specialized in deep research and information gathering")
+    print()
+
+    while True:
+        try:
+            user_input = input("\\nResearch topic: ")
+            if user_input.lower() in ['exit', 'quit']:
+                print("Goodbye!")
+                break
+
+            print(f"\\n🔍 Researching: {{ user_input }}")
+            print("   This may take a while...")
+            print()
+
+            response = await agent(user_input)
+            print(f"\\n📊 Research Report:\\n{{ response }}")
+
+        except KeyboardInterrupt:
+            print("\\nResearch interrupted. Goodbye!")
+            break
+        except Exception as e:
+            print(f"\\n❌ Error: {{ e }}")
+
+
+if __name__ == "__main__":
+    asyncio.run(main())

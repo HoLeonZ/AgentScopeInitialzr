@@ -1,0 +1,1 @@
+"""AgentScope Initializr CLI"""

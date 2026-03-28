@@ -1,0 +1,57 @@
+"""
+Main entry point for {{ name }} Browser Automation Agent.
+
+{{ description }}
+"""
+
+import asyncio
+import os
+from dotenv import load_dotenv
+
+from {{ package_name }}.config import settings, get_model, get_memory, get_toolkit
+from {{ package_name }}.agents.browser_agent import BrowserAgent
+
+# Load environment variables
+load_dotenv()
+
+
+async def main():
+    """Main entry point for browser automation agent."""
+    # Initialize browser agent
+    agent = BrowserAgent()
+
+    # Start interaction
+    print(f"🌐 {{ name }} Browser Agent is ready! Type 'exit' to quit.")
+    print(f"   Agent Type: {{ agent_type.value }}")
+    print(f"   Model Provider: {{ model_provider.value }}")
+    print(f"   Capabilities: Web navigation, form filling, data extraction, screenshots")
+    print()
+
+    try:
+        # Initialize browser
+        await agent.initialize()
+
+        while True:
+            try:
+                user_input = input("\\nYou: ")
+                if user_input.lower() in ['exit', 'quit']:
+                    print("Goodbye!")
+                    break
+
+                print(f"\\n🌐 Processing: {user_input}")
+                response = await agent.process(user_input)
+                print(f"\\nResult: {response}")
+
+            except KeyboardInterrupt:
+                print("\\nGoodbye!")
+                break
+            except Exception as e:
+                print(f"\\nError: {{ e }}")
+
+    finally:
+        # Cleanup
+        await agent.cleanup()
+
+
+if __name__ == "__main__":
+    asyncio.run(main())

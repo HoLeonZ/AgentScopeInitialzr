@@ -1,0 +1,76 @@
+"""
+Main entry point for {{ name }} - Browser Automation Agent.
+
+{{ description }}
+
+This agent can navigate and interact with websites using Playwright.
+"""
+
+import asyncio
+from dotenv import load_dotenv
+
+from {{ package_name }}.config import settings, get_model, get_memory, get_toolkit
+from agentscope.agent import ReActAgent
+
+# Load environment variables
+load_dotenv()
+
+
+async def main():
+    """Main entry point for browser automation agent."""
+    # Initialize configuration
+    model = get_model()
+    memory = get_memory()
+    toolkit = get_toolkit()
+
+    # Create browser automation agent
+    agent = ReActAgent(
+        name="{{ name }}",
+        sys_prompt="""You are a browser automation agent.
+
+You can:
+- Navigate to websites
+- Click on elements
+- Fill forms
+- Take screenshots
+- Extract information from web pages
+
+When given a task:
+1. Navigate to the appropriate website
+2. Interact with page elements as needed
+3. Extract and summarize the relevant information
+4. Report back with findings
+
+Be methodical and wait for pages to load before taking actions.""",
+        model=model,
+        toolkit=toolkit,
+        memory=memory,
+    )
+
+    # Start interaction
+    print(f"🌐 {{ name }} - Browser Automation Agent")
+    print("   Can navigate and interact with websites")
+    print()
+
+    while True:
+        try:
+            user_input = input("\\nTask: ")
+            if user_input.lower() in ['exit', 'quit']:
+                print("Closing browser. Goodbye!")
+                break
+
+            print(f"\\n🌐 Executing: {{ user_input }}")
+            print()
+
+            response = await agent(user_input)
+            print(f"\\n✅ Result:\\n{{ response }}")
+
+        except KeyboardInterrupt:
+            print("\\nInterrupted. Goodbye!")
+            break
+        except Exception as e:
+            print(f"\\n❌ Error: {{ e }}")
+
+
+if __name__ == "__main__":
+    asyncio.run(main())

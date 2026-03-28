@@ -1,0 +1,67 @@
+# AgentScope Multi-Agent Configuration
+# Generated for {{ name }}
+
+agents:
+  - name: Coordinator
+    type: coordinator
+    model_provider: {{ model_provider.value }}
+    {% if model_provider.value == "openai" %}
+    model: {{ openai_model | default("gpt-4") }}
+    {% elif model_provider.value == "dashscope" %}
+    model: {{ dashscope_model | default("qwen-max") }}
+    {% elif model_provider.value == "anthropic" %}
+    model: {{ anthropic_model | default("claude-3-5-sonnet-20241022") }}
+    {% elif model_provider.value == "gemini" %}
+    model: {{ gemini_model | default("gemini-pro") }}
+    {% endif %}
+    memory_type: {{ memory_type.value }}
+    system_prompt: |
+      You are a coordinator agent managing multiple specialized agents.
+
+  - name: Researcher
+    type: research
+    model_provider: {{ model_provider.value }}
+    model: {{ openai_model | default("gpt-4") }}
+    memory_type: {{ memory_type.value }}
+    system_prompt: |
+      You are a research specialist.
+
+  - name: Analyst
+    type: analyst
+    model_provider: {{ model_provider.value }}
+    model: {{ openai_model | default("gpt-4") }}
+    memory_type: {{ memory_type.value }}
+    system_prompt: |
+      You are an analyst.
+
+  - name: Executor
+    type: executor
+    model_provider: {{ model_provider.value }}
+    model: {{ openai_model | default("gpt-4") }}
+    memory_type: {{ memory_type.value }}
+    system_prompt: |
+      You are an executor.
+
+models:
+  {{ model_provider.value }}:
+    {% if model_provider.value == "openai" %}
+    api_key_env: "OPENAI_API_KEY"
+    model: {{ openai_model | default("gpt-4") }}
+    {% elif model_provider.value == "dashscope" %}
+    api_key_env: "DASHSCOPE_API_KEY"
+    model: {{ dashscope_model | default("qwen-max") }}
+    {% elif model_provider.value == "anthropic" %}
+    api_key_env: "ANTHROPIC_API_KEY"
+    model: {{ anthropic_model | default("claude-3-5-sonnet-20241022") }}
+    {% elif model_provider.value == "gemini" %}
+    api_key_env: "GEMINI_API_KEY"
+    model: {{ gemini_model | default("gemini-pro") }}
+    {% endif %}
+
+tools:
+  - name: delegate_task
+    enabled: true
+  - name: synthesize_results
+    enabled: true
+  - name: create_task_plan
+    enabled: true

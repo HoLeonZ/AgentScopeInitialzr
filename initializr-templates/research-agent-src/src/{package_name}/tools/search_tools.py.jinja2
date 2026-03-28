@@ -1,0 +1,64 @@
+"""
+Search and research tools.
+"""
+
+import httpx
+import os
+from agentscope.tools import tool
+
+
+@tool("web_search")
+def web_search(query: str, max_results: int = 5) -> str:
+    """
+    Perform web search using Tavily API.
+
+    Args:
+        query: Search query
+        max_results: Maximum number of results to return
+
+    Returns:
+        Search results
+    """
+    tavily_api_key = os.getenv("TAVILY_API_KEY")
+    if not tavily_api_key:
+        return "Error: TAVILY_API_KEY not found in environment"
+
+    try:
+        # Integration with Tavily Search API
+        # This is a placeholder implementation
+        return f"Web search results for '{query}' (max {max_results} results)"
+    except Exception as e:
+        return f"Search error: {str(e)}"
+
+
+@tool("analyze_source")
+def analyze_source(url: str) -> str:
+    """
+    Analyze a web source for credibility and relevance.
+
+    Args:
+        url: URL to analyze
+
+    Returns:
+        Source analysis
+    """
+    try:
+        # Placeholder for source analysis
+        return f"Source analysis for {url}: Credibility assessment, relevance score, key findings"
+    except Exception as e:
+        return f"Analysis error: {str(e)}"
+
+
+@tool("synthesize_findings")
+def synthesize_findings(sources: list, research_goal: str) -> str:
+    """
+    Synthesize findings from multiple sources.
+
+    Args:
+        sources: List of source results
+        research_goal: Original research goal
+
+    Returns:
+        Synthesized findings
+    """
+    return f"Synthesized {len(sources)} sources for goal: {research_goal}"

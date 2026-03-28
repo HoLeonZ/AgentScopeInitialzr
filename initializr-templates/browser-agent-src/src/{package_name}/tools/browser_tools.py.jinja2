@@ -1,0 +1,122 @@
+"""
+Browser automation tools.
+"""
+
+from playwright.async_api import async_playwright
+from agentscope.tools import tool
+
+
+@tool("browser_navigate")
+async def browser_navigate(url: str) -> str:
+    """
+    Navigate to a URL in the browser.
+
+    Args:
+        url: URL to navigate to
+
+    Returns:
+        Navigation result
+    """
+    try:
+        playwright = await async_playwright().start()
+        browser = await playwright.chromium.launch(headless=False)
+        page = await browser.new_page()
+        await page.goto(url)
+        title = await page.title()
+        await browser.close()
+        await playwright.stop()
+        return f"Navigated to {url}. Page title: {title}"
+    except Exception as e:
+        return f"Navigation error: {str(e)}"
+
+
+@tool("browser_click")
+async def browser_click(selector: str) -> str:
+    """
+    Click an element on the page.
+
+    Args:
+        selector: CSS selector for the element
+
+    Returns:
+        Click result
+    """
+    try:
+        # Placeholder implementation
+        return f"Clicked element: {selector}"
+    except Exception as e:
+        return f"Click error: {str(e)}"
+
+
+@tool("browser_type")
+async def browser_type(selector: str, text: str) -> str:
+    """
+    Type text into an input field.
+
+    Args:
+        selector: CSS selector for the input field
+        text: Text to type
+
+    Returns:
+        Type result
+    """
+    try:
+        # Placeholder implementation
+        return f"Typed '{text}' into {selector}"
+    except Exception as e:
+        return f"Type error: {str(e)}"
+
+
+@tool("browser_screenshot")
+async def browser_screenshot(filename: str) -> str:
+    """
+    Take a screenshot of the current page.
+
+    Args:
+        filename: Filename for the screenshot
+
+    Returns:
+        Screenshot result
+    """
+    try:
+        # Placeholder implementation
+        return f"Screenshot saved as {filename}"
+    except Exception as e:
+        return f"Screenshot error: {str(e)}"
+
+
+@tool("browser_extract")
+async def browser_extract(selector: str) -> str:
+    """
+    Extract data from elements matching the selector.
+
+    Args:
+        selector: CSS selector for elements
+
+    Returns:
+        Extracted data
+    """
+    try:
+        # Placeholder implementation
+        return f"Extracted data from {selector}"
+    except Exception as e:
+        return f"Extraction error: {str(e)}"
+
+
+@tool("browser_scroll")
+async def browser_scroll(direction: str = "down", amount: int = 500) -> str:
+    """
+    Scroll the page.
+
+    Args:
+        direction: Scroll direction (up/down)
+        amount: Pixels to scroll
+
+    Returns:
+        Scroll result
+    """
+    try:
+        # Placeholder implementation
+        return f"Scrolled {direction} by {amount} pixels"
+    except Exception as e:
+        return f"Scroll error: {str(e)}"

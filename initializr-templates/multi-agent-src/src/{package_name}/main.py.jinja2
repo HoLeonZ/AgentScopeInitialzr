@@ -1,0 +1,48 @@
+"""
+Main entry point for {{ name }}.
+
+{{ description }}
+"""
+
+import asyncio
+import os
+from dotenv import load_dotenv
+
+from {{ package_name }}.config import settings, get_model, get_memory, get_toolkit
+from {{ package_name }}.agents.multi_agent_system import MultiAgentSystem
+
+# Load environment variables
+load_dotenv()
+
+
+async def main():
+    """Main entry point for multi-agent system."""
+    # Initialize multi-agent system
+    system = MultiAgentSystem()
+
+    # Start interaction
+    print(f"🤖 {{ name }} Multi-Agent System is ready! Type 'exit' to quit.")
+    print(f"   Agent Type: {{ agent_type.value }}")
+    print(f"   Model Provider: {{ model_provider.value }}")
+    print(f"   Available Agents: Coordinator, Researcher, Analyst, Executor")
+    print()
+
+    while True:
+        try:
+            user_input = input("\\nYou: ")
+            if user_input.lower() in ['exit', 'quit']:
+                print("Goodbye!")
+                break
+
+            response = await system.process(user_input)
+            print(f"\\nSystem: {{ response }}")
+
+        except KeyboardInterrupt:
+            print("\\nGoodbye!")
+            break
+        except Exception as e:
+            print(f"\\nError: {{ e }}")
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
