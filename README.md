@@ -55,6 +55,16 @@ Interactive wizard mode:
 agentscope-init wizard --name my-agent
 ```
 
+## Documentation
+
+For detailed architecture, API reference, and deployment guides, see the [docs/](docs/) directory:
+
+- **[Architecture Documentation](docs/architecture.md)** - System architecture, component relationships, and technology stack
+- **[API Reference](docs/api-reference.md)** - Complete API endpoint documentation with examples
+- **[Deployment Guide](docs/deployment-guide.md)** - Docker, Kubernetes, and cloud deployment instructions
+- **[Component Diagram](docs/component-diagram.md)** - Detailed component specifications and data flow
+- **[Visual Summary](docs/visual-summary.md)** - Visual overview of all architecture diagrams
+
 ### Available Templates
 
 1. **basic** - Basic ReAct Agent
