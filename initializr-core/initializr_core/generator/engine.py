@@ -107,16 +107,10 @@ class ProjectGenerator:
         project_path: Path
     ):
         """Generate basic project directory structure."""
-        # Determine package directory based on layout
-        if metadata.layout.value == "standard":
-            # src/ layout: src/project_name/
-            src_dir = project_path / "src"
-            src_dir.mkdir(parents=True, exist_ok=True)
-            pkg_dir = src_dir / metadata.package_name
-        else:
-            # lightweight layout: project_name/
-            pkg_dir = project_path / metadata.package_name
-
+        # Standard src/ layout: src/project_name/
+        src_dir = project_path / "src"
+        src_dir.mkdir(parents=True, exist_ok=True)
+        pkg_dir = src_dir / metadata.package_name
         pkg_dir.mkdir(parents=True, exist_ok=True)
 
         # Create subdirectories
@@ -170,13 +164,9 @@ class ProjectGenerator:
         template
     ):
         """Generate source code files."""
-        # Determine package directory based on layout
-        if metadata.layout.value == "standard":
-            pkg_dir = project_path / "src" / metadata.package_name
-            main_path = pkg_dir / "main.py"
-        else:
-            pkg_dir = project_path / metadata.package_name
-            main_path = project_path / "main.py"
+        # Standard src/ layout: src/project_name/
+        pkg_dir = project_path / "src" / metadata.package_name
+        main_path = pkg_dir / "main.py"
 
         # Generate __init__.py files
         self._generate_init_files(pkg_dir, metadata)

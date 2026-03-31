@@ -38,12 +38,6 @@ class FormatterType(Enum):
     MULTI_AGENT = "multi-agent"
 
 
-class ProjectLayout(Enum):
-    """Project layout enumeration."""
-    STANDARD = "standard"  # src/project_name/ layout (recommended)
-    LIGHTWEIGHT = "lightweight"  # project_name/ layout
-
-
 @dataclass
 class Dependency:
     """Represents a project dependency."""
@@ -94,10 +88,7 @@ class AgentScopeMetadata:
     description: str = ""
     package_name: str = ""
     version: str = "0.1.0"
-    python_version: str = "3.10"
-
-    # Project layout
-    layout: ProjectLayout = ProjectLayout.STANDARD
+    python_version: str = "3.14"
 
     # Agent configuration
     agent_type: AgentType = AgentType.BASIC
@@ -142,7 +133,6 @@ class AgentScopeMetadata:
             "package_name": self.package_name,
             "version": self.version,
             "python_version": self.python_version,
-            "layout": self.layout.value,
             "agent_type": self.agent_type.value,
             "model_provider": self.model_provider.value,
             "memory_type": self.memory_type.value,

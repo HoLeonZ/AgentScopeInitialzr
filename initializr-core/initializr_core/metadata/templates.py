@@ -52,7 +52,7 @@ class TemplateRegistry:
             Template(
                 template_id="basic",
                 name="Basic ReAct Agent",
-                description="基础 ReAct 智能体，支持对话和工具调用 (src/ layout)",
+                description="基础 ReAct 智能体，支持对话和工具调用",
                 structure_path="basic-agent-src",
                 default_dependencies=[
                     Dependency("agentscope"),
@@ -70,7 +70,7 @@ class TemplateRegistry:
             Template(
                 template_id="multi-agent",
                 name="Multi-Agent System",
-                description="多智能体协作系统，支持智能体间通信和任务分配 (src/ layout)",
+                description="多智能体协作系统，支持智能体间通信和任务分配",
                 structure_path="multi-agent-src",
                 default_dependencies=[
                     Dependency("agentscope"),
@@ -88,7 +88,7 @@ class TemplateRegistry:
             Template(
                 template_id="research",
                 name="Research Agent",
-                description="深度研究智能体，支持网络搜索和信息聚合 (src/ layout)",
+                description="深度研究智能体，支持网络搜索和信息聚合",
                 structure_path="research-agent-src",
                 default_dependencies=[
                     Dependency("agentscope"),
@@ -107,7 +107,7 @@ class TemplateRegistry:
             Template(
                 template_id="browser",
                 name="Browser Automation Agent",
-                description="浏览器自动化智能体，支持网页交互和数据抓取 (src/ layout)",
+                description="浏览器自动化智能体，支持网页交互和数据抓取",
                 structure_path="browser-agent-src",
                 default_dependencies=[
                     Dependency("agentscope"),
@@ -123,78 +123,6 @@ class TemplateRegistry:
             )
         )
 
-        # Legacy templates for backward compatibility (lightweight layout)
-        self.register(
-            Template(
-                template_id="basic-legacy",
-                name="Basic ReAct Agent (Legacy)",
-                description="基础 ReAct 智能体，支持对话和工具调用 (lightweight layout)",
-                structure_path="basic-agent",
-                default_dependencies=[
-                    Dependency("agentscope"),
-                    Dependency("python-dotenv"),
-                ],
-                default_tools=[
-                    ToolConfig(name="execute_python_code", enabled=True),
-                    ToolConfig(name="execute_shell_command", enabled=True),
-                ],
-            )
-        )
-
-        self.register(
-            Template(
-                template_id="multi-agent-legacy",
-                name="Multi-Agent System (Legacy)",
-                description="多智能体协作系统，支持智能体间通信和任务分配 (lightweight layout)",
-                structure_path="multi-agent",
-                default_dependencies=[
-                    Dependency("agentscope"),
-                    Dependency("python-dotenv"),
-                ],
-                default_tools=[
-                    ToolConfig(name="execute_python_code", enabled=True),
-                    ToolConfig(name="execute_shell_command", enabled=True),
-                ],
-            )
-        )
-
-        self.register(
-            Template(
-                template_id="research-legacy",
-                name="Research Agent (Legacy)",
-                description="深度研究智能体，支持网络搜索和信息聚合 (lightweight layout)",
-                structure_path="research-agent",
-                default_dependencies=[
-                    Dependency("agentscope"),
-                    Dependency("python-dotenv"),
-                    Dependency("httpx"),
-                ],
-                default_tools=[
-                    ToolConfig(name="web_search", enabled=True, config={"provider": "tavily"}),
-                    ToolConfig(name="execute_python_code", enabled=True),
-                ],
-            )
-        )
-
-        self.register(
-            Template(
-                template_id="browser-legacy",
-                name="Browser Automation Agent (Legacy)",
-                description="浏览器自动化智能体，支持网页交互和数据抓取 (lightweight layout)",
-                structure_path="browser-agent",
-                default_dependencies=[
-                    Dependency("agentscope"),
-                    Dependency("python-dotenv"),
-                    Dependency("playwright"),
-                ],
-                default_tools=[
-                    ToolConfig(name="browser_navigate", enabled=True),
-                    ToolConfig(name="browser_click", enabled=True),
-                    ToolConfig(name="browser_type", enabled=True),
-                    ToolConfig(name="browser_screenshot", enabled=True),
-                ],
-            )
-        )
 
     def register(self, template: Template):
         """
