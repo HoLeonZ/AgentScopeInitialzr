@@ -153,3 +153,13 @@ worktrees/
 # AgentScope Initializr specific
 /tmp/agentscope-initializr/
 *.zip
+
+# Frontend dependencies
+initializr-web/frontend/node_modules/
+initializr-web/frontend/package-lock.json
+
+# Output directories
+output/
+
+# Claude Code settings
+.claude/settings.local.json
