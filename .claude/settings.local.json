@@ -15,7 +15,19 @@
       "Bash(timeout 3 uvicorn initializr_web.api:app --host localhost --port 8765)",
       "Bash(curl -s http://localhost:8765/docs)",
       "Bash(pkill:*)",
-      "Bash(git init:*)"
+      "Bash(git init:*)",
+      "Bash(git clean:*)",
+      "Bash(git restore:*)",
+      "Bash(docs/extensions.md:*)",
+      "Bash(docs/changelog.md:*)",
+      "Bash(wc -l ls -la docs/*.md)",
+      "Bash(wc -l ls -la archive/*.md)",
+      "Bash(docs/architecture.md:*)",
+      "Bash(docs/README.md:*)",
+      "Bash(README.md:*)",
+      "Bash(/dev/null echo:*)",
+      "Bash(du -sh *.md docs/*.md archive/*.md)",
+      "Bash(DOCS_REORGANIZATION.md:*)"
     ]
   }
 }
