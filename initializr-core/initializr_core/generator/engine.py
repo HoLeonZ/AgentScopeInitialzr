@@ -482,7 +482,7 @@ python_classes = ["Test*"]
 python_functions = ["test_*"]
 addopts = "-v --tb=short --strict-markers"
 markers = [
-    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "slow: marks tests as slow",
     "integration: marks tests as integration tests",
 ]
 """
