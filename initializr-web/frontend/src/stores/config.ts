@@ -100,6 +100,12 @@ export const useConfigStore = defineStore('config', () => {
     }
   }
 
+  const setCurrentStep = (step: number) => {
+    if (step >= 1 && step <= totalSteps) {
+      currentStep.value = step
+    }
+  }
+
   const generateProject = async () => {
     if (!isValid.value) {
       error.value = 'Project name is required'
@@ -129,6 +135,7 @@ export const useConfigStore = defineStore('config', () => {
     isValid,
     setField,
     resetForm,
+    setCurrentStep,
     nextStep,
     prevStep,
     generateProject,

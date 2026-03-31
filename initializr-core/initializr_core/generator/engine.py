@@ -192,6 +192,9 @@ class ProjectGenerator:
         # Generate docs
         self._generate_docs(project_path, metadata)
 
+        # Generate tests and evaluation
+        self._generate_tests_and_evaluation(project_path, metadata)
+
         # Generate main.py
         main_content = self._generate_main(metadata)
         main_path.write_text(main_content)
@@ -847,3 +850,78 @@ When adding new features:
             "ollama": "OLLAMA_HOST",
         }
         return keys.get(provider, "API_KEY")
+
+    def _generate_tests_and_evaluation(
+        self,
+        project_path: Path,
+        metadata: AgentScopeMetadata
+    ):
+        """Generate test and evaluation modules."""
+        tests_dir = project_path / "tests"
+
+        # Generate test module
+        if metadata.generate_tests:
+            test_code = self.extension_generator.generate_tests_code(metadata)
+            (tests_dir / f"test_{metadata.package_name}.py").write_text(test_code)
+
+        # Generate evaluation module
+        if metadata.generate_evaluation:
+            eval_code = self.extension_generator.generate_evaluation_code(metadata)
+            (tests_dir / f"test_evaluation.py").write_text(eval_code)
+
+        # Generate pytest configuration
+        pytest_content = f"""[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
+"""
+        (project_path / "pytest.ini").write_text(pytest_content)
+
+        # Generate benchmark tasks if specified
+        if metadata.initial_benchmark_tasks > 0:
+            self._generate_benchmark_tests(tests_dir, metadata)
+
+    def _generate_benchmark_tests(
+        self,
+        tests_dir: Path,
+        metadata: AgentScopeMetadata
+    ):
+        """Generate benchmark test tasks."""
+        benchmark_content = f'''"""
+Benchmark tests for {metadata.name}.
+
+This module contains benchmark tasks for performance evaluation.
+"""
+
+import pytest
+from {metadata.package_name}.agents import create_react_agent
+
+
+class TestBenchmarks:
+    """Benchmark test cases."""
+
+    @pytest.mark.asyncio
+    async def test_benchmark_task_1(self):
+        """Benchmark task 1: Basic conversation."""
+        agent = create_react_agent()
+        response = await agent("Hello, who are you?")
+        assert response is not None
+
+    @pytest.mark.asyncio
+    async def test_benchmark_task_2(self):
+        """Benchmark task 2: Tool usage."""
+        agent = create_react_agent()
+        response = await agent("What is 25 * 34?")
+        assert response is not None
+
+    @pytest.mark.asyncio
+    async def test_benchmark_task_3(self):
+        """Benchmark task 3: Complex query."""
+        agent = create_react_agent()
+        response = await agent("Can you help me solve a math problem?")
+        assert response is not None
+'''
+        (tests_dir / "test_benchmarks.py").write_text(benchmark_content)

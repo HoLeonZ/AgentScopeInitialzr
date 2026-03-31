@@ -100,11 +100,26 @@ class AgentScopeMetadata:
 
     # Memory configuration
     memory_type: MemoryType = MemoryType.IN_MEMORY
+    short_term_memory: Optional[str] = None
+    long_term_memory: Optional[str] = None
 
     # AgentScope extension points
     hooks: List[HookConfig] = field(default_factory=list)
     middleware: List[MiddlewareConfig] = field(default_factory=list)
     formatter: FormatterType = FormatterType.CHAT
+    formatter_name: Optional[str] = None
+
+    # Skills configuration
+    enable_skills: bool = False
+    skills: List[str] = field(default_factory=list)
+
+    # RAG configuration
+    enable_rag: bool = False
+    rag_config: Dict[str, Any] = field(default_factory=dict)
+
+    # Pipeline configuration
+    enable_pipeline: bool = False
+    pipeline_config: Dict[str, Any] = field(default_factory=dict)
 
     # Additional settings
     enable_streaming: bool = True
@@ -114,6 +129,14 @@ class AgentScopeMetadata:
     # Author information
     author: str = ""
     email: str = ""
+
+    # Testing & Evaluation
+    generate_tests: bool = False
+    generate_evaluation: bool = False
+    evaluator_type: str = "general"
+    enable_openjudge: bool = False
+    openjudge_graders: List[str] = field(default_factory=list)
+    initial_benchmark_tasks: int = 0
 
     def __post_init__(self):
         """Validate and normalize metadata after initialization."""
@@ -136,10 +159,25 @@ class AgentScopeMetadata:
             "agent_type": self.agent_type.value,
             "model_provider": self.model_provider.value,
             "memory_type": self.memory_type.value,
+            "short_term_memory": self.short_term_memory,
+            "long_term_memory": self.long_term_memory,
             "formatter": self.formatter.value,
+            "formatter_name": self.formatter_name,
+            "enable_skills": self.enable_skills,
+            "skills": self.skills,
+            "enable_rag": self.enable_rag,
+            "rag_config": self.rag_config,
+            "enable_pipeline": self.enable_pipeline,
+            "pipeline_config": self.pipeline_config,
             "enable_streaming": self.enable_streaming,
             "enable_thinking": self.enable_thinking,
             "parallel_tool_calls": self.parallel_tool_calls,
             "author": self.author,
             "email": self.email,
+            "generate_tests": self.generate_tests,
+            "generate_evaluation": self.generate_evaluation,
+            "evaluator_type": self.evaluator_type,
+            "enable_openjudge": self.enable_openjudge,
+            "openjudge_graders": self.openjudge_graders,
+            "initial_benchmark_tasks": self.initial_benchmark_tasks,
         }
