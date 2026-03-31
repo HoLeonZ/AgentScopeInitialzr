@@ -1,5 +1,6 @@
 // initializr-web/frontend/src/api/client.ts
-import axios, { AxiosInstance } from 'axios'
+import axios from 'axios'
+import type { AxiosInstance } from 'axios'
 
 const apiClient: AxiosInstance = axios.create({
   baseURL: '/api/v1',
