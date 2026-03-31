@@ -15,16 +15,11 @@ class ProjectRequest(BaseModel):
     author: str = Field(default="", max_length=100, description="Author name")
 
     # Project structure
-    layout: str = Field(
-        default="standard",
-        pattern="^(standard|lightweight)$",
-        description="Project layout (standard or lightweight)"
-    )
     agent_type: str = Field(default="basic", description="Agent type")
     python_version: str = Field(
-        default="3.11",
-        pattern=r"^3\.(10|11|12)$",
-        description="Python version"
+        default="3.14",
+        pattern=r"^3\.14$",
+        description="Python version (only 3.14 supported)"
     )
 
     # Model configuration
@@ -73,7 +68,6 @@ class ProjectRequest(BaseModel):
     model_config = {"json_schema_extra": {"examples": [{
         "name": "my-agent",
         "description": "My custom agent",
-        "layout": "standard",
         "agent_type": "multi-agent",
         "model_provider": "openai",
         "model_config": {"model": "gpt-4", "temperature": 0.7},

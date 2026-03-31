@@ -7,7 +7,6 @@ from initializr_core.metadata.models import (
     AgentScopeMetadata,
     AgentType,
     ModelProvider,
-    ProjectLayout,
     ToolConfig,
 )
 
@@ -28,7 +27,6 @@ def project_request_to_metadata(request: ProjectRequest) -> AgentScopeMetadata:
         description=request.description,
         author=request.author,
         package_name=request.name.replace("-", "_"),
-        layout=ProjectLayout(request.layout),
         agent_type=AgentType(request.agent_type),
         model_provider=ModelProvider(request.model_provider),
         tools=tool_configs,
