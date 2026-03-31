@@ -9,10 +9,8 @@ export const useConfigStore = defineStore('config', () => {
   const form = ref<ProjectRequest>({
     name: '',
     description: '',
-    author: '',
-    layout: 'standard',
     agent_type: 'basic',
-    python_version: '3.11',
+    python_version: '3.14',
     model_provider: 'openai',
     model_config: {},
     enable_memory: true,
@@ -60,10 +58,8 @@ export const useConfigStore = defineStore('config', () => {
     form.value = {
       name: '',
       description: '',
-      author: '',
-      layout: 'standard',
       agent_type: 'basic',
-      python_version: '3.11',
+      python_version: '3.14',
       model_provider: 'openai',
       model_config: {},
       enable_memory: true,
