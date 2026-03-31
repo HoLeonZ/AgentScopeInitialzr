@@ -653,21 +653,86 @@ class TestBenchmarks:
 # - Checkpoint and recovery
 '''
 
+
     def generate_skills_files(self, pkg_dir: Path, metadata: AgentScopeMetadata):
-        """Generate skill implementation files based on metadata."""
+        """Generate skill implementation files based on metadata.
+
+        Each skill is organized in its own folder following the AgentScope
+        standard skill structure with a SKILL.md file.
+        """
         from pathlib import Path
 
         skills_dir = pkg_dir / "skills"
         skills_dir.mkdir(exist_ok=True)
 
-        # If skills are enabled, generate individual skill files
+        # If skills are enabled, generate individual skill directories
         if metadata.enable_skills and metadata.skills:
             for skill in metadata.skills:
-                skill_file_name = f"{skill.lower().replace('-', '_')}_skill.py"
-                skill_file_path = skills_dir / skill_file_name
+                skill_name = skill.lower().replace('-', '_')
+                skill_dir = skills_dir / skill_name
+                skill_dir.mkdir(exist_ok=True)
 
-                # Generate skill skeleton
-                skill_content = f'''"""
+                # Generate SKILL.md with YAML frontmatter
+                skill_md_content = f'''---
+name: {skill}
+description: A skill for {skill.lower()} operations
+license: MIT
+version: 1.0.0
+---
+
+# {skill.capitalize()} Skill
+
+## Overview
+
+This skill provides {skill.lower()} capabilities for the agent.
+
+## Capabilities
+
+- Execute basic {skill.lower()} operations
+- Handle {skill.lower()} related requests
+- Process {skill.lower()} inputs and provide results
+
+## Usage
+
+When the agent needs to perform {skill.lower()} operations, this skill will be invoked.
+
+## Implementation
+
+The skill is implemented in the `scripts/` directory with the following functions:
+
+- `{skill_name}_execute`: Basic {skill.lower()} operation
+- `{skill_name}_advanced`: Advanced {skill.lower()} operation with additional options
+
+## Examples
+
+### Basic Usage
+
+```
+Input: "Perform {skill.lower()} on X"
+Output: Result of {skill.lower()} operation
+```
+
+### Advanced Usage
+
+```
+Input: "Perform advanced {skill.lower()} with options Y"
+Output: Advanced {skill.lower()} result with options Y applied
+```
+
+## Notes
+
+- This is a skeleton implementation
+- Modify the implementation in `scripts/` to add actual functionality
+- Update this SKILL.md to reflect the actual capabilities
+'''
+                (skill_dir / "SKILL.md").write_text(skill_md_content)
+
+                # Create scripts directory for implementation
+                scripts_dir = skill_dir / "scripts"
+                scripts_dir.mkdir(exist_ok=True)
+
+                # Generate skill implementation
+                skill_impl_content = f'''"""
 {skill.capitalize()} skill implementation.
 
 This module provides the {skill} capability for the agent.
@@ -678,7 +743,7 @@ from agentscope.skills import skill
 
 
 @skill("{skill}")
-def {skill.lower().replace('-', '_')}_execute(input_text: str, context: Optional[Dict[str, Any]] = None) -> str:
+def {skill_name}_execute(input_text: str, context: Optional[Dict[str, Any]] = None) -> str:
     """
     Execute {skill} operation.
 
@@ -702,7 +767,7 @@ def {skill.lower().replace('-', '_')}_execute(input_text: str, context: Optional
 
 
 @skill("{skill}_advanced")
-def {skill.lower().replace('-', '_')}_advanced(input_text: str, options: Optional[Dict[str, Any]] = None) -> str:
+def {skill_name}_advanced(input_text: str, options: Optional[Dict[str, Any]] = None) -> str:
     """
     Execute advanced {skill} operation.
 
@@ -723,10 +788,50 @@ def {skill.lower().replace('-', '_')}_advanced(input_text: str, options: Optiona
 
     return result
 '''
-                skill_file_path.write_text(skill_content)
+                (scripts_dir / "__init__.py").write_text(skill_impl_content)
 
-        # Always generate a base skills module
-        base_skills_path = skills_dir / "base_skills.py"
+                # Create __init__.py for the skill directory
+                (skill_dir / "__init__.py").write_text(f'''"""
+{skill.capitalize()} skill package.
+"""
+''')
+
+        # Always generate a base skills module for common utilities
+        base_skills_dir = skills_dir / "base_skills"
+        base_skills_dir.mkdir(exist_ok=True)
+
+        base_skill_md = '''---
+name: base_skills
+description: Common utility skills for conversations, analysis, and summarization
+license: MIT
+version: 1.0.0
+---
+
+# Base Skills
+
+## Overview
+
+This skill provides common utility skills that can be used across different agents.
+
+## Capabilities
+
+- **Conversational Response**: Generate conversational responses
+- **Analysis**: Analyze input text (length, word count, etc.)
+- **Summarization**: Summarize text content
+
+## Usage
+
+These are general-purpose skills available to all agents by default.
+
+## Implementation
+
+The skills are implemented in `scripts/__init__.py`.
+'''
+        (base_skills_dir / "SKILL.md").write_text(base_skill_md)
+
+        base_scripts_dir = base_skills_dir / "scripts"
+        base_scripts_dir.mkdir(exist_ok=True)
+
         base_skills_content = '''"""
 Base skills for the agent.
 
@@ -805,7 +910,11 @@ def summarize_text(input_text: str, max_length: int = 100) -> str:
 
     return summary
 '''
-        base_skills_path.write_text(base_skills_content)
+        (base_scripts_dir / "__init__.py").write_text(base_skills_content)
+        (base_skills_dir / "__init__.py").write_text('''"""
+Base skills package.
+"""
+''')
 
         # Generate skills __init__.py to export skills
         skills_init_path = skills_dir / "__init__.py"
@@ -814,23 +923,13 @@ Agent skills module.
 
 This package contains various skill implementations for {metadata.package_name}.
 """
-
-from .base_skills import (
+'''
+        skills_init_content += '''
+from .base_skills.scripts import (
     conversational_response,
     analyze_input,
     summarize_text,
 )
-'''
-
-        # Add imports for custom skills
-        if metadata.enable_skills and metadata.skills:
-            for skill in metadata.skills:
-                skill_module = skill.lower().replace('-', '_')
-                skills_init_content += f'''
-from .{skill_module}_skill import {skill.lower().replace('-', '_')}_execute
-'''
-
-        skills_init_content += '''
 
 __all__ = [
     "conversational_response",
@@ -839,13 +938,19 @@ __all__ = [
 ]
 '''
 
-        # Add custom skills to __all__
+        # Add imports for custom skills
         if metadata.enable_skills and metadata.skills:
             for skill in metadata.skills:
-                skill_func = f'{skill.lower().replace("-", "_")}_execute'
+                skill_module = skill.lower().replace('-', '_')
+                skills_init_content += f'''
+
+from .{skill_module}.scripts import {skill_module}_execute
+'''
+
+                # Add to __all__
                 skills_init_content = skills_init_content.replace(
                     ']',
-            f'    "{skill_func}",\n]'
+            f'    "{skill_module}_execute",\n]'
                 )
 
         skills_init_path.write_text(skills_init_content)

@@ -722,9 +722,20 @@ def create_react_agent(name: str = "{metadata.name}") -> ReActAgent:
             (pkg_dir / "agents" / "react_agent.py").write_text(agent_content)
 
     def _generate_tools(self, pkg_dir: Path, metadata: AgentScopeMetadata):
-        """Generate tool implementation files."""
-        tools_content = '''"""
-Custom tools for the agent.
+        """Generate tool implementation files - one tool per folder."""
+        tools_dir = pkg_dir / "tools"
+        tools_dir.mkdir(exist_ok=True)
+
+        # Generate calculator tool
+        calculator_dir = tools_dir / "calculator"
+        calculator_dir.mkdir(exist_ok=True)
+        (calculator_dir / "__init__.py").write_text('''"""
+Calculator tool for mathematical expressions.
+"""
+from .calculator import calculator
+''')
+        (calculator_dir / "calculator.py").write_text('''"""
+Calculator tool implementation.
 """
 
 from agentscope.tools import tool
@@ -746,6 +757,21 @@ def calculator(expression: str) -> str:
         return f"Result: {result}"
     except Exception as e:
         return f"Error: {str(e)}"
+''')
+
+        # Generate time tool
+        time_dir = tools_dir / "get_current_time"
+        time_dir.mkdir(exist_ok=True)
+        (time_dir / "__init__.py").write_text('''"""
+Get current time tool.
+"""
+from .get_current_time import get_current_time
+''')
+        (time_dir / "get_current_time.py").write_text('''"""
+Get current time tool implementation.
+"""
+
+from agentscope.tools import tool
 
 
 @tool("get_current_time")
@@ -758,8 +784,17 @@ def get_current_time() -> str:
     """
     from datetime import datetime
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-'''
-        (pkg_dir / "tools" / "custom_tools.py").write_text(tools_content)
+''')
+
+        # Generate tools __init__.py
+        (tools_dir / "__init__.py").write_text('''"""
+Custom tools for the agent.
+"""
+from .calculator import calculator
+from .get_current_time import get_current_time
+
+__all__ = ["calculator", "get_current_time"]
+''')
 
     def _generate_skills(self, pkg_dir: Path, metadata: AgentScopeMetadata):
         """Generate skill implementation files."""
@@ -1173,52 +1208,239 @@ def format_bytes(size_bytes: int) -> str:
         (pkg_dir / "utils" / "helpers.py").write_text(helpers_content)
 
     def _generate_prompts(self, pkg_dir: Path, metadata: AgentScopeMetadata):
-        """Generate prompt template files."""
-        prompts_content = f'''"""
-System prompts for {metadata.name}.
-"""
+        """Generate prompt template files as Markdown."""
+        prompts_dir = pkg_dir / "prompts"
+        prompts_dir.mkdir(exist_ok=True)
 
-DEFAULT_SYSTEM_PROMPT = """
+        # Generate default system prompt
+        default_prompt = f'''# Default System Prompt
+
+**Agent Name**: {metadata.name}
+**Description**: {metadata.description}
+
+## Instructions
+
 You are a helpful AI assistant powered by AgentScope.
 You have access to various tools to help answer questions and complete tasks.
 Think step-by-step and explain your reasoning.
-"""
 
-REACT_AGENT_PROMPT = """
-You are a ReAct agent. Use the following format:
+## Available Tools
 
-Thought: you should always think about what to do
-Action: the action to take
-Observation: the result of the action
-... (this Thought/Action/Observation can repeat N times)
-Thought: I now know the final answer
-Final Answer: the final answer to the original input question
+- `calculate`: Calculate mathematical expressions
+- `get_current_time`: Get the current time
 
-Available tools:
-- calculate: Calculate mathematical expressions
-- get_current_time: Get the current time
-"""
+## Response Guidelines
 
-MULTI_AGENT_COORDINATOR_PROMPT = """
-You are a coordinator agent managing multiple specialized agents.
-Your role is to:
-1. Understand the user's request
-2. Break down complex tasks into subtasks
-3. Delegate subtasks to appropriate specialized agents
-4. Synthesize results from multiple agents
-5. Provide a cohesive final response
-"""
-
-RESEARCH_AGENT_PROMPT = """
-You are a research agent specialized in finding and synthesizing information.
-Your capabilities include:
-- Searching for current information
-- Analyzing multiple sources
-- Synthesizing findings into coherent reports
-- Citing sources appropriately
-"""
+1. Be clear and concise
+2. Show your reasoning when appropriate
+3. Use tools when needed
+4. Ask for clarification if the request is ambiguous
 '''
-        (pkg_dir / "prompts" / "system_prompts.py").write_text(prompts_content)
+        (prompts_dir / "default_system_prompt.md").write_text(default_prompt)
+
+        # Generate ReAct agent prompt
+        react_prompt = '''# ReAct Agent System Prompt
+
+## Role
+
+You are a ReAct (Reasoning + Acting) agent that combines reasoning and acting to solve problems.
+
+## Workflow
+
+Follow this pattern for each task:
+
+1. **Thought**: Think about what to do next
+2. **Action**: Choose and execute an action
+3. **Observation**: Observe the result of the action
+4. **Repeat** until you have enough information
+5. **Final Answer**: Provide the final answer
+
+## Format
+
+```
+Thought: [your reasoning about what to do]
+Action: [the action to take, e.g., use a tool]
+Observation: [the result you observe]
+... (repeat as needed)
+Thought: I now know the final answer
+Final Answer: [your final response]
+```
+
+## Available Tools
+
+- `calculate`: Calculate mathematical expressions
+- `get_current_time`: Get the current time
+
+## Guidelines
+
+- Break down complex tasks into steps
+- Use tools when appropriate
+- Verify your findings
+- Provide clear, accurate answers
+'''
+        (prompts_dir / "react_agent_prompt.md").write_text(react_prompt)
+
+        # Generate multi-agent coordinator prompt
+        coordinator_prompt = '''# Multi-Agent Coordinator System Prompt
+
+## Role
+
+You are a coordinator agent managing multiple specialized agents in a collaborative system.
+
+## Responsibilities
+
+1. **Understand** the user's request thoroughly
+2. **Break down** complex tasks into subtasks
+3. **Delegate** subtasks to appropriate specialized agents
+4. **Synthesize** results from multiple agents
+5. **Provide** a cohesive final response
+
+## Coordination Strategy
+
+- Identify which agents are needed for each task
+- Sequence tasks appropriately when dependencies exist
+- Aggregate and reconcile results from multiple agents
+- Handle conflicts or discrepancies in agent outputs
+- Ensure the final response addresses all aspects of the user's request
+
+## Best Practices
+
+- Be explicit about delegation
+- Provide context when delegating tasks
+- Combine insights from multiple sources
+- Maintain coherence across agent outputs
+'''
+        (prompts_dir / "multi_agent_coordinator_prompt.md").write_text(coordinator_prompt)
+
+        # Generate research agent prompt
+        research_prompt = '''# Research Agent System Prompt
+
+## Role
+
+You are a research agent specialized in finding, analyzing, and synthesizing information from multiple sources.
+
+## Capabilities
+
+- **Search** for current and relevant information
+- **Analyze** multiple sources critically
+- **Synthesize** findings into coherent reports
+- **Cite** sources appropriately
+
+## Research Process
+
+1. **Clarify** the research question
+2. **Identify** key search terms and concepts
+3. **Search** for relevant information
+4. **Evaluate** source credibility and relevance
+5. **Synthesize** findings into insights
+6. **Cite** all sources used
+
+## Source Evaluation
+
+Consider:
+- Author credibility and expertise
+- Publication quality and reputation
+- Currency and timeliness
+- Supporting evidence and data
+- Potential biases or conflicts
+
+## Output Format
+
+- Clear executive summary
+- Key findings organized by theme
+- Proper citations for all sources
+- Limitations and areas for further research
+'''
+        (prompts_dir / "research_agent_prompt.md").write_text(research_prompt)
+
+        # Generate browser agent prompt
+        browser_prompt = '''# Browser Agent System Prompt
+
+## Role
+
+You are a browser agent capable of interacting with web pages through automation.
+
+## Capabilities
+
+- **Navigate** to web pages
+- **Click** on interactive elements
+- **Type** into form fields
+- **Screenshot** page states
+- **Extract** information from pages
+
+## Browser Automation Commands
+
+- `browser_navigate(url)`: Navigate to a URL
+- `browser_click(selector)`: Click an element
+- `browser_type(selector, text)`: Type text into an input
+- `browser_screenshot()`: Capture page screenshot
+
+## Best Practices
+
+- Wait for page loads before acting
+- Handle dynamic content gracefully
+- Take screenshots for verification
+- Handle errors and timeouts
+- Respect website terms of service
+'''
+        (prompts_dir / "browser_agent_prompt.md").write_text(browser_prompt)
+
+        # Generate prompts __init__.py for loading markdown files
+        init_content = '''"""
+System prompts for the agent.
+
+This module provides functions to load prompt templates from markdown files.
+"""
+
+from pathlib import Path
+from typing import Optional
+
+
+PROMPTS_DIR = Path(__file__).parent
+
+
+def load_prompt(prompt_name: str) -> str:
+    """
+    Load a prompt template from a markdown file.
+
+    Args:
+        prompt_name: Name of the prompt file (without .md extension)
+
+    Returns:
+        Prompt content as string
+    """
+    prompt_file = PROMPTS_DIR / f"{prompt_name}.md"
+    if prompt_file.exists():
+        return prompt_file.read_text(encoding="utf-8")
+    else:
+        raise FileNotFoundError(f"Prompt file not found: {prompt_file}")
+
+
+def get_default_system_prompt() -> str:
+    """Get the default system prompt."""
+    return load_prompt("default_system_prompt")
+
+
+def get_react_agent_prompt() -> str:
+    """Get the ReAct agent prompt."""
+    return load_prompt("react_agent_prompt")
+
+
+def get_multi_agent_coordinator_prompt() -> str:
+    """Get the multi-agent coordinator prompt."""
+    return load_prompt("multi_agent_coordinator_prompt")
+
+
+def get_research_agent_prompt() -> str:
+    """Get the research agent prompt."""
+    return load_prompt("research_agent_prompt")
+
+
+def get_browser_agent_prompt() -> str:
+    """Get the browser agent prompt."""
+    return load_prompt("browser_agent_prompt")
+'''
+        (prompts_dir / "__init__.py").write_text(init_content)
 
     def _generate_config(self, pkg_dir: Path, metadata: AgentScopeMetadata):
         """Generate configuration files."""
