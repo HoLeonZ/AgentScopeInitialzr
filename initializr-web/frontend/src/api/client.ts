@@ -9,6 +9,15 @@ const apiClient: AxiosInstance = axios.create({
   timeout: 30000,
 })
 
+// Health check client (no /api/v1 prefix)
+const healthClient: AxiosInstance = axios.create({
+  baseURL: '',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  timeout: 10000,
+})
+
 // Request interceptor
 apiClient.interceptors.request.use(
   (config) => {
@@ -28,4 +37,5 @@ apiClient.interceptors.response.use(
   }
 )
 
+export { healthClient }
 export default apiClient

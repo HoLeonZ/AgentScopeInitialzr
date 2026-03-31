@@ -1,5 +1,5 @@
 // initializr-web/frontend/src/api/index.ts
-import apiClient from './client'
+import apiClient, { healthClient } from './client'
 import type {
   ProjectRequest,
   ProjectResponse,
@@ -13,12 +13,12 @@ import type {
 export const api = {
   // Health checks
   getHealth: async (): Promise<HealthResponse> => {
-    const response = await apiClient.get<HealthResponse>('/../health')
+    const response = await healthClient.get<HealthResponse>('/health')
     return response.data
   },
 
   getDetailedHealth: async (): Promise<DetailedHealthResponse> => {
-    const response = await apiClient.get<DetailedHealthResponse>('/../health/detailed')
+    const response = await healthClient.get<DetailedHealthResponse>('/health/detailed')
     return response.data
   },
 
