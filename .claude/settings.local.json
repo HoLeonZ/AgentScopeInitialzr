@@ -43,7 +43,10 @@
       "Bash(xargs kill:*)",
       "Bash(/tmp/test-skill/SKILL.md:*)",
       "Bash(zip -r /tmp/test-skill.zip *)",
-      "Bash(curl -X POST -F \"file=@/tmp/test-skill.zip\" http://localhost:8000/api/skills/upload)"
+      "Bash(curl -X POST -F \"file=@/tmp/test-skill.zip\" http://localhost:8000/api/skills/upload)",
+      "Bash(/tmp/improve_config.sh:*)",
+      "Bash(__NEW_LINE_12ecc059d1a3546e__ bash:*)",
+      "Bash(python3:*)"
     ]
   }
 }
