@@ -113,11 +113,13 @@ class ProjectGenerator:
         pkg_dir = src_dir / metadata.package_name
         pkg_dir.mkdir(parents=True, exist_ok=True)
 
-        # Create subdirectories
+        # Create subdirectories - following industry best practices
         (pkg_dir / "agents").mkdir(exist_ok=True)
+        (pkg_dir / "skills").mkdir(exist_ok=True)
         (pkg_dir / "tools").mkdir(exist_ok=True)
         (pkg_dir / "prompts").mkdir(exist_ok=True)
         (pkg_dir / "config").mkdir(exist_ok=True)
+        (pkg_dir / "utils").mkdir(exist_ok=True)
 
         # Create tests directory
         tests_dir = project_path / "tests"
@@ -145,10 +147,6 @@ class ProjectGenerator:
         env_example = self._generate_env_example(metadata)
         (project_path / ".env.example").write_text(env_example)
 
-        # Generate .gitignore
-        gitignore = self._generate_gitignore()
-        (project_path / ".gitignore").write_text(gitignore)
-
         # Generate requirements.txt
         requirements = self._generate_requirements(metadata)
         (project_path / "requirements.txt").write_text(requirements)
@@ -174,6 +172,9 @@ class ProjectGenerator:
         # Generate agents files
         self._generate_agents(pkg_dir, metadata)
 
+        # Generate skills files
+        self._generate_skills(pkg_dir, metadata)
+
         # Generate tools files
         self._generate_tools(pkg_dir, metadata)
 
@@ -182,6 +183,9 @@ class ProjectGenerator:
 
         # Generate config files
         self._generate_config(pkg_dir, metadata)
+
+        # Generate utils files
+        self._generate_utils(pkg_dir, metadata)
 
         # Generate examples
         self._generate_examples(project_path, metadata)
@@ -199,8 +203,20 @@ class ProjectGenerator:
         main_content = self._generate_main(metadata)
         main_path.write_text(main_content)
 
+    def _get_display_agent_type(self, agent_type_value: str) -> str:
+        """Get display name for agent type."""
+        display_names = {
+            "basic": "Basic Agent",
+            "multi-agent": "Multi-Agent System",
+            "research": "Research Agent",
+            "browser": "Browser Agent",
+        }
+        return display_names.get(agent_type_value, agent_type_value)
+
     def _generate_readme(self, metadata: AgentScopeMetadata, project_path: Path):
         """Generate README.md."""
+        agent_type_display = self._get_display_agent_type(metadata.agent_type.value)
+
         readme = f"""# {metadata.name}
 
 {metadata.description}
@@ -229,28 +245,46 @@ cp .env.example .env
 ## Usage
 
 ```bash
-python main.py
+python -m {metadata.package_name}.main
 ```
 
 ## Project Structure
 
 ```
 {metadata.name}/
-├── {metadata.package_name}/          # Package directory
-│   ├── agents/              # Agent implementations
-│   ├── tools/               # Custom tools
-│   └── config/              # Configuration
-├── tests/                   # Tests
-├── main.py                  # Entry point
-└── requirements.txt         # Dependencies
+├── src/
+│   └── {metadata.package_name}/          # Package directory
+│       ├── agents/              # Agent implementations
+│       ├── skills/              # Agent skill modules
+│       ├── tools/               # Custom tools
+│       ├── prompts/             # Prompt templates
+│       ├── config/              # Configuration
+│       ├── utils/               # Utility functions
+│       └── main.py              # Entry point
+├── tests/                       # Tests
+├── examples/                    # Usage examples
+├── scripts/                     # Utility scripts
+├── docs/                        # Documentation
+├── pyproject.toml              # Project config
+├── requirements.txt             # Dependencies
+└── .env.example                # Environment template
 ```
 
 ## AgentScope Configuration
 
-- **Agent Type**: {metadata.agent_type.value}
+- **Agent Type**: {agent_type_display}
 - **Model Provider**: {metadata.model_provider.value}
 - **Memory Type**: {metadata.memory_type.value}
 - **Python Version**: {metadata.python_version}
+
+## Features
+
+This project includes:
+- Pre-configured AgentScope agents
+- Modular skill system for extensibility
+- Integrated tools for common tasks
+- Comprehensive testing framework
+- Example usage and documentation
 
 ## License
 
@@ -285,6 +319,19 @@ MIT
             lines.append("")
             lines.append("# Search API Configuration")
             lines.append("TAVILY_API_KEY=your-tavily-api-key")
+
+        # Add logging configuration
+        lines.append("")
+        lines.append("# Logging Configuration")
+        lines.append("LOG_LEVEL=INFO")
+        lines.append("LOG_TO_FILE=true")
+        lines.append("LOG_TO_CONSOLE=true")
+        lines.append("# Max log file size in bytes (default: 10485760 = 10 MB)")
+        lines.append("LOG_FILE_MAX_BYTES=10485760")
+        lines.append("# Number of backup files to keep (default: 5)")
+        lines.append("LOG_FILE_BACKUP_COUNT=5")
+        lines.append("# Number of days to keep log files (default: 30)")
+        lines.append("LOG_RETENTION_DAYS=30")
 
         return "\n".join(lines)
 
@@ -369,22 +416,75 @@ Thumbs.db
 name = "{metadata.name}"
 version = "{metadata.version}"
 description = "{metadata.description}"
+authors = [
+    {{name = "{metadata.author}", email = "{metadata.email}"}},
+]
+readme = "README.md"
 requires-python = ">={metadata.python_version}"
 dependencies = [
     "agentscope>=0.1.0",
 ]
 
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "black>=23.0.0",
+    "isort>=5.12.0",
+    "mypy>=1.0.0",
+]
+
+[project.scripts]
+{metadata.package_name} = "{metadata.package_name}.main:run_cli"
+
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
+[tool.setuptools.packages.find]
+where = ["src"]
+
 [tool.black]
 line-length = 100
 target-version = ['py310']
+include = '\\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \\.eggs
+  | \\.git
+  | \\.hg
+  | \\.mypy_cache
+  | \\.tox
+  | \\.venv
+  | build
+  | dist
+)/
+'''
 
 [tool.isort]
 profile = "black"
 line_length = 100
+skip_gitignore = true
+
+[tool.mypy]
+python_version = "{metadata.python_version}"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short --strict-markers"
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+]
 """
 
     def _generate_package_init(self, metadata: AgentScopeMetadata) -> str:
@@ -400,6 +500,24 @@ __version__ = "{metadata.version}"
 
     def _generate_main(self, metadata: AgentScopeMetadata) -> str:
         """Generate main.py entry point."""
+        agent_type_display = self._get_display_agent_type(metadata.agent_type.value)
+        skills_import = ""
+        skills_usage = ""
+
+        if metadata.enable_skills and metadata.skills:
+            skills_import = f"""
+from {metadata.package_name}.skills import (
+    conversational_response,
+    analyze_input,
+    summarize_text,
+)
+"""
+            skills_usage = """
+    # Skills are available through the agent's toolkit
+    # Custom skills can be called directly:
+    # result = await conversational_response(input_text)
+"""
+
         return f'''"""
 Main entry point for {metadata.name}.
 
@@ -407,57 +525,148 @@ This module initializes and runs the AgentScope agent.
 """
 
 import asyncio
+import logging
+import sys
 import os
+from datetime import datetime
 from dotenv import load_dotenv
+from pathlib import Path
 
 from {metadata.package_name}.config import settings, get_model, get_memory, get_toolkit
+from {metadata.package_name}.utils.logging import setup_logging, cleanup_old_logs
 from agentscope.agent import ReActAgent
+{skills_import}
 
 # Load environment variables
 load_dotenv()
 
+# Setup unified logging with file rotation and retention
+logger = setup_logging(
+    level=os.getenv("LOG_LEVEL", "INFO"),
+    log_to_file=settings.LOG_TO_FILE,
+    log_to_console=settings.LOG_TO_CONSOLE,
+    max_bytes=settings.LOG_FILE_MAX_BYTES,
+    backup_count=settings.LOG_FILE_BACKUP_COUNT,
+    retention_days=settings.LOG_RETENTION_DAYS,
+)
+
 
 async def main():
     """Main entry point."""
-    # Initialize configuration
-    model = get_model()
-    memory = get_memory()
-    toolkit = get_toolkit()
+    try:
+        # Log startup
+        logger.info(f"Starting {metadata.name}...")
+        logger.info(f"Agent Type: {agent_type_display}")
+        logger.info(f"Model Provider: {metadata.model_provider.value}")
+        logger.info(f"Log Level: {os.getenv('LOG_LEVEL', 'INFO')}")
+        logger.info(f"Log Retention: {{settings.LOG_RETENTION_DAYS}} days")
 
-    # Create agent
-    agent = ReActAgent(
-        name="{metadata.name}",
-        sys_prompt=settings.SYSTEM_PROMPT,
-        model=model,
-        toolkit=toolkit,
-        memory=memory,
-    )
+        # Clean up old logs
+        cleanup_old_logs(retention_days=settings.LOG_RETENTION_DAYS)
 
-    # Start interaction
-    print(f"🤖 {metadata.name} is ready! Type 'exit' to quit.")
-    print(f"   Agent Type: {metadata.agent_type.value}")
-    print(f"   Model Provider: {metadata.model_provider.value}")
-    print()
+        # Initialize configuration
+        model = get_model()
+        memory = get_memory()
+        toolkit = get_toolkit()
 
-    while True:
-        try:
-            user_input = input("\\nYou: ")
-            if user_input.lower() in ['exit', 'quit']:
-                print("Goodbye!")
+        # Create agent
+        agent = ReActAgent(
+            name="{metadata.name}",
+            sys_prompt=settings.SYSTEM_PROMPT,
+            model=model,
+            toolkit=toolkit,
+            memory=memory,
+        )
+
+        logger.info("Agent initialized successfully")
+{skills_usage}
+        # Start interaction
+        print(f"🤖 {metadata.name} is ready!")
+        print(f"   Type: {agent_type_display}")
+        print(f"   Model: {metadata.model_provider.value}")
+        print(f"   Started at: {{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}}")
+        print(f"   Type 'exit' or 'quit' to stop, 'help' for commands")
+        print()
+
+        while True:
+            try:
+                user_input = input("\\n💬 You: ")
+
+                # Handle commands
+                if user_input.lower() in ['exit', 'quit']:
+                    print("\\n👋 Goodbye!")
+                    logger.info("Agent shutdown by user")
+                    break
+
+                if user_input.lower() == 'help':
+                    print("\\n📖 Available commands:")
+                    print("  - help: Show this help message")
+                    print("  - exit/quit: Exit the agent")
+                    print("  - stats: Show agent statistics")
+                    print("  - logs: Show log configuration")
+                    print("  - Any other text will be sent to the agent")
+                    continue
+
+                if user_input.lower() == 'stats':
+                    print("\\n📊 Agent Statistics:")
+                    print(f"  Name: {metadata.name}")
+                    print(f"  Type: {agent_type_display}")
+                    print(f"  Model: {metadata.model_provider.value}")
+                    print(f"  Memory: {metadata.memory_type.value}")
+                    print(f"  Log Level: {{logging.getLevelName(logger.level)}}")
+                    print(f"  Log Retention: {{settings.LOG_RETENTION_DAYS}} days")
+                    continue
+
+                if user_input.lower() == 'logs':
+                    print("\\n📝 Log Configuration:")
+                    print(f"  Log Directory: logs/")
+                    print(f"  Log Level: {{logging.getLevelName(logger.level)}}")
+                    print(f"  File Logging: {{'Enabled' if settings.LOG_TO_FILE else 'Disabled'}}")
+                    print(f"  Console Logging: {{'Enabled' if settings.LOG_TO_CONSOLE else 'Disabled'}}")
+                    print(f"  Max File Size: {{settings.LOG_FILE_MAX_BYTES / 1024 / 1024:.1f}} MB")
+                    print(f"  Backup Count: {{settings.LOG_FILE_BACKUP_COUNT}}")
+                    print(f"  Retention Days: {{settings.LOG_RETENTION_DAYS}}")
+                    continue
+
+                if not user_input.strip():
+                    continue
+
+                # Process input
+                logger.info(f"User input: {{user_input[:50]}}...")
+                response = await agent(user_input)
+                print(f"\\n🤖 {metadata.name}:")
+                print(f"{{response}}")
+                logger.info("Response generated")
+
+            except KeyboardInterrupt:
+                print("\\n\\n👋 Interrupted. Goodbye!")
+                logger.info("Agent shutdown by interrupt")
                 break
+            except Exception as e:
+                error_msg = f"Error processing request: {{str(e)}}"
+                print(f"\\n❌ {{error_msg}}")
+                logger.error(error_msg, exc_info=True)
 
-            response = await agent(user_input)
-            print(f"\\n{metadata.name}: {{response}}")
+    except Exception as e:
+        logger.error(f"Fatal error: {{str(e)}}", exc_info=True)
+        print(f"\\n❌ Fatal error: {{str(e)}}")
+        sys.exit(1)
 
-        except KeyboardInterrupt:
-            print("\\nGoodbye!")
-            break
-        except Exception as e:
-            print(f"\\nError: {{e}}")
+
+def run_cli():
+    """Entry point for CLI."""
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print("\\n\\n👋 Interrupted. Goodbye!")
+        sys.exit(0)
+    except Exception as e:
+        logger.error(f"Unexpected error: {{str(e)}}", exc_info=True)
+        sys.exit(1)
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    run_cli()
 '''
 
     def _generate_init_files(
@@ -472,8 +681,10 @@ if __name__ == "__main__":
 
         # Submodule __init__.py files
         (pkg_dir / "agents" / "__init__.py").write_text('"""Agent implementations."""\n')
+        (pkg_dir / "skills" / "__init__.py").write_text('"""Agent skill modules."""\n')
         (pkg_dir / "tools" / "__init__.py").write_text('"""Tool implementations."""\n')
         (pkg_dir / "prompts" / "__init__.py").write_text('"""Prompt templates."""\n')
+        (pkg_dir / "utils" / "__init__.py").write_text('"""Utility functions."""\n')
 
     def _generate_agents(self, pkg_dir: Path, metadata: AgentScopeMetadata):
         """Generate agent implementation files."""
@@ -549,6 +760,417 @@ def get_current_time() -> str:
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 '''
         (pkg_dir / "tools" / "custom_tools.py").write_text(tools_content)
+
+    def _generate_skills(self, pkg_dir: Path, metadata: AgentScopeMetadata):
+        """Generate skill implementation files."""
+        # Generate skills using extension generator
+        self.extension_generator.generate_skills_files(pkg_dir, metadata)
+
+    def _generate_utils(self, pkg_dir: Path, metadata: AgentScopeMetadata):
+        """Generate utility function files."""
+        # Generate logging module
+        logging_content = f'''"""
+Unified logging module for {metadata.name}.
+
+This module provides centralized logging configuration with file rotation,
+retention policies, and structured logging support.
+"""
+
+import logging
+import sys
+from pathlib import Path
+from logging.handlers import RotatingFileHandler, TimedRotatingFileHandler
+from typing import Optional
+from datetime import datetime
+
+
+class LoggerConfig:
+    """Logger configuration."""
+
+    # Log directory
+    LOG_DIR = Path("logs")
+
+    # Log format
+    LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s"
+    DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
+
+    # Log file settings
+    LOG_FILE_MAX_BYTES = 10 * 1024 * 1024  # 10 MB
+    LOG_FILE_BACKUP_COUNT = 5  # Keep 5 backup files
+
+    # Log retention settings (in days)
+    LOG_RETENTION_DAYS = 30  # Keep logs for 30 days
+
+    # Console log colors
+    COLORS = {{
+        'DEBUG': '\\033[36m',     # Cyan
+        'INFO': '\\033[32m',      # Green
+        'WARNING': '\\033[33m',   # Yellow
+        'ERROR': '\\033[31m',     # Red
+        'CRITICAL': '\\033[35m',  # Magenta
+        'RESET': '\\033[0m',      # Reset
+    }}
+
+
+class ColoredFormatter(logging.Formatter):
+    """Custom formatter with color support for console output."""
+
+    def __init__(self, fmt: str, datefmt: str, use_colors: bool = True):
+        super().__init__(fmt, datefmt)
+        self.use_colors = use_colors
+
+    def format(self, record: logging.LogRecord) -> str:
+        if self.use_colors:
+            levelname = record.levelname
+            if levelname in LoggerConfig.COLORS:
+                record.levelname = f"{{LoggerConfig.COLORS[levelname]}}{{levelname}}{{LoggerConfig.COLORS['RESET']}}"
+
+        formatted = super().format(record)
+        return formatted
+
+
+def setup_logging(
+    name: str = "{metadata.package_name}",
+    level: str = "INFO",
+    log_to_file: bool = True,
+    log_to_console: bool = True,
+    max_bytes: int = LoggerConfig.LOG_FILE_MAX_BYTES,
+    backup_count: int = LoggerConfig.LOG_FILE_BACKUP_COUNT,
+    retention_days: int = LoggerConfig.LOG_RETENTION_DAYS,
+) -> logging.Logger:
+    """
+    Setup unified logging with file rotation and retention.
+
+    Args:
+        name: Logger name
+        level: Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+        log_to_file: Enable file logging
+        log_to_console: Enable console logging
+        max_bytes: Maximum log file size before rotation (bytes)
+        backup_count: Number of backup files to keep
+        retention_days: Number of days to keep log files
+
+    Returns:
+        Configured logger instance
+
+    Example:
+        >>> # Basic usage
+        >>> logger = setup_logging()
+        >>>
+        >>> # Custom configuration
+        >>> logger = setup_logging(
+        ...     level="DEBUG",
+        ...     max_bytes=20*1024*1024,  # 20 MB
+        ...     backup_count=10,
+        ...     retention_days=60
+        ... )
+    """
+    # Create logger
+    logger = logging.getLogger(name)
+    logger.setLevel(getattr(logging, level.upper()))
+    logger.handlers.clear()  # Clear existing handlers
+
+    # Create formatters
+    file_formatter = logging.Formatter(
+        fmt=LoggerConfig.LOG_FORMAT,
+        datefmt=LoggerConfig.DATE_FORMAT
+    )
+
+    console_formatter = ColoredFormatter(
+        fmt=LoggerConfig.LOG_FORMAT,
+        datefmt=LoggerConfig.DATE_FORMAT,
+        use_colors=True
+    )
+
+    # File handler with rotation
+    if log_to_file:
+        # Ensure log directory exists
+        LoggerConfig.LOG_DIR.mkdir(parents=True, exist_ok=True)
+
+        # Use rotating file handler (size-based)
+        log_file = LoggerConfig.LOG_DIR / f"{{name}}.log"
+        file_handler = RotatingFileHandler(
+            filename=log_file,
+            maxBytes=max_bytes,
+            backupCount=backup_count,
+            encoding='utf-8'
+        )
+        file_handler.setLevel(logging.DEBUG)
+        file_handler.setFormatter(file_formatter)
+        logger.addHandler(file_handler)
+
+        # Also add time-based rotation for daily cleanup
+        timed_handler = TimedRotatingFileHandler(
+            filename=LoggerConfig.LOG_DIR / f"{{name}}_daily.log",
+            when='midnight',
+            interval=1,
+            backupCount=retention_days,
+            encoding='utf-8'
+        )
+        timed_handler.setLevel(logging.DEBUG)
+        timed_handler.setFormatter(file_formatter)
+        timed_handler.suffix = "%Y-%m-%d"
+        logger.addHandler(timed_handler)
+
+    # Console handler
+    if log_to_console:
+        console_handler = logging.StreamHandler(sys.stdout)
+        console_handler.setLevel(getattr(logging, level.upper()))
+        console_handler.setFormatter(console_formatter)
+        logger.addHandler(console_handler)
+
+    return logger
+
+
+def get_logger(name: Optional[str] = None) -> logging.Logger:
+    """
+    Get an existing logger or create a new one.
+
+    Args:
+        name: Logger name (defaults to package name)
+
+    Returns:
+        Logger instance
+    """
+    if name is None:
+        name = "{metadata.package_name}"
+    return logging.getLogger(name)
+
+
+def cleanup_old_logs(retention_days: int = LoggerConfig.LOG_RETENTION_DAYS):
+    """
+    Clean up log files older than retention_days.
+
+    Args:
+        retention_days: Number of days to keep logs
+    """
+    if not LoggerConfig.LOG_DIR.exists():
+        return
+
+    import os
+    import time
+
+    current_time = time.time()
+    cutoff_time = current_time - (retention_days * 24 * 60 * 60)
+
+    for log_file in LoggerConfig.LOG_DIR.glob("*.log*"):
+        try:
+            if log_file.stat().st_mtime < cutoff_time:
+                log_file.unlink()
+                get_logger().info(f"Deleted old log file: {{log_file}}")
+        except Exception as e:
+            get_logger().warning(f"Failed to delete {{log_file}}: {{e}}")
+
+
+class LoggerContext:
+    """Context manager for temporary logging configuration."""
+
+    def __init__(self, logger: logging.Logger, level: str):
+        self.logger = logger
+        self.level = level
+        self.old_level = None
+
+    def __enter__(self):
+        self.old_level = self.logger.level
+        self.logger.setLevel(getattr(logging, self.level.upper()))
+        return self.logger
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.logger.setLevel(self.old_level)
+        return False
+
+
+# Example usage:
+if __name__ == "__main__":
+    # Setup logging
+    logger = setup_logging(
+        level="DEBUG",
+        max_bytes=1024*1024,  # 1 MB for testing
+        backup_count=3,
+        retention_days=7
+    )
+
+    # Test logging
+    logger.debug("This is a debug message")
+    logger.info("This is an info message")
+    logger.warning("This is a warning message")
+    logger.error("This is an error message")
+    logger.critical("This is a critical message")
+
+    # Using context manager for temporary level change
+    with LoggerContext(logger, "DEBUG"):
+        logger.debug("Debug message in context")
+
+    # Cleanup old logs
+    cleanup_old_logs(retention_days=7)
+'''
+        (pkg_dir / "utils" / "logging.py").write_text(logging_content)
+
+        # Generate helpers module
+        helpers_content = f'''"""
+Utility helper functions for {metadata.name}.
+
+This module provides common utility functions used throughout the application.
+"""
+
+from typing import Any, Dict, Optional
+from datetime import datetime
+
+from .logging import get_logger
+
+
+logger = get_logger(__name__)
+
+
+def format_response(response: Any, format_type: str = "text") -> str:
+    """
+    Format agent response for display.
+
+    Args:
+        response: Agent response object
+        format_type: Format type (text, json, markdown)
+
+    Returns:
+        Formatted response string
+    """
+    if format_type == "json":
+        import json
+        return json.dumps(response, indent=2, ensure_ascii=False)
+    elif format_type == "markdown":
+        return f"```\\n{{str(response)}}\\n```"
+    else:
+        return str(response)
+
+
+def parse_tool_result(result: Any) -> Dict[str, Any]:
+    """
+    Parse tool execution result.
+
+    Args:
+        result: Result from tool execution
+
+    Returns:
+        Parsed result dictionary
+    """
+    if isinstance(result, dict):
+        return result
+    elif isinstance(result, str):
+        return {{"result": result}}
+    else:
+        return {{
+            "result": str(result),
+            "type": type(result).__name__
+        }}
+
+
+def validate_input(input_text: str, max_length: int = 10000) -> bool:
+    """
+    Validate user input.
+
+    Args:
+        input_text: Input text to validate
+        max_length: Maximum allowed length
+
+    Returns:
+        True if valid, False otherwise
+    """
+    if not input_text or not input_text.strip():
+        logger.warning("Empty input received")
+        return False
+    if len(input_text) > max_length:
+        logger.warning(f"Input too long: {{len(input_text)}} > {{max_length}}")
+        return False
+    return True
+
+
+def get_timestamp() -> str:
+    """
+    Get current timestamp in ISO format.
+
+    Returns:
+        ISO formatted timestamp
+    """
+    return datetime.utcnow().isoformat() + "Z"
+
+
+def truncate_text(text: str, max_length: int = 100, suffix: str = "...") -> str:
+    """
+    Truncate text to maximum length.
+
+    Args:
+        text: Text to truncate
+        max_length: Maximum length
+        suffix: Suffix to add if truncated
+
+    Returns:
+        Truncated text
+    """
+    if len(text) <= max_length:
+        return text
+    return text[:max_length - len(suffix)] + suffix
+
+
+def safe_execute(func, *args, default=None, log_error: bool = True, **kwargs):
+    """
+    Safely execute a function and return default value on exception.
+
+    Args:
+        func: Function to execute
+        *args: Positional arguments for the function
+        default: Default value to return on exception
+        log_error: Whether to log errors
+        **kwargs: Keyword arguments for the function
+
+    Returns:
+        Function result or default value
+    """
+    try:
+        return func(*args, **kwargs)
+    except Exception as e:
+        if log_error:
+            logger.error(f"Error executing {{func.__name__}}: {{e}}", exc_info=True)
+        return default
+
+
+def format_duration(seconds: float) -> str:
+    """
+    Format duration in seconds to human-readable string.
+
+    Args:
+        seconds: Duration in seconds
+
+    Returns:
+        Formatted duration string
+    """
+    if seconds < 1:
+        return f"{{seconds*1000:.0f}}ms"
+    elif seconds < 60:
+        return f"{{seconds:.1f}}s"
+    elif seconds < 3600:
+        minutes = seconds / 60
+        return f"{{minutes:.1f}}m"
+    else:
+        hours = seconds / 3600
+        return f"{{hours:.1f}}h"
+
+
+def format_bytes(size_bytes: int) -> str:
+    """
+    Format bytes to human-readable string.
+
+    Args:
+        size_bytes: Size in bytes
+
+    Returns:
+        Formatted size string
+    """
+    for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
+        if size_bytes < 1024.0:
+            return f"{{size_bytes:.1f}}{{unit}}"
+        size_bytes /= 1024.0
+    return f"{{size_bytes:.1f}}PB"
+'''
+        (pkg_dir / "utils" / "helpers.py").write_text(helpers_content)
 
     def _generate_prompts(self, pkg_dir: Path, metadata: AgentScopeMetadata):
         """Generate prompt template files."""
@@ -713,39 +1335,107 @@ if __name__ == "__main__":
 
     def _generate_scripts(self, project_path: Path, metadata: AgentScopeMetadata):
         """Generate utility scripts."""
-        setup_script = '''#!/bin/bash
-# Setup script for AgentScope project
+        setup_script = f'''#!/bin/bash
+# Setup script for {metadata.name} project
 
-echo "🚀 Setting up AgentScope project..."
+set -e
+
+echo "🚀 Setting up {metadata.name} project..."
+
+# Check Python version
+python_version=$(python3 --version 2>&1 | awk '{{print $2}}')
+echo "✓ Python version: $python_version"
 
 # Create virtual environment
-python -m venv venv
+if [ ! -d "venv" ]; then
+    echo "📦 Creating virtual environment..."
+    python3 -m venv venv
+else
+    echo "✓ Virtual environment already exists"
+fi
 
 # Activate virtual environment
+echo "🔧 Activating virtual environment..."
 source venv/bin/activate
 
+# Upgrade pip
+echo "⬆️  Upgrading pip..."
+pip install --upgrade pip setuptools wheel
+
 # Install dependencies
-pip install --upgrade pip
-pip install -r requirements.txt
+echo "📥 Installing dependencies..."
+pip install -e .
+
+# Install development dependencies (optional)
+echo "📥 Installing development dependencies..."
+pip install -e ".[dev]" || echo "⚠️  Warning: Dev dependencies not installed"
 
 # Create .env file from example
 if [ ! -f .env ]; then
     cp .env.example .env
-    echo "⚠️  Please update .env with your API keys"
+    echo "⚠️  Created .env file - Please update it with your API keys"
+else
+    echo "✓ .env file already exists"
 fi
 
-echo "✅ Setup complete! Activate your environment with: source venv/bin/activate"
+echo ""
+echo "✅ Setup complete!"
+echo ""
+echo "📝 Next steps:"
+echo "  1. Activate the environment: source venv/bin/activate"
+echo "  2. Configure your API keys in .env file"
+echo "  3. Run the agent: {metadata.package_name}"
+echo "  4. Or run with: python -m {metadata.package_name}.main"
+echo "  5. Run tests: pytest tests/"
+echo ""
 '''
         (project_path / "scripts" / "setup.sh").write_text(setup_script)
+
+        # Make setup script executable
+        import stat
+        setup_path = project_path / "scripts" / "setup.sh"
+        setup_path.chmod(setup_path.stat().st_mode | stat.S_IEXEC)
 
         deploy_script = '''#!/bin/bash
 # Deploy script for AgentScope project
 
+set -e
+
 echo "🚀 Deploying AgentScope project..."
 
+# Activate virtual environment
+if [ -d "venv" ]; then
+    source venv/bin/activate
+    echo "✓ Virtual environment activated"
+else
+    echo "❌ Virtual environment not found. Run ./scripts/setup.sh first"
+    exit 1
+fi
+
+# Run code quality checks
+echo "🔍 Running code quality checks..."
+
+# Format with black (if installed)
+if command -v black &> /dev/null; then
+    echo "🎨 Formatting code with black..."
+    black src/ tests/ --check
+fi
+
+# Sort imports with isort (if installed)
+if command -v isort &> /dev/null; then
+    echo "📦 Sorting imports with isort..."
+    isort src/ tests/ --check-only
+fi
+
+# Type checking with mypy (if installed)
+if command -v mypy &> /dev/null; then
+    echo "🔎 Type checking with mypy..."
+    mypy src/
+fi
+
 # Run tests
-echo "Running tests..."
-pytest tests/ -v
+echo "🧪 Running tests..."
+pytest tests/ -v --tb=short
 
 # Check if tests passed
 if [ $? -eq 0 ]; then
@@ -755,12 +1445,45 @@ else
     exit 1
 fi
 
+echo ""
 echo "✅ Deployment ready!"
+echo "📦 To build the package: python -m build"
+echo "📤 To publish: twine upload dist/*"
 '''
         (project_path / "scripts" / "deploy.sh").write_text(deploy_script)
 
+        # Make deploy script executable
+        deploy_path = project_path / "scripts" / "deploy.sh"
+        deploy_path.chmod(deploy_path.stat().st_mode | stat.S_IEXEC)
+
+        # Add run script for convenience
+        run_script = f'''#!/bin/bash
+# Run script for {metadata.name}
+
+set -e
+
+# Activate virtual environment
+if [ -d "venv" ]; then
+    source venv/bin/activate
+else
+    echo "❌ Virtual environment not found. Run ./scripts/setup.sh first"
+    exit 1
+fi
+
+# Run the agent
+echo "🚀 Starting {metadata.name}..."
+python -m {metadata.package_name}.main "$@"
+'''
+        (project_path / "scripts" / "run.sh").write_text(run_script)
+
+        # Make run script executable
+        run_path = project_path / "scripts" / "run.sh"
+        run_path.chmod(run_path.stat().st_mode | stat.S_IEXEC)
+
     def _generate_docs(self, project_path: Path, metadata: AgentScopeMetadata):
         """Generate documentation files."""
+        agent_type_display = self._get_display_agent_type(metadata.agent_type.value)
+
         architecture_content = f'''# {metadata.name} Architecture
 
 ## Project Structure
@@ -770,9 +1493,11 @@ echo "✅ Deployment ready!"
 ├── src/
 │   └── {metadata.package_name}/          # Main package
 │       ├── agents/              # Agent implementations
+│       ├── skills/              # Agent skill modules
 │       ├── tools/               # Custom tools
 │       ├── prompts/             # Prompt templates
 │       ├── config/              # Configuration
+│       ├── utils/               # Utility functions
 │       └── main.py              # Entry point
 ├── tests/                       # Tests
 ├── examples/                    # Usage examples
@@ -786,29 +1511,41 @@ echo "✅ Deployment ready!"
 ## Architecture Overview
 
 ### Agent Layer
-- **ReActAgent**: Basic reasoning-acting agent
-- **Multi-Agent**: Specialized agents for different tasks
+- **Agent Type**: {agent_type_display}
+- **Pattern**: ReAct (Reasoning + Acting) paradigm
+- **Capabilities**: Task execution with tool usage
+
+### Skill Layer
+- **Modular Skills**: Reusable skill modules
+- **Skill Composition**: Combine multiple skills
+- **Extensibility**: Easy to add custom skills
 
 ### Tool Layer
-- **Calculator**: Mathematical calculations
-- **Time**: Current time and date utilities
+- **Built-in Tools**: Calculator, time utilities
+- **Custom Tools**: Extend with domain-specific tools
+- **Tool Registry**: Dynamic tool registration
 
 ### Configuration Layer
 - **Settings**: Application settings management
-- **Models**: Model provider configuration
+- **Models**: Model provider configuration (OpenAI, Anthropic, etc.)
 - **Memory**: Short and long-term memory management
+- **Formatters**: Message formatting for different providers
 
 ### Extension Points
-- **Hooks**: Agent lifecycle hooks
-- **Middleware**: Request/response processing
-- **Formatters**: Message formatting
+- **Hooks**: Agent lifecycle hooks (pre/post reply, pre/post observe)
+- **Middleware**: Request/response processing pipeline
+- **Formatters**: Custom message formatters
+- **Skills**: Modular skill system
+- **RAG**: Retrieval-Augmented Generation support
+- **Pipeline**: Multi-agent pipeline orchestration
 
 ## Design Principles
 
 1. **Modularity**: Each component has a single responsibility
-2. **Extensibility**: Easy to add new agents, tools, and features
+2. **Extensibility**: Easy to add new agents, tools, and skills
 3. **Testability**: Comprehensive test coverage
 4. **Documentation**: Clear documentation and examples
+5. **Industry Best Practices**: Following Python packaging standards
 
 ## Development Workflow
 
@@ -821,11 +1558,33 @@ echo "✅ Deployment ready!"
 ## Contributing
 
 When adding new features:
-1. Add agent in `agents/` directory
-2. Add tools in `tools/` directory
-3. Update prompts in `prompts/` directory
-4. Add tests in `tests/` directory
-5. Provide examples in `examples/` directory
+1. Add agent implementations in `agents/` directory
+2. Add skill modules in `skills/` directory
+3. Add tools in `tools/` directory
+4. Update prompts in `prompts/` directory
+5. Add utility functions in `utils/` directory
+6. Add tests in `tests/` directory
+7. Provide examples in `examples/` directory
+
+## Directory Details
+
+### `agents/`
+Contains agent implementations and factory functions.
+
+### `skills/`
+Contains modular skill implementations that can be composed into agents.
+
+### `tools/`
+Contains custom tool functions that agents can use.
+
+### `prompts/`
+Contains prompt templates and system prompts.
+
+### `config/`
+Contains configuration modules for models, memory, and tools.
+
+### `utils/`
+Contains utility functions for logging, formatting, validation, etc.
 '''
         (project_path / "docs" / "architecture.md").write_text(architecture_content)
 

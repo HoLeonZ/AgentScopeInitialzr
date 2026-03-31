@@ -79,6 +79,14 @@ You should respond in a friendly and professional manner."""
     # Pipeline Configuration
     ENABLE_PIPELINE = {str(metadata.enable_pipeline).lower()}
 
+    # Logging Configuration
+    LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
+    LOG_TO_FILE = os.getenv("LOG_TO_FILE", "true").lower() == "true"
+    LOG_TO_CONSOLE = os.getenv("LOG_TO_CONSOLE", "true").lower() == "true"
+    LOG_FILE_MAX_BYTES = int(os.getenv("LOG_FILE_MAX_BYTES", "10485760"))  # 10 MB
+    LOG_FILE_BACKUP_COUNT = int(os.getenv("LOG_FILE_BACKUP_COUNT", "5"))  # 5 backups
+    LOG_RETENTION_DAYS = int(os.getenv("LOG_RETENTION_DAYS", "30"))  # 30 days
+
 
 settings = Settings()
 
@@ -281,20 +289,34 @@ def get_toolkit():
 
         # Add enabled tools (metadata.tools is a list of ToolConfig objects)
         tool_mappings = {
-            "execute_python_code": "execute_python_code",
-            "execute_shell_command": "execute_shell_command",
-            "web_search": "web_search_tavily",
-            "browser_navigate": "browser_navigate",
-            "browser_click": "browser_click",
-            "browser_type": "browser_type",
-            "browser_screenshot": "browser_screenshot",
+            "execute_python_code": ("execute_python_code", "from agentscope.tools import execute_python_code"),
+            "execute_shell_command": ("execute_shell_command", "from agentscope.tools import execute_shell_command"),
+            "web_search": ("web_search_tavily", "from agentscope.tools import web_search_tavily"),
+            "browser_navigate": ("browser_navigate", "from agentscope.tools import browser_navigate"),
+            "browser_click": ("browser_click", "from agentscope.tools import browser_click"),
+            "browser_type": ("browser_type", "from agentscope.tools import browser_type"),
+            "browser_screenshot": ("browser_screenshot", "from agentscope.tools import browser_screenshot"),
         }
 
+        # Import statements for tools
+        imports_added = set()
         for tool_config in metadata.tools:
-            tool_name = tool_config.name  # Get tool name from ToolConfig
+            tool_name = tool_config.name
             if tool_name in tool_mappings:
-                func_name = tool_mappings[tool_name]
-                lines.append(f'    # toolkit.register({func_name})')
+                func_name, import_stmt = tool_mappings[tool_name]
+                if import_stmt not in imports_added:
+                    lines.append(f'    {import_stmt}')
+                    imports_added.add(import_stmt)
+
+        # Register tools
+        if metadata.tools:
+            lines.append('')
+            for tool_config in metadata.tools:
+                tool_name = tool_config.name
+                if tool_name in tool_mappings:
+                    func_name, _ = tool_mappings[tool_name]
+                    lines.append(f'    toolkit.register({func_name})')
+                    lines.append(f'    # {tool_name} enabled')
 
         lines.append('''
     return toolkit
@@ -630,3 +652,200 @@ class TestBenchmarks:
 # - Debugging agent behavior
 # - Checkpoint and recovery
 '''
+
+    def generate_skills_files(self, pkg_dir: Path, metadata: AgentScopeMetadata):
+        """Generate skill implementation files based on metadata."""
+        from pathlib import Path
+
+        skills_dir = pkg_dir / "skills"
+        skills_dir.mkdir(exist_ok=True)
+
+        # If skills are enabled, generate individual skill files
+        if metadata.enable_skills and metadata.skills:
+            for skill in metadata.skills:
+                skill_file_name = f"{skill.lower().replace('-', '_')}_skill.py"
+                skill_file_path = skills_dir / skill_file_name
+
+                # Generate skill skeleton
+                skill_content = f'''"""
+{skill.capitalize()} skill implementation.
+
+This module provides the {skill} capability for the agent.
+"""
+
+from typing import Any, Dict, Optional
+from agentscope.skills import skill
+
+
+@skill("{skill}")
+def {skill.lower().replace('-', '_')}_execute(input_text: str, context: Optional[Dict[str, Any]] = None) -> str:
+    """
+    Execute {skill} operation.
+
+    Args:
+        input_text: Input text or command for {skill} operation
+        context: Additional context for the operation
+
+    Returns:
+        Result of the {skill} operation
+    """
+    # TODO: Implement {skill} logic here
+    # This is a skeleton implementation
+
+    if context is None:
+        context = {{}}
+
+    # Placeholder implementation
+    result = f"{{skill}} operation executed with input: {{input_text}}"
+
+    return result
+
+
+@skill("{skill}_advanced")
+def {skill.lower().replace('-', '_')}_advanced(input_text: str, options: Optional[Dict[str, Any]] = None) -> str:
+    """
+    Execute advanced {skill} operation.
+
+    Args:
+        input_text: Input text or command for {skill} operation
+        options: Additional options for the operation
+
+    Returns:
+        Result of the advanced {skill} operation
+    """
+    # TODO: Implement advanced {skill} logic here
+
+    if options is None:
+        options = {{}}
+
+    # Placeholder implementation
+    result = f"Advanced {{skill}} operation executed with options: {{options}}"
+
+    return result
+'''
+                skill_file_path.write_text(skill_content)
+
+        # Always generate a base skills module
+        base_skills_path = skills_dir / "base_skills.py"
+        base_skills_content = '''"""
+Base skills for the agent.
+
+This module provides common skills that can be used across different agents.
+"""
+
+from typing import Any, Dict, Optional
+from agentscope.skills import skill
+
+
+@skill("conversation")
+def conversational_response(input_text: str, context: Optional[Dict[str, Any]] = None) -> str:
+    """
+    Generate a conversational response.
+
+    Args:
+        input_text: User input text
+        context: Conversation context and history
+
+    Returns:
+        Conversational response
+    """
+    if context is None:
+        context = {}
+
+    # Extract conversation history if available
+    history = context.get("history", [])
+
+    # Basic conversational logic
+    response = f"Received: {input_text}"
+
+    return response
+
+
+@skill("analysis")
+def analyze_input(input_text: str, analysis_type: str = "general") -> Dict[str, Any]:
+    """
+    Analyze input text.
+
+    Args:
+        input_text: Text to analyze
+        analysis_type: Type of analysis (general, sentiment, entities, etc.)
+
+    Returns:
+        Analysis results
+    """
+    result = {
+        "input": input_text,
+        "analysis_type": analysis_type,
+        "length": len(input_text),
+        "word_count": len(input_text.split()),
+    }
+
+    # TODO: Add more sophisticated analysis based on analysis_type
+
+    return result
+
+
+@skill("summarization")
+def summarize_text(input_text: str, max_length: int = 100) -> str:
+    """
+    Summarize input text.
+
+    Args:
+        input_text: Text to summarize
+        max_length: Maximum length of summary
+
+    Returns:
+        Summarized text
+    """
+    # Basic summarization - take first max_length characters
+    if len(input_text) <= max_length:
+        return input_text
+
+    summary = input_text[:max_length] + "..."
+
+    return summary
+'''
+        base_skills_path.write_text(base_skills_content)
+
+        # Generate skills __init__.py to export skills
+        skills_init_path = skills_dir / "__init__.py"
+        skills_init_content = f'''"""
+Agent skills module.
+
+This package contains various skill implementations for {metadata.package_name}.
+"""
+
+from .base_skills import (
+    conversational_response,
+    analyze_input,
+    summarize_text,
+)
+'''
+
+        # Add imports for custom skills
+        if metadata.enable_skills and metadata.skills:
+            for skill in metadata.skills:
+                skill_module = skill.lower().replace('-', '_')
+                skills_init_content += f'''
+from .{skill_module}_skill import {skill.lower().replace('-', '_')}_execute
+'''
+
+        skills_init_content += '''
+
+__all__ = [
+    "conversational_response",
+    "analyze_input",
+    "summarize_text",
+]
+'''
+
+        # Add custom skills to __all__
+        if metadata.enable_skills and metadata.skills:
+            for skill in metadata.skills:
+                skill_func = f'{skill.lower().replace("-", "_")}_execute'
+                skills_init_content = skills_init_content.replace(
+                    ']',
+            f'    "{skill_func}",\n]'
+                )
+
+        skills_init_path.write_text(skills_init_content)
