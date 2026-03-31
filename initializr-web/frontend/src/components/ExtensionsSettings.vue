@@ -227,7 +227,7 @@
           />
         </div>
         <div class="card-description">
-          Define specialized skills for your agent to master
+          Select specialized skills from the skill management system
         </div>
       </template>
 
@@ -238,32 +238,10 @@
           show-icon
           style="margin-bottom: 20px"
         >
-          Skills are specialized capabilities that your agent can use. Select presets or add custom skills.
+          Skills are uploaded by administrators via the Skill Management System. Select the skills you want to include in your project.
         </el-alert>
 
-        <el-form-item label="Skill Modules">
-          <el-select
-            v-model="localForm.skills"
-            multiple
-            filterable
-            allow-create
-            placeholder="Add skill modules"
-            size="large"
-            @change="updateField('skills', $event)"
-          >
-            <el-option
-              v-for="skill in availableSkills"
-              :key="skill"
-              :label="skill"
-              :value="skill"
-            >
-              <div class="skill-option">
-                <el-icon><Medal /></el-icon>
-                <span>{{ skill }}</span>
-              </div>
-            </el-option>
-          </el-select>
-        </el-form-item>
+        <SkillSelector v-model="localForm.skills" @update:model-value="updateField('skills', $event)" />
 
         <!-- Code Preview -->
         <el-collapse style="margin-top: 20px">
@@ -281,14 +259,6 @@
             </div>
           </el-collapse-item>
         </el-collapse>
-
-        <el-alert
-          type="warning"
-          :closable="false"
-          show-icon
-        >
-          Custom skills require implementation in the generated project. Preset skills provide a starting point.
-        </el-alert>
       </template>
     </el-card>
 
@@ -590,6 +560,7 @@ import { ref, reactive, onMounted, computed } from 'vue'
 import { useConfigStore } from '@/stores/config'
 import { api } from '@/api'
 import type { ExtensionsResponse } from '@/types'
+import SkillSelector from './SkillSelector.vue'
 import {
   Tools,
   Document,

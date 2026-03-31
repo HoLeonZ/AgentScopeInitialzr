@@ -184,6 +184,9 @@ class ProjectGenerator:
         # Generate config files
         self._generate_config(pkg_dir, metadata)
 
+        # Generate log folder
+        self._generate_log_folder(pkg_dir, metadata)
+
         # Generate utils files
         self._generate_utils(pkg_dir, metadata)
 
