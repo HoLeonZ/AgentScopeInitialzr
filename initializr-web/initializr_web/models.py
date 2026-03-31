@@ -136,3 +136,33 @@ class DetailedHealthResponse(HealthResponse):
 
     system: Dict[str, float] = Field(..., description="System metrics")
     projects: Dict[str, Any] = Field(..., description="Project statistics")
+
+
+# Skill Management Models
+
+class SkillUploadResponse(BaseModel):
+    """Response model for skill upload."""
+
+    success: bool = Field(..., description="Whether upload succeeded")
+    message: str = Field(..., description="Response message")
+    skill: Optional[Dict[str, Any]] = Field(None, description="Skill metadata")
+
+
+class SkillListResponse(BaseModel):
+    """Response model for skills listing."""
+
+    skills: List[Dict[str, Any]] = Field(..., description="List of skills")
+    total: int = Field(..., description="Total number of skills")
+
+
+class SkillDetailResponse(BaseModel):
+    """Response model for skill details."""
+
+    skill: Dict[str, Any] = Field(..., description="Skill metadata")
+
+
+class SkillDeleteResponse(BaseModel):
+    """Response model for skill deletion."""
+
+    success: bool = Field(..., description="Whether deletion succeeded")
+    message: str = Field(..., description="Response message")

@@ -27,7 +27,23 @@
       "Bash(README.md:*)",
       "Bash(/dev/null echo:*)",
       "Bash(du -sh *.md docs/*.md archive/*.md)",
-      "Bash(DOCS_REORGANIZATION.md:*)"
+      "Bash(DOCS_REORGANIZATION.md:*)",
+      "Bash(git push:*)",
+      "Bash(npm install:*)",
+      "Bash(docker-compose up:*)",
+      "Bash(npm run:*)",
+      "Bash(curl -s http://localhost:8000/health)",
+      "Bash(curl -s http://localhost:5173/)",
+      "Bash(git reset:*)",
+      "Bash(kill 1989 2170 2035)",
+      "Bash(kill 5867 5876)",
+      "Bash(kill 7344 7346)",
+      "Bash(curl -s http://localhost:8000/api/skills/)",
+      "Bash(kill -9 7452)",
+      "Bash(xargs kill:*)",
+      "Bash(/tmp/test-skill/SKILL.md:*)",
+      "Bash(zip -r /tmp/test-skill.zip *)",
+      "Bash(curl -X POST -F \"file=@/tmp/test-skill.zip\" http://localhost:8000/api/skills/upload)"
     ]
   }
 }

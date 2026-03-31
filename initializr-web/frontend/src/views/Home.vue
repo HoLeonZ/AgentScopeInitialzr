@@ -2,7 +2,16 @@
   <div class="home">
     <el-container>
       <el-header>
-        <h1>AgentScope Initializr</h1>
+        <div class="header-content">
+          <h1>AgentScope Initializr</h1>
+          <nav class="nav-menu">
+            <router-link to="/configure">创建项目</router-link>
+            <router-link to="/skills">
+              <el-icon><Collection /></el-icon>
+              Skill 管理
+            </router-link>
+          </nav>
+        </div>
       </el-header>
       <el-main>
         <el-card class="welcome-card">
@@ -42,6 +51,7 @@
 
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
+import { Collection } from '@element-plus/icons-vue'
 
 const router = useRouter()
 
@@ -58,13 +68,40 @@ const startConfiguration = () => {
 }
 
 .el-header {
-  text-align: center;
   margin-bottom: 40px;
 }
 
-.el-header h1 {
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header-content h1 {
   margin: 0;
   font-size: 2.5em;
+}
+
+.nav-menu {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+
+.nav-menu a {
+  color: #409eff;
+  text-decoration: none;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 16px;
+  border-radius: 4px;
+  transition: background-color 0.3s;
+}
+
+.nav-menu a:hover {
+  background-color: #ecf5ff;
 }
 
 .welcome-card {

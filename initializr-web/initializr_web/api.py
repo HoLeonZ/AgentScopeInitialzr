@@ -12,6 +12,7 @@ from initializr_web.router import (
     models_router,
     extensions_router,
     projects_router,
+    skills_router,
 )
 
 # Create FastAPI app
@@ -41,6 +42,7 @@ app.include_router(templates_router)
 app.include_router(models_router)
 app.include_router(extensions_router)
 app.include_router(projects_router)
+app.include_router(skills_router)
 
 
 @app.get("/")

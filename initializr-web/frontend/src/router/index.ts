@@ -13,6 +13,11 @@ const router = createRouter({
       path: '/configure',
       name: 'configure',
       component: () => import('../views/Configure.vue')
+    },
+    {
+      path: '/skills',
+      name: 'skills',
+      component: () => import('../views/SkillManagement.vue')
     }
   ]
 })
