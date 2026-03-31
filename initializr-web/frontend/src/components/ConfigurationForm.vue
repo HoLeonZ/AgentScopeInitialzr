@@ -16,19 +16,8 @@
 
       <!-- Step 2: Model & Memory -->
       <div v-show="currentStep === 2" class="step-content">
-        <h3>Model Configuration</h3>
-        <p class="subtitle">Configure the LLM model for your agent</p>
-        <el-alert type="info" :closable="false">
-          Model configuration UI - Simplified for MVP
-        </el-alert>
-
-        <el-divider />
-
-        <h3>Memory Configuration</h3>
-        <p class="subtitle">Configure short-term and long-term memory</p>
-        <el-alert type="info" :closable="false">
-          Memory configuration UI - Simplified for MVP
-        </el-alert>
+        <ModelSettings />
+        <MemorySettings />
       </div>
 
       <!-- Step 3: Extensions -->
@@ -91,6 +80,8 @@ import { useConfigStore } from '@/stores/config'
 import { ElMessage } from 'element-plus'
 import TemplateSelector from './TemplateSelector.vue'
 import BasicSettings from './BasicSettings.vue'
+import ModelSettings from './ModelSettings.vue'
+import MemorySettings from './MemorySettings.vue'
 
 const configStore = useConfigStore()
 const currentStep = computed(() => configStore.currentStep)
