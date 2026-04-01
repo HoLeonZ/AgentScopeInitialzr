@@ -17,7 +17,7 @@ async def list_extensions() -> ExtensionsResponse:
     """
     return ExtensionsResponse(
         memory={
-            "short_term": ["oceanbase", "redis"],  # Only OceanBase and Redis for short-term
+            "short_term": ["in-memory", "oceanbase", "redis"],  # In-Memory, OceanBase and Redis for short-term
             "long_term": ["mem0", "oceanbase"],  # Only Mem0 and OceanBase for long-term
         },
         tools={
