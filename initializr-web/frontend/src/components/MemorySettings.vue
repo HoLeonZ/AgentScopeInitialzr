@@ -71,6 +71,14 @@
         <span class="hint">Required for Mem0 memory service</span>
       </el-form-item>
 
+      <el-form-item v-if="enableLongTerm && form.long_term_memory === 'mem0'" label="Mem0 API URL">
+        <el-input
+          v-model="mem0ApiUrl"
+          placeholder="https://api.mem0.ai"
+        />
+        <span class="hint">Mem0 API endpoint URL (optional, uses default if not provided)</span>
+      </el-form-item>
+
       <el-form-item v-if="enableLongTerm && form.long_term_memory === 'oceanbase'" label="OceanBase Connection String">
         <el-input
           v-model="oceanbaseConnectionString"
@@ -88,42 +96,60 @@
       </el-form-item>
 
       <!-- Short-term Memory Configurations -->
-      <el-form-item v-if="form.enable_memory && form.short_term_memory === 'redis'" label="Redis Host">
+      <el-form-item v-if="form.enable_memory && form.short_term_memory === 'redis'" label="Redis Connection Mode">
+        <el-radio-group v-model="redisConnectionMode">
+          <el-radio label="manual">Manual Configuration</el-radio>
+          <el-radio label="url">URL Connection</el-radio>
+        </el-radio-group>
+        <span class="hint">Choose how to connect to Redis server</span>
+      </el-form-item>
+
+      <template v-if="form.enable_memory && form.short_term_memory === 'redis' && redisConnectionMode === 'manual'">
+        <el-form-item label="Redis Host">
+          <el-input
+            v-model="redisHost"
+            placeholder="localhost"
+          />
+          <span class="hint">Redis server hostname</span>
+        </el-form-item>
+
+        <el-form-item label="Redis Port">
+          <el-input-number
+            v-model="redisPort"
+            :min="1"
+            :max="65535"
+            placeholder="6379"
+          />
+          <span class="hint">Redis server port</span>
+        </el-form-item>
+
+        <el-form-item label="Redis DB">
+          <el-input-number
+            v-model="redisDb"
+            :min="0"
+            :max="15"
+            placeholder="0"
+          />
+          <span class="hint">Redis database number</span>
+        </el-form-item>
+
+        <el-form-item label="Redis Password (Optional)">
+          <el-input
+            v-model="redisPassword"
+            type="password"
+            placeholder="Leave empty if no authentication"
+            show-password
+          />
+          <span class="hint">Redis server password</span>
+        </el-form-item>
+      </template>
+
+      <el-form-item v-if="form.enable_memory && form.short_term_memory === 'redis' && redisConnectionMode === 'url'" label="Redis URL">
         <el-input
-          v-model="redisHost"
-          placeholder="localhost"
+          v-model="redisUrl"
+          placeholder="redis://localhost:6379/0 or rediss://user:pass@host:port/db"
         />
-        <span class="hint">Redis server hostname</span>
-      </el-form-item>
-
-      <el-form-item v-if="form.enable_memory && form.short_term_memory === 'redis'" label="Redis Port">
-        <el-input-number
-          v-model="redisPort"
-          :min="1"
-          :max="65535"
-          placeholder="6379"
-        />
-        <span class="hint">Redis server port</span>
-      </el-form-item>
-
-      <el-form-item v-if="form.enable_memory && form.short_term_memory === 'redis'" label="Redis DB">
-        <el-input-number
-          v-model="redisDb"
-          :min="0"
-          :max="15"
-          placeholder="0"
-        />
-        <span class="hint">Redis database number</span>
-      </el-form-item>
-
-      <el-form-item v-if="form.enable_memory && form.short_term_memory === 'redis'" label="Redis Password (Optional)">
-        <el-input
-          v-model="redisPassword"
-          type="password"
-          placeholder="Leave empty if no authentication"
-          show-password
-        />
-        <span class="hint">Redis server password</span>
+        <span class="hint">Complete Redis connection URL (for cloud services like Redis Cloud)</span>
       </el-form-item>
 
       <el-form-item v-if="form.enable_memory && form.short_term_memory === 'oceanbase'" label="OceanBase Connection String">
@@ -191,6 +217,7 @@ const extensions = ref<any>({
 const activePreviewTab = ref('agent')
 const enableLongTerm = ref(false)
 const mem0ApiKey = ref('')
+const mem0ApiUrl = ref('')
 
 // OceanBase configurations
 const oceanbaseConnectionString = ref('')
@@ -199,10 +226,12 @@ const oceanbaseShortTermConnectionString = ref('')
 const oceanbaseShortTermTableName = ref('agent_conversation')
 
 // Redis configurations
+const redisConnectionMode = ref('manual')
 const redisHost = ref('localhost')
 const redisPort = ref(6379)
 const redisDb = ref(0)
 const redisPassword = ref('')
+const redisUrl = ref('')
 
 const updateField = (field: string, value: any) => {
   configStore.setField(field as any, value)
@@ -236,14 +265,48 @@ const agentCodePreview = computed(() => {
 
   let code = `# Agent initialization with memory configuration`
 
-  if (shortTerm) {
-    const memoryClass = shortTerm === 'in-memory' ? 'Memory()' : 'Memory(name="conversation_mem")'
+  if (shortTerm && shortTerm !== 'in-memory') {
+    if (shortTerm === 'redis') {
+      if (redisConnectionMode.value === 'url') {
+        code += `
+
+# Configure Redis memory with URL
+from agentscope.memory import RedisMemory
+
+memory = RedisMemory(
+    url="${redisUrl.value || 'redis://localhost:6379/0'}"
+)`
+      } else {
+        code += `
+
+# Configure Redis memory with manual settings
+from agentscope.memory import RedisMemory
+
+memory = RedisMemory(
+    host="${redisHost.value || 'localhost'}",
+    port=${redisPort.value || 6379},
+    db=${redisDb.value || 0},
+    ${redisPassword.value ? `password="${redisPassword.value}",` : ''}
+)`
+      }
+    } else if (shortTerm === 'oceanbase') {
+      code += `
+
+# Configure OceanBase short-term memory
+from agentscope.memory import OceanBaseMemory
+
+memory = OceanBaseMemory(
+    connection_string="${oceanbaseShortTermConnectionString.value || 'postgresql://user:password@localhost:2881/tenant'}",
+    table_name="${oceanbaseShortTermTableName.value || 'agent_conversation'}",
+)`
+    }
+  } else if (shortTerm === 'in-memory') {
     code += `
 
-from agentscope.memory import Memory
+# Configure in-memory storage
+from agentscope.memory import InMemoryMemory
 
-# Create ${formatMemoryName(shortTerm)} memory
-memory = ${memoryClass}`
+memory = InMemoryMemory()`
   }
 
   if (longTerm && longTerm !== 'none') {
@@ -253,7 +316,8 @@ memory = ${memoryClass}`
 agent.memory.add_long_term(
     type="${longTerm}",
     config={
-        "api_key": "${mem0ApiKey.value || 'your-api-key'}"
+        "api_key": "${mem0ApiKey.value || 'your-api-key'}"${mem0ApiUrl.value ? `,
+        "api_url": "${mem0ApiUrl.value}"` : ''}
     }
 )`
   }
@@ -274,6 +338,21 @@ const configPreview = computed(() => {
     config.short_term_memory = {
       type: form.value.short_term_memory
     }
+    if (form.value.short_term_memory === 'redis') {
+      if (redisConnectionMode.value === 'url') {
+        config.short_term_memory.url = redisUrl.value || 'redis://localhost:6379/0'
+      } else {
+        config.short_term_memory.host = redisHost.value || 'localhost'
+        config.short_term_memory.port = redisPort.value || 6379
+        config.short_term_memory.db = redisDb.value || 0
+        if (redisPassword.value) {
+          config.short_term_memory.password = redisPassword.value
+        }
+      }
+    } else if (form.value.short_term_memory === 'oceanbase') {
+      config.short_term_memory.connection_string = oceanbaseShortTermConnectionString.value || 'postgresql://user:password@localhost:2881/tenant'
+      config.short_term_memory.table_name = oceanbaseShortTermTableName.value || 'agent_conversation'
+    }
   }
 
   if (enableLongTerm.value && form.value.long_term_memory) {
@@ -282,6 +361,9 @@ const configPreview = computed(() => {
     }
     if (form.value.long_term_memory === 'mem0') {
       config.long_term_memory.api_key = mem0ApiKey.value || 'your-api-key'
+      if (mem0ApiUrl.value) {
+        config.long_term_memory.api_url = mem0ApiUrl.value
+      }
     }
   }
 

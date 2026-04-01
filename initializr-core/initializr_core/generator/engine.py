@@ -338,12 +338,44 @@ MIT
             lines.append(f"LONG_TERM_MEMORY={metadata.long_term_memory}")
 
         # Memory backend configuration
-        if metadata.memory_type.value == "long-term" and metadata.long_term_memory:
+        # Short-term memory configuration
+        if metadata.short_term_memory and metadata.short_term_memory != 'in-memory':
+            if metadata.short_term_memory == 'redis':
+                lines.append("# Short-term Memory: Redis Configuration")
+                # Check if using URL or manual configuration
+                if metadata.rag_config and metadata.rag_config.get('redis_url'):
+                    lines.append(f"REDIS_URL={metadata.rag_config.get('redis_url')}")
+                else:
+                    lines.append("REDIS_HOST=localhost")
+                    lines.append("REDIS_PORT=6379")
+                    lines.append("REDIS_DB=0")
+                    lines.append("# REDIS_PASSWORD=your-redis-password  # Optional")
+            elif metadata.short_term_memory == 'oceanbase':
+                lines.append("# Short-term Memory: OceanBase Configuration")
+                lines.append("OCEANBASE_CONNECTION_STRING=postgresql://user:password@localhost:2881/tenant")
+                lines.append("OCEANBASE_TABLE_NAME=agent_conversation")
+            lines.append("")
+
+        # Long-term memory configuration
+        if metadata.long_term_memory:
             if metadata.long_term_memory == "mem0":
+                lines.append("# Long-term Memory: Mem0 Configuration")
                 lines.append("MEM0_API_KEY=your-mem0-api-key")
+                # Check if mem0 URL is provided in rag_config
+                if metadata.rag_config and metadata.rag_config.get('api_url'):
+                    lines.append(f"MEM0_API_URL={metadata.rag_config['api_url']}")
+                else:
+                    lines.append("# MEM0_API_URL=https://api.mem0.ai  # Optional, uncomment if using custom endpoint")
             elif metadata.long_term_memory == "oceanbase":
+                lines.append("# Long-term Memory: OceanBase Configuration")
                 lines.append("OCEANBASE_CONNECTION_STRING=postgresql://user:password@localhost:2881/tenant")
                 lines.append("OCEANBASE_TABLE_NAME=agent_memory")
+            elif metadata.long_term_memory == "redis":
+                lines.append("# Long-term Memory: Redis Configuration")
+                lines.append("REDIS_HOST=localhost")
+                lines.append("REDIS_PORT=6379")
+                lines.append("REDIS_DB=0")
+                lines.append("# REDIS_PASSWORD=your-redis-password  # Optional")
         lines.append("")
 
         # RAG Configuration
@@ -601,8 +633,8 @@ from datetime import datetime
 from dotenv import load_dotenv
 from pathlib import Path
 
-from {metadata.package_name}.config import settings, get_model, get_memory, get_toolkit
-from {metadata.package_name}.utils.log import setup_logging, cleanup_old_logs
+from {metadata.package_name}.config import settings
+from {metadata.package_name}.config.lifecycle import ApplicationLifecycle
 from agentscope.agent import ReActAgent
 {skills_import}
 
@@ -629,7 +661,6 @@ async def main():
         logger.info(f"Agent Type: {agent_type_display}")
         logger.info(f"Model Provider: {metadata.model_provider.value}")
         logger.info(f"Log Level: {os.getenv('LOG_LEVEL', 'INFO')}")
-        logger.info(f"Log Retention: {{settings.LOG_RETENTION_DAYS}} days")
 
         # Clean up old logs
         cleanup_old_logs(
@@ -637,18 +668,18 @@ async def main():
             log_dir=settings.LOG_DIR
         )
 
-        # Initialize configuration
-        model = get_model()
-        memory = get_memory()
-        toolkit = get_toolkit()
+        # Initialize application lifecycle (includes agentscope.init() and middleware injection)
+        ApplicationLifecycle.initialize()
+        logger.info("Application lifecycle initialized")
 
-        # Create agent
+        # Get agent parameters with auto-injected middlewares
+        agent_params = ApplicationLifecycle.get_agent_params()
+
+        # Create agent with all middlewares auto-injected
         agent = ReActAgent(
             name="{metadata.name}",
             sys_prompt=settings.SYSTEM_PROMPT,
-            model=model,
-            toolkit=toolkit,
-            memory=memory,
+            **agent_params  # Auto-includes: model, formatter, toolkit, memory, etc.
         )
 
         logger.info("Agent initialized successfully")
@@ -724,6 +755,13 @@ async def main():
         logger.error(f"Fatal error: {{str(e)}}", exc_info=True)
         print(f"\\n❌ Fatal error: {{str(e)}}")
         sys.exit(1)
+    finally:
+        # Cleanup application lifecycle
+        try:
+            ApplicationLifecycle.shutdown()
+            logger.info("Application shutdown completed")
+        except Exception as e:
+            logger.error(f"Error during shutdown: {{str(e)}}", exc_info=True)
 
 
 def run_cli():
@@ -1583,6 +1621,10 @@ def get_browser_agent_prompt() -> str:
         model_content = self.extension_generator.generate_model_config_file(metadata)
         (pkg_dir / "config" / "model.py").write_text(model_content)
 
+        # Formatter configuration (required for ReActAgent)
+        formatter_content = self.extension_generator.generate_formatter_config_file(metadata)
+        (pkg_dir / "config" / "formatter.py").write_text(formatter_content)
+
         # Memory configuration
         memory_content = self.extension_generator.generate_memory_config_file(metadata)
         (pkg_dir / "config" / "memory.py").write_text(memory_content)
@@ -1590,6 +1632,14 @@ def get_browser_agent_prompt() -> str:
         # Toolkit configuration
         toolkit_content = self.extension_generator.generate_toolkit_config_file(metadata)
         (pkg_dir / "config" / "toolkit.py").write_text(toolkit_content)
+
+        # Middleware manager (for auto-injection)
+        middleware_content = self.extension_generator.generate_middleware_manager_file(metadata)
+        (pkg_dir / "config" / "middleware.py").write_text(middleware_content)
+
+        # Application lifecycle manager
+        lifecycle_content = self.extension_generator.generate_lifecycle_manager_file(metadata)
+        (pkg_dir / "config" / "lifecycle.py").write_text(lifecycle_content)
 
         # RAG configuration (if enabled)
         if metadata.enable_rag:

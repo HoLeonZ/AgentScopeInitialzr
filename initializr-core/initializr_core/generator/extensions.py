@@ -38,6 +38,9 @@ class ExtensionGenerator:
             "from .model import get_model",
             "from .memory import get_memory",
             "from .toolkit import get_toolkit",
+            "from .formatter import get_formatter",
+            "from .middleware import middleware_manager, map_to_agent_params",
+            "from .lifecycle import ApplicationLifecycle",
         ]
 
         # Build __all__ list
@@ -46,6 +49,10 @@ class ExtensionGenerator:
             '"get_model"',
             '"get_memory"',
             '"get_toolkit"',
+            '"get_formatter"',
+            '"middleware_manager"',
+            '"map_to_agent_params"',
+            '"ApplicationLifecycle"',
         ]
 
         if metadata.enable_rag:
@@ -137,7 +144,7 @@ settings = Settings()
             return '''
 def get_model():
     """Get configured model instance."""
-    from agentscope.models import OpenAIChatModel
+    from agentscope.model import OpenAIChatModel
 
     return OpenAIChatModel(
         api_key=os.getenv("OPENAI_API_KEY"),
@@ -149,7 +156,7 @@ def get_model():
             return '''
 def get_model():
     """Get configured model instance."""
-    from agentscope.models import DashScopeChatModel
+    from agentscope.model import DashScopeChatModel
 
     return DashScopeChatModel(
         api_key=os.getenv("DASHSCOPE_API_KEY"),
@@ -161,7 +168,7 @@ def get_model():
             return '''
 def get_model():
     """Get configured model instance."""
-    from agentscope.models import AnthropicChatModel
+    from agentscope.model import AnthropicChatModel
 
     return AnthropicChatModel(
         api_key=os.getenv("ANTHROPIC_API_KEY"),
@@ -173,7 +180,7 @@ def get_model():
             return '''
 def get_model():
     """Get configured model instance."""
-    from agentscope.models import GeminiChatModel
+    from agentscope.model import GeminiChatModel
 
     return GeminiChatModel(
         api_key=os.getenv("GEMINI_API_KEY"),
@@ -185,7 +192,7 @@ def get_model():
             return '''
 def get_model():
     """Get configured model instance."""
-    from agentscope.models import OllamaChatModel
+    from agentscope.model import OllamaChatModel
 
     return OllamaChatModel(
         model_name=os.getenv("OLLAMA_MODEL", "llama2"),
@@ -203,8 +210,11 @@ def get_model():
         """Generate memory configuration code with enhanced options."""
         lines = []
 
-        # Determine memory configuration based on memory_type
-        if metadata.memory_type == MemoryType.LONG_TERM and metadata.long_term_memory:
+        # Check if we have specific memory configurations
+        has_short_term = metadata.short_term_memory and metadata.short_term_memory != 'in-memory'
+        has_long_term = metadata.long_term_memory
+
+        if has_long_term:
             # Long-term memory configuration
             lines.append(f"""
 # Long-term memory configuration
@@ -218,7 +228,8 @@ def get_long_term_memory():
     from agentscope.memory import Mem0Memory
 
     return Mem0Memory(
-        api_key=os.getenv("MEM0_API_KEY"),
+        api_key=os.getenv("MEM0_API_KEY"){''',
+        api_url=os.getenv("MEM0_API_URL")''' if metadata.rag_config and metadata.rag_config.get('api_url') else ''},
     )
 ''')
             elif metadata.long_term_memory == "zep":
@@ -265,13 +276,89 @@ def get_long_term_memory():
     raise NotImplementedError("Long-term memory not configured")
 ''')
 
-            # Main get_memory function for long-term
+        if has_short_term:
+            # Short-term memory configuration
+            lines.append(f"""
+# Short-term memory configuration
+SHORT_TERM_MEMORY_TYPE = "{metadata.short_term_memory}"
+""")
+
+            if metadata.short_term_memory == "redis":
+                # Check if using URL or manual configuration
+                use_redis_url = metadata.rag_config and metadata.rag_config.get('redis_url')
+
+                if use_redis_url:
+                    lines.append(f'''
+def get_short_term_memory():
+    """Get short-term memory instance with Redis (URL mode)."""
+    from agentscope.memory import RedisMemory
+
+    return RedisMemory(
+        url=os.getenv("REDIS_URL", "redis://localhost:6379/0"),
+    )
+''')
+                else:
+                    lines.append(f'''
+def get_short_term_memory():
+    """Get short-term memory instance with Redis (manual mode)."""
+    from agentscope.memory import RedisMemory
+
+    return RedisMemory(
+        host=os.getenv("REDIS_HOST", "localhost"),
+        port=int(os.getenv("REDIS_PORT", "6379")),
+        db=int(os.getenv("REDIS_DB", "0")),
+        password=os.getenv("REDIS_PASSWORD", None),
+    )
+''')
+            elif metadata.short_term_memory == "oceanbase":
+                lines.append(f'''
+def get_short_term_memory():
+    """Get short-term memory instance with OceanBase."""
+    from agentscope.memory import OceanBaseMemory
+
+    return OceanBaseMemory(
+        connection_string=os.getenv("OCEANBASE_CONNECTION_STRING"),
+        table_name=os.getenv("OCEANBASE_TABLE_NAME", "agent_conversation"),
+    )
+''')
+            else:
+                # Default fallback
+                lines.append('''
+def get_short_term_memory():
+    """Get short-term memory instance - placeholder."""
+    raise NotImplementedError("Short-term memory not configured")
+''')
+
+        # Main get_memory function
+        if has_short_term and has_long_term:
+            # Combined memory (short-term + long-term)
+            lines.append('''
+def get_memory():
+    """Get configured memory instance with both short and long-term storage."""
+    from agentscope.memory import CombinedMemory
+
+    short_term = get_short_term_memory()
+    long_term = get_long_term_memory()
+
+    return CombinedMemory(
+        short_term=short_term,
+        long_term=long_term,
+    )
+''')
+        elif has_short_term:
+            # Only short-term memory
+            lines.append('''
+def get_memory():
+    """Get configured memory instance with short-term storage."""
+    return get_short_term_memory()
+''')
+        elif has_long_term:
+            # Only long-term memory
             lines.append('''
 def get_memory():
     """Get configured memory instance with long-term storage."""
     return get_long_term_memory()
 ''')
-
         else:
             # In-memory configuration (default)
             lines.append('''
@@ -336,38 +423,58 @@ def get_toolkit():
 
     def _generate_formatter_config(self, metadata: AgentScopeMetadata) -> str:
         """Generate formatter configuration code."""
+        # Map model providers to their formatter classes
+        formatter_map = {
+            ModelProvider.OPENAI: "OpenAIChatFormatter",
+            ModelProvider.DASHSCOPE: "DashScopeChatFormatter",
+            ModelProvider.ANTHROPIC: "AnthropicChatFormatter",
+            ModelProvider.GEMINI: "GeminiChatFormatter",
+            ModelProvider.OLLAMA: "OllamaChatFormatter",
+        }
+
+        # Map for multi-agent formatters
+        multi_agent_formatter_map = {
+            ModelProvider.OPENAI: "OpenAIMultiAgentFormatter",
+            ModelProvider.DASHSCOPE: "DashScopeMultiAgentFormatter",
+            ModelProvider.ANTHROPIC: "AnthropicMultiAgentFormatter",
+            ModelProvider.GEMINI: "GeminiMultiAgentFormatter",
+            ModelProvider.OLLAMA: "OllamaMultiAgentFormatter",
+        }
+
         if metadata.formatter_name:
             # Use specific formatter by name
             return f'''
 def get_formatter():
     """Get configured formatter instance."""
-    from agentscope.formatters import {metadata.formatter_name}
+    from agentscope.formatter import {metadata.formatter_name}
 
     return {metadata.formatter_name}()
 '''
-        elif metadata.formatter == FormatterType.CHAT:
-            return '''
-def get_formatter():
-    """Get configured formatter instance."""
-    from agentscope.formatters import ChatFormatter
-
-    return ChatFormatter()
-'''
         elif metadata.formatter == FormatterType.MULTI_AGENT:
-            return '''
+            # Multi-agent formatter based on model provider
+            formatter_class = multi_agent_formatter_map.get(
+                metadata.model_provider,
+                "OpenAIMultiAgentFormatter"
+            )
+            return f'''
 def get_formatter():
     """Get configured formatter instance."""
-    from agentscope.formatters import MultiAgentFormatter
+    from agentscope.formatter import {formatter_class}
 
-    return MultiAgentFormatter()
+    return {formatter_class}()
 '''
         else:
-            return '''
+            # Chat formatter based on model provider (default)
+            formatter_class = formatter_map.get(
+                metadata.model_provider,
+                "OpenAIChatFormatter"
+            )
+            return f'''
 def get_formatter():
-    """Get configured formatter instance - placeholder."""
-    from agentscope.formatters import ChatFormatter
+    """Get configured formatter instance."""
+    from agentscope.formatter import {formatter_class}
 
-    return ChatFormatter()
+    return {formatter_class}()
 '''
 
     def _generate_skills_config(self, metadata: AgentScopeMetadata) -> str:
@@ -565,6 +672,19 @@ This module contains the memory client initialization.
 
 import os
 from .settings import settings
+
+{config}
+'''
+
+    def generate_formatter_config_file(self, metadata: AgentScopeMetadata) -> str:
+        """Generate formatter.py configuration file."""
+        config = self._generate_formatter_config(metadata)
+
+        return f'''"""
+Formatter configuration for {metadata.name}.
+
+This module contains the formatter initialization for message formatting.
+"""
 
 {config}
 '''
@@ -1122,3 +1242,251 @@ from .{skill_module}.scripts import {skill_module}_execute
                 )
 
         skills_init_path.write_text(skills_init_content)
+
+
+    def generate_middleware_manager_file(self, metadata: AgentScopeMetadata) -> str:
+        """Generate middleware manager for auto-injection."""
+        return f'''"""
+Middleware manager for {metadata.name}.
+
+This module provides automatic middleware injection and lifecycle management.
+"""
+
+from typing import Dict, Any, Optional, List
+from {metadata.package_name}.config import (
+    get_model,
+    get_formatter,
+    get_memory,
+    get_toolkit,
+)
+
+
+class MiddlewareManager:
+    """Framework-level middleware manager for automatic injection."""
+
+    def __init__(self):
+        self._middlewares: Dict[str, Dict[str, Any]] = {{}}
+        self._initialized = False
+
+    def register(self, name: str, factory: callable, config: Dict[str, Any] = None):
+        """
+        Register a middleware factory function.
+
+        Args:
+            name: Middleware name
+            factory: Factory function that creates the middleware instance
+            config: Optional configuration dict
+        """
+        self._middlewares[name] = {{
+            'factory': factory,
+            'config': config or {{}},
+            'instance': None
+        }}
+
+    def initialize_all(self):
+        """Initialize all registered middlewares."""
+        if self._initialized:
+            return
+
+        for name, middleware in self._middlewares.items():
+            try:
+                middleware['instance'] = middleware['factory'](**middleware['config'])
+            except Exception as e:
+                raise RuntimeError(f"Failed to initialize middleware '{{name}}': {{e}}")
+
+        self._initialized = True
+
+    def get(self, name: str) -> Any:
+        """
+        Get middleware instance.
+
+        Args:
+            name: Middleware name
+
+        Returns:
+            Middleware instance
+
+        Raises:
+            RuntimeError: If middlewares not initialized
+            KeyError: If middleware not found
+        """
+        if not self._initialized:
+            raise RuntimeError(
+                "Middlewares not initialized. "
+                "Call initialize_all() after agentscope.init()"
+            )
+        return self._middlewares[name]['instance']
+
+    def has(self, name: str) -> bool:
+        """Check if middleware is registered."""
+        return name in self._middlewares
+
+    def get_config(self, key: str, default: Any = None) -> Any:
+        """Get configuration value."""
+        return self._middlewares.get(key, {{}}).get('config', {{}}).get(key, default)
+
+    def shutdown_all(self):
+        """Cleanup all middleware resources."""
+        for middleware in self._middlewares.values():
+            instance = middleware['instance']
+            if instance and hasattr(instance, 'close'):
+                try:
+                    instance.close()
+                except Exception as e:
+                    print(f"Warning: Error closing middleware: {{e}}")
+        self._initialized = False
+
+
+# Global middleware manager instance
+middleware_manager = MiddlewareManager()
+
+
+def register_core_middlewares():
+    """Register core middlewares (model, formatter, memory, toolkit)."""
+    # Register core components
+    middleware_manager.register('model', lambda: get_model(), {{}})
+    middleware_manager.register('formatter', lambda: get_formatter(), {{}})
+    middleware_manager.register('memory', lambda: get_memory(), {{}})
+    middleware_manager.register('toolkit', lambda: get_toolkit(), {{}})
+
+
+def map_to_agent_params() -> Dict[str, Any]:
+    """
+    Map middlewares to ReActAgent parameters.
+
+    Returns:
+        Dictionary of agent parameters
+    """
+    params = {{
+        'model': middleware_manager.get('model'),
+        'formatter': middleware_manager.get('formatter'),
+    }}
+
+    # Optional middlewares
+    optional_middlewares = ['toolkit', 'memory']
+
+    for middleware_name in optional_middlewares:
+        if middleware_manager.has(middleware_name):
+            params[middleware_name] = middleware_manager.get(middleware_name)
+
+    # Add optional RAG middleware if registered
+    if middleware_manager.has('knowledge'):
+        params['knowledge'] = middleware_manager.get('knowledge')
+
+    # Add optional pipeline middleware if registered
+    if middleware_manager.has('plan_notebook'):
+        params['plan_notebook'] = middleware_manager.get('plan_notebook')
+
+    # Add configuration parameters
+    params.update({{
+        'enable_meta_tool': middleware_manager.get_config('enable_meta_tool', False),
+        'parallel_tool_calls': middleware_manager.get_config('parallel_tool_calls', False),
+        'max_iters': middleware_manager.get_config('max_iters', 10),
+    }})
+
+    return params
+'''
+
+    def generate_lifecycle_manager_file(self, metadata: AgentScopeMetadata) -> str:
+        """Generate application lifecycle manager."""
+        return f'''"""
+Application lifecycle manager for {metadata.name}.
+
+This module provides framework-level initialization and shutdown
+integrated with AgentScope lifecycle.
+"""
+
+import os
+import agentscope
+from {metadata.package_name}.config.middleware import (
+    middleware_manager,
+    register_core_middlewares,
+    map_to_agent_params,
+)
+{f'''
+from {metadata.package_name}.config.rag import get_rag_retriever
+''' if metadata.enable_rag else ''}
+{f'''
+from {metadata.package_name}.config.pipeline import get_pipeline
+''' if metadata.enable_pipeline else ''}
+
+
+class ApplicationLifecycle:
+    """Application lifecycle manager integrated with AgentScope."""
+
+    _initialized = False
+
+    @classmethod
+    def initialize(cls):
+        """
+        Initialize application with AgentScope and all middlewares.
+
+        This should be called before creating any agents.
+        """
+        if cls._initialized:
+            return
+
+        # 1. Initialize AgentScope
+        agentscope.init(
+            project="{metadata.name}",
+            name="{metadata.name}_instance",
+            logging_path="logs",
+            logging_level=os.getenv("LOG_LEVEL", "INFO"),
+        )
+
+        # 2. Register core middlewares
+        register_core_middlewares()
+
+        # 3. Register optional middlewares
+{f'''
+        # Register RAG as knowledge middleware
+        middleware_manager.register(
+            'knowledge',
+            lambda: get_rag_retriever(),
+            {{}}
+        )
+''' if metadata.enable_rag else ''}
+{f'''
+        # Register pipeline as plan notebook middleware
+        middleware_manager.register(
+            'plan_notebook',
+            lambda: get_pipeline(),
+            {{}}
+        )
+''' if metadata.enable_pipeline else ''}
+
+        # 4. Initialize all middlewares
+        middleware_manager.initialize_all()
+
+        cls._initialized = True
+
+    @classmethod
+    def shutdown(cls):
+        """
+        Shutdown application and cleanup resources.
+
+        This should be called when exiting the application.
+        """
+        if not cls._initialized:
+            return
+
+        # Cleanup all middlewares
+        middleware_manager.shutdown_all()
+
+        cls._initialized = False
+
+    @classmethod
+    def get_agent_params(cls) -> dict:
+        """
+        Get agent parameters with all middlewares auto-injected.
+
+        Returns:
+            Dictionary of agent parameters
+        """
+        if not cls._initialized:
+            raise RuntimeError(
+                "Application not initialized. Call ApplicationLifecycle.initialize() first."
+            )
+
+        return map_to_agent_params()
+'''

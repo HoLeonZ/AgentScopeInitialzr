@@ -445,14 +445,14 @@
       </template>
     </el-card>
 
-    <!-- Pipeline Extension -->
-    <el-card class="extension-card pipeline-card" shadow="hover">
+    <!-- Pipeline Extension (Only for Multi-Agent) -->
+    <el-card v-if="form.agent_type === 'multi-agent'" class="extension-card pipeline-card" shadow="hover">
       <template #header>
         <div class="card-header">
           <div class="header-left">
             <el-icon class="header-icon" color="#909399"><Operation /></el-icon>
             <span class="header-title">Pipeline Extension</span>
-            <el-tag size="small" type="warning">Advanced</el-tag>
+            <el-tag size="small" type="warning">Multi-Agent Only</el-tag>
           </div>
           <el-switch
             v-model="localForm.enable_pipeline"
@@ -598,7 +598,7 @@
           <el-tag v-else type="info">Disabled</el-tag>
         </el-descriptions-item>
 
-        <el-descriptions-item label="Pipeline">
+        <el-descriptions-item v-if="form.agent_type === 'multi-agent'" label="Pipeline">
           <el-tag v-if="localForm.enable_pipeline" type="warning">
             {{ pipelineConfig.type || 'Not Configured' }}
           </el-tag>

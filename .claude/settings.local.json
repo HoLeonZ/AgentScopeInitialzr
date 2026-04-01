@@ -62,7 +62,9 @@
       "Bash(lsof -ti:8000)",
       "Bash(lsof -ti:5173)",
       "Bash(lsof -i:8000 -i:5173)",
-      "Bash(lsof:*)"
+      "Bash(lsof:*)",
+      "Bash(find . -name \"*.py\" -exec grep -l \"init.*agent\\\\|agent.*init\\\\|lifecycle\\\\|生命周期\" {} \\\\;)",
+      "Bash(find:*)"
     ]
   }
 }

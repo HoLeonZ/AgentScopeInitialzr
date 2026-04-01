@@ -47,12 +47,12 @@ class TemplateRegistry:
 
     def _register_default_templates(self):
         """Register default templates."""
-        # Basic Agent Template (src/ layout)
+        # Single Agent Template (src/ layout)
         self.register(
             Template(
                 template_id="basic",
-                name="Basic ReAct Agent",
-                description="基础 ReAct 智能体，支持对话和工具调用",
+                name="Single Agent",
+                description="单智能体系统，支持对话和工具调用",
                 structure_path="basic-agent-src",
                 default_dependencies=[
                     Dependency("agentscope"),
