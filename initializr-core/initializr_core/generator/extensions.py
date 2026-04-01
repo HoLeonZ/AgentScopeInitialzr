@@ -80,6 +80,7 @@ You should respond in a friendly and professional manner."""
     ENABLE_PIPELINE = {str(metadata.enable_pipeline).lower()}
 
     # Logging Configuration
+    LOG_DIR = os.getenv("LOG_DIR", "logs")
     LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
     LOG_TO_FILE = os.getenv("LOG_TO_FILE", "true").lower() == "true"
     LOG_TO_CONSOLE = os.getenv("LOG_TO_CONSOLE", "true").lower() == "true"
@@ -180,96 +181,83 @@ def get_model():
         """Generate memory configuration code with enhanced options."""
         lines = []
 
-        # Short-term memory
-        if metadata.short_term_memory:
-            lines.append(f"""
-# Short-term memory configuration
-SHORT_TERM_MEMORY_TYPE = "{metadata.short_term_memory}"
-""")
-
-            if metadata.short_term_memory == "in-memory":
-                lines.append('''
-def get_short_term_memory():
-    """Get short-term memory instance."""
-    from agentscope.memory import InMemoryMemory
-    return InMemoryMemory()
-''')
-            elif metadata.short_term_memory == "redis":
-                lines.append('''
-def get_short_term_memory():
-    """Get short-term memory instance with Redis."""
-    from agentscope.memory import RedisMemory
-    return RedisMemory(
-        host=os.getenv("REDIS_HOST", "localhost"),
-        port=int(os.getenv("REDIS_PORT", "6379")),
-        db=int(os.getenv("REDIS_DB", "0")),
-    )
-''')
-            elif metadata.short_term_memory == "oceanbase":
-                lines.append('''
-def get_short_term_memory():
-    """Get short-term memory instance with OceanBase."""
-    from agentscope.memory import OceanBaseMemory
-    return OceanBaseMemory(
-        connection_string=os.getenv("OCEANBASE_CONNECTION_STRING"),
-    )
-''')
-
-        # Long-term memory
-        if metadata.long_term_memory and metadata.long_term_memory != "none":
+        # Determine memory configuration based on memory_type
+        if metadata.memory_type == MemoryType.LONG_TERM and metadata.long_term_memory:
+            # Long-term memory configuration
             lines.append(f"""
 # Long-term memory configuration
 LONG_TERM_MEMORY_TYPE = "{metadata.long_term_memory}"
 """)
 
             if metadata.long_term_memory == "mem0":
-                lines.append('''
+                lines.append(f'''
 def get_long_term_memory():
     """Get long-term memory instance with Mem0."""
-    from agentscope.memory import Mem0LongTermMemory
-    return Mem0LongTermMemory(
-        api_key=os.getenv("MEMORY_API_KEY"),
+    from agentscope.memory import Mem0Memory
+
+    return Mem0Memory(
+        api_key=os.getenv("MEM0_API_KEY"),
     )
 ''')
             elif metadata.long_term_memory == "zep":
-                lines.append('''
+                lines.append(f'''
 def get_long_term_memory():
     """Get long-term memory instance with Zep."""
-    from agentscope.memory import ZepLongTermMemory
-    return ZepLongTermMemory(
+    from agentscope.memory import ZepMemory
+
+    return ZepMemory(
         api_key=os.getenv("ZEP_API_KEY"),
         endpoint=os.getenv("ZEP_ENDPOINT"),
+        session_id=os.getenv("ZEP_SESSION_ID", "default"),
     )
 ''')
             elif metadata.long_term_memory == "oceanbase":
-                lines.append('''
+                lines.append(f'''
 def get_long_term_memory():
     """Get long-term memory instance with OceanBase."""
-    from agentscope.memory import OceanBaseLongTermMemory
-    return OceanBaseLongTermMemory(
+    from agentscope.memory import OceanBaseMemory
+
+    return OceanBaseMemory(
         connection_string=os.getenv("OCEANBASE_CONNECTION_STRING"),
+        table_name=os.getenv("OCEANBASE_TABLE_NAME", "agent_memory"),
     )
 ''')
+            elif metadata.long_term_memory == "redis":
+                lines.append(f'''
+def get_long_term_memory():
+    """Get long-term memory instance with Redis."""
+    from agentscope.memory import RedisMemory
 
-        # Main get_memory function
-        if metadata.long_term_memory and metadata.long_term_memory != "none":
+    return RedisMemory(
+        host=os.getenv("REDIS_HOST", "localhost"),
+        port=int(os.getenv("REDIS_PORT", "6379")),
+        db=int(os.getenv("REDIS_DB", "0")),
+        password=os.getenv("REDIS_PASSWORD", None),
+    )
+''')
+            else:
+                # Default fallback
+                lines.append('''
+def get_long_term_memory():
+    """Get long-term memory instance - placeholder."""
+    raise NotImplementedError("Long-term memory not configured")
+''')
+
+            # Main get_memory function for long-term
             lines.append('''
 def get_memory():
-    """Get configured memory instance with both short and long-term memory."""
-    from agentscope.memory import CombinedMemory
-
-    short_term = get_short_term_memory()
-    long_term = get_long_term_memory()
-
-    return CombinedMemory(
-        short_term=short_term,
-        long_term=long_term,
-    )
+    """Get configured memory instance with long-term storage."""
+    return get_long_term_memory()
 ''')
+
         else:
+            # In-memory configuration (default)
             lines.append('''
+# In-memory configuration
+MEMORY_TYPE = "in-memory"
+
 def get_memory():
-    """Get configured memory instance."""
+    """Get configured in-memory instance."""
     from agentscope.memory import InMemoryMemory
     return InMemoryMemory()
 ''')
@@ -387,7 +375,7 @@ def get_skills():
         return "\n".join(lines)
 
     def _generate_rag_config(self, metadata: AgentScopeMetadata) -> str:
-        """Generate RAG configuration code."""
+        """Generate RAG configuration code with client instantiation."""
         if not metadata.enable_rag:
             return '''
 # RAG not enabled
@@ -395,31 +383,91 @@ def get_skills():
 
         config = metadata.rag_config or {}
         store_type = config.get("store_type", "chroma")
-        embedding_model = config.get("embedding_model", "openai:text-embedding-ada-002")
+        embedding_model = config.get("embedding_model", "openai")
         chunk_size = config.get("chunk_size", 500)
         chunk_overlap = config.get("chunk_overlap", 50)
 
-        return f'''
-# RAG Configuration
+        lines = [
+            f'''# RAG Configuration
 RAG_STORE_TYPE = "{store_type}"
 RAG_EMBEDDING_MODEL = "{embedding_model}"
 RAG_CHUNK_SIZE = {chunk_size}
 RAG_CHUNK_OVERLAP = {chunk_overlap}
+'''
+        ]
 
+        # Generate client instantiation code based on store type
+        if store_type == "chroma":
+            lines.append(f'''
+def get_vector_store():
+    """Get configured ChromaDB vector store instance."""
+    import chromadb
+    from agentscope.rag import ChromaVectorStore
+
+    client = chromadb.HttpClient(
+        host=os.getenv("CHROMA_HOST", "localhost"),
+        port=int(os.getenv("CHROMA_PORT", "8000")),
+    )
+
+    return ChromaVectorStore(
+        client=client,
+        collection_name=os.getenv("CHROMA_COLLECTION", "agent_documents"),
+        embedding_model="{embedding_model}",
+    )
+''')
+        elif store_type == "faiss":
+            lines.append(f'''
+def get_vector_store():
+    """Get configured FAISS vector store instance."""
+    from agentscope.rag import FAISSVectorStore
+    from pathlib import Path
+
+    return FAISSVectorStore(
+        index_path=Path(os.getenv("FAISS_INDEX_PATH", "./faiss_index")),
+        embedding_model="{embedding_model}",
+        dimension=int(os.getenv("FAISS_DIMENSION", "1536")),
+    )
+''')
+        elif store_type == "pinecone":
+            lines.append(f'''
+def get_vector_store():
+    """Get configured Pinecone vector store instance."""
+    from agentscope.rag import PineconeVectorStore
+
+    return PineconeVectorStore(
+        api_key=os.getenv("PINECONE_API_KEY"),
+        environment=os.getenv("PINECONE_ENVIRONMENT", "us-west1-gcp"),
+        index_name=os.getenv("PINECONE_INDEX", "agent-docs"),
+        embedding_model="{embedding_model}",
+    )
+''')
+        else:
+            # Default fallback
+            lines.append(f'''
+def get_vector_store():
+    """Get vector store - placeholder for {store_type}."""
+    raise NotImplementedError("Vector store type not implemented: {store_type}")
+''')
+
+        # Add RAG retriever function
+        lines.append(f'''
 def get_rag_retriever():
     """Get configured RAG retriever instance."""
     from agentscope.rag import RAGRetriever
 
+    vector_store = get_vector_store()
+
     return RAGRetriever(
-        store_type="{store_type}",
-        embedding_model="{embedding_model}",
+        vector_store=vector_store,
         chunk_size={chunk_size},
         chunk_overlap={chunk_overlap},
     )
-'''
+''')
+
+        return "\n".join(lines)
 
     def _generate_pipeline_config(self, metadata: AgentScopeMetadata) -> str:
-        """Generate pipeline configuration code."""
+        """Generate pipeline configuration code with client instantiation."""
         if not metadata.enable_pipeline:
             return '''
 # Pipeline not enabled
@@ -430,24 +478,58 @@ def get_rag_retriever():
         num_stages = config.get("num_stages", 3)
         error_handling = config.get("error_handling", "stop")
 
-        return f'''
-# Pipeline Configuration
+        lines = [
+            f'''# Pipeline Configuration
 PIPELINE_TYPE = "{pipeline_type}"
 PIPELINE_NUM_STAGES = {num_stages}
 PIPELINE_ERROR_HANDLING = "{error_handling}"
+'''
+        ]
 
+        # Generate pipeline instantiation based on type
+        if pipeline_type == "sequential":
+            lines.append(f'''
 def get_pipeline():
-    """Get configured pipeline instance."""
-    from agentscope.pipeline import Pipeline
+    """Get configured sequential pipeline instance."""
+    from agentscope.pipeline import SequentialPipeline
 
-    pipeline = Pipeline(
-        type="{pipeline_type}",
+    return SequentialPipeline(
         num_stages={num_stages},
         error_handling="{error_handling}",
     )
+''')
+        elif pipeline_type == "parallel":
+            lines.append(f'''
+def get_pipeline():
+    """Get configured parallel pipeline instance."""
+    from agentscope.pipeline import ParallelPipeline
 
-    return pipeline
-'''
+    return ParallelPipeline(
+        num_stages={num_stages},
+        error_handling="{error_handling}",
+        max_concurrency=int(os.getenv("PIPELINE_MAX_CONCURRENCY", "3")),
+    )
+''')
+        elif pipeline_type == "conditional":
+            lines.append(f'''
+def get_pipeline():
+    """Get configured conditional pipeline instance."""
+    from agentscope.pipeline import ConditionalPipeline
+
+    return ConditionalPipeline(
+        num_stages={num_stages},
+        error_handling="{error_handling}",
+    )
+''')
+        else:
+            # Default fallback
+            lines.append(f'''
+def get_pipeline():
+    """Get pipeline - placeholder for {pipeline_type}."""
+    raise NotImplementedError("Pipeline type not implemented: {pipeline_type}")
+''')
+
+        return "\n".join(lines)
 
     def generate_hooks_code(self, metadata: AgentScopeMetadata) -> str:
         """Generate hooks implementation code."""

@@ -65,21 +65,63 @@ agentscope-init my-agent --template basic
 
 ## 🔧 开发
 
+### 环境要求
+
+- Python 3.11+
+- Node.js 16+
+- npm 或 yarn
+
+### 克隆仓库
+
 ```bash
-# 克隆仓库
 git clone https://github.com/your-org/agentscope-initializr.git
 cd agentscope-initializr
+```
 
+### 后端启动
+
+```bash
+# 进入后端目录
+cd initializr-web
+
+# 安装依赖（推荐使用虚拟环境）
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+pip install -e .
+
+# 启动后端服务（运行在 http://localhost:8000）
+python -m initializr_web.main
+# 或安装后使用命令
+agentscope-web
+```
+
+### 前端启动
+
+```bash
+# 进入前端目录
+cd initializr-web/frontend
+
+# 安装依赖
+npm install
+
+# 启动开发服务器（运行在 http://localhost:5173）
+npm run dev
+
+# 构建生产版本
+npm run build
+
+# 类型检查
+npm run type-check
+```
+
+### 运行测试
+
+```bash
 # 安装开发依赖
 pip install -e ".[dev]"
 
 # 运行测试
 pytest
-
-# 启动开发服务器
-cd initializr-web/frontend
-npm install
-npm run dev
 ```
 
 ## 📝 变更日志

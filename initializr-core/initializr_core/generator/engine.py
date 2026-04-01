@@ -296,6 +296,7 @@ MIT
         """Generate .env.example content."""
         lines = ["# Agent Configuration"]
 
+        # Model provider configuration
         if metadata.model_provider.value == "openai":
             lines.append("OPENAI_API_KEY=your-api-key-here")
             lines.append("OPENAI_MODEL=gpt-4")
@@ -309,12 +310,53 @@ MIT
             lines.append("GEMINI_API_KEY=your-api-key-here")
             lines.append("GEMINI_MODEL=gemini-pro")
 
-        if metadata.memory_type.value == "long-term":
+        # Memory configuration
+        if metadata.memory_type.value == "long-term" and metadata.long_term_memory:
             lines.append("")
             lines.append("# Long-term Memory Configuration")
-            lines.append("MEMORY_BACKEND=mem0")
-            lines.append("MEMORY_API_KEY=your-memory-api-key")
 
+            if metadata.long_term_memory == "mem0":
+                lines.append("MEM0_API_KEY=your-mem0-api-key")
+            elif metadata.long_term_memory == "zep":
+                lines.append("ZEP_API_KEY=your-zep-api-key")
+                lines.append("ZEP_ENDPOINT=https://api.zep.ai")
+                lines.append("ZEP_SESSION_ID=default")
+            elif metadata.long_term_memory == "oceanbase":
+                lines.append("OCEANBASE_CONNECTION_STRING=postgresql://user:password@localhost:2881/tenant")
+                lines.append("OCEANBASE_TABLE_NAME=agent_memory")
+            elif metadata.long_term_memory == "redis":
+                lines.append("REDIS_HOST=localhost")
+                lines.append("REDIS_PORT=6379")
+                lines.append("REDIS_DB=0")
+                lines.append("REDIS_PASSWORD=")
+
+        # RAG configuration
+        if metadata.enable_rag:
+            lines.append("")
+            lines.append("# RAG Configuration")
+
+            rag_config = metadata.rag_config or {}
+            store_type = rag_config.get("store_type", "chroma")
+
+            if store_type == "chroma":
+                lines.append("CHROMA_HOST=localhost")
+                lines.append("CHROMA_PORT=8000")
+                lines.append("CHROMA_COLLECTION=agent_documents")
+            elif store_type == "faiss":
+                lines.append("FAISS_INDEX_PATH=./faiss_index")
+                lines.append("FAISS_DIMENSION=1536")
+            elif store_type == "pinecone":
+                lines.append("PINECONE_API_KEY=your-pinecone-api-key")
+                lines.append("PINECONE_ENVIRONMENT=us-west1-gcp")
+                lines.append("PINECONE_INDEX=agent-docs")
+
+        # Pipeline configuration
+        if metadata.enable_pipeline:
+            lines.append("")
+            lines.append("# Pipeline Configuration")
+            lines.append("PIPELINE_MAX_CONCURRENCY=3")
+
+        # Research agent search API
         if metadata.agent_type.value == "research":
             lines.append("")
             lines.append("# Search API Configuration")
@@ -323,6 +365,8 @@ MIT
         # Add logging configuration
         lines.append("")
         lines.append("# Logging Configuration")
+        lines.append("# Log directory path (relative or absolute)")
+        lines.append("LOG_DIR=logs")
         lines.append("LOG_LEVEL=INFO")
         lines.append("LOG_TO_FILE=true")
         lines.append("LOG_TO_CONSOLE=true")
@@ -533,7 +577,7 @@ from dotenv import load_dotenv
 from pathlib import Path
 
 from {metadata.package_name}.config import settings, get_model, get_memory, get_toolkit
-from {metadata.package_name}.utils.logging import setup_logging, cleanup_old_logs
+from {metadata.package_name}.utils.log import setup_logging, cleanup_old_logs
 from agentscope.agent import ReActAgent
 {skills_import}
 
@@ -543,6 +587,7 @@ load_dotenv()
 # Setup unified logging with file rotation and retention
 logger = setup_logging(
     level=os.getenv("LOG_LEVEL", "INFO"),
+    log_dir=settings.LOG_DIR,
     log_to_file=settings.LOG_TO_FILE,
     log_to_console=settings.LOG_TO_CONSOLE,
     max_bytes=settings.LOG_FILE_MAX_BYTES,
@@ -562,7 +607,10 @@ async def main():
         logger.info(f"Log Retention: {{settings.LOG_RETENTION_DAYS}} days")
 
         # Clean up old logs
-        cleanup_old_logs(retention_days=settings.LOG_RETENTION_DAYS)
+        cleanup_old_logs(
+            retention_days=settings.LOG_RETENTION_DAYS,
+            log_dir=settings.LOG_DIR
+        )
 
         # Initialize configuration
         model = get_model()
@@ -684,7 +732,13 @@ if __name__ == "__main__":
         (pkg_dir / "skills" / "__init__.py").write_text('"""Agent skill modules."""\n')
         (pkg_dir / "tools" / "__init__.py").write_text('"""Tool implementations."""\n')
         (pkg_dir / "prompts" / "__init__.py").write_text('"""Prompt templates."""\n')
-        (pkg_dir / "utils" / "__init__.py").write_text('"""Utility functions."""\n')
+        (pkg_dir / "utils" / "__init__.py").write_text('''"""Utility functions."""
+
+from . import helpers
+from . import log
+
+__all__ = ["helpers", "log"]
+''')
 
     def _generate_agents(self, pkg_dir: Path, metadata: AgentScopeMetadata):
         """Generate agent implementation files."""
@@ -803,7 +857,11 @@ __all__ = ["calculator", "get_current_time"]
 
     def _generate_utils(self, pkg_dir: Path, metadata: AgentScopeMetadata):
         """Generate utility function files."""
-        # Generate logging module
+        # Create log directory under utils
+        log_dir = pkg_dir / "utils" / "log"
+        log_dir.mkdir(parents=True, exist_ok=True)
+
+        # Generate logging module in utils/log/
         logging_content = f'''"""
 Unified logging module for {metadata.name}.
 
@@ -812,6 +870,7 @@ retention policies, and structured logging support.
 """
 
 import logging
+import os
 import sys
 from pathlib import Path
 from logging.handlers import RotatingFileHandler, TimedRotatingFileHandler
@@ -822,8 +881,8 @@ from datetime import datetime
 class LoggerConfig:
     """Logger configuration."""
 
-    # Log directory
-    LOG_DIR = Path("logs")
+    # Log directory (can be overridden via environment variable)
+    LOG_DIR = Path(os.getenv("LOG_DIR", "logs"))
 
     # Log format
     LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s"
@@ -867,6 +926,7 @@ class ColoredFormatter(logging.Formatter):
 def setup_logging(
     name: str = "{metadata.package_name}",
     level: str = "INFO",
+    log_dir: Optional[Path] = None,
     log_to_file: bool = True,
     log_to_console: bool = True,
     max_bytes: int = LoggerConfig.LOG_FILE_MAX_BYTES,
@@ -879,6 +939,7 @@ def setup_logging(
     Args:
         name: Logger name
         level: Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+        log_dir: Log directory path (defaults to LOG_DIR env var or "logs")
         log_to_file: Enable file logging
         log_to_console: Enable console logging
         max_bytes: Maximum log file size before rotation (bytes)
@@ -905,6 +966,12 @@ def setup_logging(
     logger.setLevel(getattr(logging, level.upper()))
     logger.handlers.clear()  # Clear existing handlers
 
+    # Determine log directory
+    if log_dir is None:
+        log_dir = LoggerConfig.LOG_DIR
+    else:
+        log_dir = Path(log_dir)
+
     # Create formatters
     file_formatter = logging.Formatter(
         fmt=LoggerConfig.LOG_FORMAT,
@@ -920,10 +987,10 @@ def setup_logging(
     # File handler with rotation
     if log_to_file:
         # Ensure log directory exists
-        LoggerConfig.LOG_DIR.mkdir(parents=True, exist_ok=True)
+        log_dir.mkdir(parents=True, exist_ok=True)
 
         # Use rotating file handler (size-based)
-        log_file = LoggerConfig.LOG_DIR / f"{{name}}.log"
+        log_file = log_dir / f"{{name}}.log"
         file_handler = RotatingFileHandler(
             filename=log_file,
             maxBytes=max_bytes,
@@ -936,7 +1003,7 @@ def setup_logging(
 
         # Also add time-based rotation for daily cleanup
         timed_handler = TimedRotatingFileHandler(
-            filename=LoggerConfig.LOG_DIR / f"{{name}}_daily.log",
+            filename=log_dir / f"{{name}}_daily.log",
             when='midnight',
             interval=1,
             backupCount=retention_days,
@@ -972,14 +1039,23 @@ def get_logger(name: Optional[str] = None) -> logging.Logger:
     return logging.getLogger(name)
 
 
-def cleanup_old_logs(retention_days: int = LoggerConfig.LOG_RETENTION_DAYS):
+def cleanup_old_logs(
+    retention_days: int = LoggerConfig.LOG_RETENTION_DAYS,
+    log_dir: Optional[Path] = None
+):
     """
     Clean up log files older than retention_days.
 
     Args:
         retention_days: Number of days to keep logs
+        log_dir: Log directory path (defaults to LOG_DIR env var or "logs")
     """
-    if not LoggerConfig.LOG_DIR.exists():
+    if log_dir is None:
+        log_dir = LoggerConfig.LOG_DIR
+    else:
+        log_dir = Path(log_dir)
+
+    if not log_dir.exists():
         return
 
     import os
@@ -988,7 +1064,7 @@ def cleanup_old_logs(retention_days: int = LoggerConfig.LOG_RETENTION_DAYS):
     current_time = time.time()
     cutoff_time = current_time - (retention_days * 24 * 60 * 60)
 
-    for log_file in LoggerConfig.LOG_DIR.glob("*.log*"):
+    for log_file in log_dir.glob("*.log*"):
         try:
             if log_file.stat().st_mtime < cutoff_time:
                 log_file.unlink()
@@ -1039,7 +1115,32 @@ if __name__ == "__main__":
     # Cleanup old logs
     cleanup_old_logs(retention_days=7)
 '''
-        (pkg_dir / "utils" / "logging.py").write_text(logging_content)
+        (log_dir / "logging.py").write_text(logging_content)
+
+        # Generate log module __init__.py
+        log_init_content = '''"""
+Log management utilities.
+
+This package contains all logging-related functionality.
+"""
+
+from .logging import (
+    setup_logging,
+    get_logger,
+    cleanup_old_logs,
+    LoggerContext,
+    LoggerConfig,
+)
+
+__all__ = [
+    "setup_logging",
+    "get_logger",
+    "cleanup_old_logs",
+    "LoggerContext",
+    "LoggerConfig",
+]
+'''
+        (log_dir / "__init__.py").write_text(log_init_content)
 
         # Generate helpers module
         helpers_content = f'''"""
@@ -1051,7 +1152,7 @@ This module provides common utility functions used throughout the application.
 from typing import Any, Dict, Optional
 from datetime import datetime
 
-from .logging import get_logger
+from .log.logging import get_logger
 
 
 logger = get_logger(__name__)
