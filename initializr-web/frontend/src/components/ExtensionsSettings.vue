@@ -306,22 +306,16 @@
                 size="large"
                 @change="updateRagConfig"
               >
-                <el-option label="Chroma" value="chroma">
+                <el-option label="Qdrant" value="qdrant">
                   <div class="option-item">
-                    <div class="option-label">Chroma</div>
-                    <div class="option-desc">Local vector database</div>
+                    <div class="option-label">Qdrant</div>
+                    <div class="option-desc">High-performance vector database</div>
                   </div>
                 </el-option>
-                <el-option label="FAISS" value="faiss">
+                <el-option label="KBase" value="kbase">
                   <div class="option-item">
-                    <div class="option-label">FAISS</div>
-                    <div class="option-desc">Facebook AI Similarity Search</div>
-                  </div>
-                </el-option>
-                <el-option label="Pinecone" value="pinecone">
-                  <div class="option-item">
-                    <div class="option-label">Pinecone</div>
-                    <div class="option-desc">Managed vector database service</div>
+                    <div class="option-label">KBase</div>
+                    <div class="option-desc">Enterprise knowledge base service</div>
                   </div>
                 </el-option>
               </el-select>
@@ -338,6 +332,66 @@
             </el-form-item>
           </el-col>
         </el-row>
+
+        <!-- Qdrant Configuration -->
+        <template v-if="ragConfig.store_type === 'qdrant'">
+          <el-divider content-position="left">
+            <el-icon><Setting /></el-icon>
+            Qdrant Configuration
+          </el-divider>
+
+          <el-row :gutter="20">
+            <el-col :span="12">
+              <el-form-item label="Qdrant Host">
+                <el-input
+                  v-model="ragConfig.qdrant_host"
+                  placeholder="localhost"
+                  @input="updateRagConfig"
+                />
+                <span class="hint">Qdrant server hostname</span>
+              </el-form-item>
+            </el-col>
+
+            <el-col :span="12">
+              <el-form-item label="Qdrant Port">
+                <el-input-number
+                  v-model="ragConfig.qdrant_port"
+                  :min="1"
+                  :max="65535"
+                  placeholder="6333"
+                  @change="updateRagConfig"
+                />
+                <span class="hint">Qdrant server port</span>
+              </el-form-item>
+            </el-col>
+          </el-row>
+
+          <el-form-item label="Collection Name">
+            <el-input
+              v-model="ragConfig.collection_name"
+              placeholder="agent_documents"
+              @input="updateRagConfig"
+            />
+            <span class="hint">Qdrant collection name for storing documents</span>
+          </el-form-item>
+        </template>
+
+        <!-- KBase Configuration -->
+        <template v-if="ragConfig.store_type === 'kbase'">
+          <el-divider content-position="left">
+            <el-icon><Setting /></el-icon>
+            KBase Configuration
+          </el-divider>
+
+          <el-form-item label="KBase Retrieval URL">
+            <el-input
+              v-model="ragConfig.kbase_retrieval_url"
+              placeholder="https://kbase.example.com/api/retrieve"
+              @input="updateRagConfig"
+            />
+            <span class="hint">KBase retrieval service URL</span>
+          </el-form-item>
+        </template>
 
         <el-divider content-position="left">
           <el-icon><Setting /></el-icon>
@@ -593,10 +647,16 @@ const localForm = reactive({
 })
 
 const ragConfig = reactive({
-  store_type: form.value.rag_config?.store_type || 'chroma',
+  store_type: form.value.rag_config?.store_type || 'qdrant',
   embedding_model: form.value.rag_config?.embedding_model || 'openai:text-embedding-ada-002',
   chunk_size: form.value.rag_config?.chunk_size || 500,
   chunk_overlap: form.value.rag_config?.chunk_overlap || 50,
+  // Qdrant configuration
+  qdrant_host: form.value.rag_config?.qdrant_host || 'localhost',
+  qdrant_port: form.value.rag_config?.qdrant_port || 6333,
+  collection_name: form.value.rag_config?.collection_name || 'agent_documents',
+  // KBase configuration
+  kbase_retrieval_url: form.value.rag_config?.kbase_retrieval_url || '',
 })
 
 const pipelineConfig = reactive({

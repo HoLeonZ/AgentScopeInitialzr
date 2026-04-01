@@ -70,6 +70,77 @@
         />
         <span class="hint">Required for Mem0 memory service</span>
       </el-form-item>
+
+      <el-form-item v-if="enableLongTerm && form.long_term_memory === 'oceanbase'" label="OceanBase Connection String">
+        <el-input
+          v-model="oceanbaseConnectionString"
+          placeholder="postgresql://user:password@localhost:2881/tenant"
+        />
+        <span class="hint">OceanBase database connection string</span>
+      </el-form-item>
+
+      <el-form-item v-if="enableLongTerm && form.long_term_memory === 'oceanbase'" label="Table Name">
+        <el-input
+          v-model="oceanbaseTableName"
+          placeholder="agent_memory"
+        />
+        <span class="hint">Table name for storing agent memories</span>
+      </el-form-item>
+
+      <!-- Short-term Memory Configurations -->
+      <el-form-item v-if="form.enable_memory && form.short_term_memory === 'redis'" label="Redis Host">
+        <el-input
+          v-model="redisHost"
+          placeholder="localhost"
+        />
+        <span class="hint">Redis server hostname</span>
+      </el-form-item>
+
+      <el-form-item v-if="form.enable_memory && form.short_term_memory === 'redis'" label="Redis Port">
+        <el-input-number
+          v-model="redisPort"
+          :min="1"
+          :max="65535"
+          placeholder="6379"
+        />
+        <span class="hint">Redis server port</span>
+      </el-form-item>
+
+      <el-form-item v-if="form.enable_memory && form.short_term_memory === 'redis'" label="Redis DB">
+        <el-input-number
+          v-model="redisDb"
+          :min="0"
+          :max="15"
+          placeholder="0"
+        />
+        <span class="hint">Redis database number</span>
+      </el-form-item>
+
+      <el-form-item v-if="form.enable_memory && form.short_term_memory === 'redis'" label="Redis Password (Optional)">
+        <el-input
+          v-model="redisPassword"
+          type="password"
+          placeholder="Leave empty if no authentication"
+          show-password
+        />
+        <span class="hint">Redis server password</span>
+      </el-form-item>
+
+      <el-form-item v-if="form.enable_memory && form.short_term_memory === 'oceanbase'" label="OceanBase Connection String">
+        <el-input
+          v-model="oceanbaseShortTermConnectionString"
+          placeholder="postgresql://user:password@localhost:2881/tenant"
+        />
+        <span class="hint">OceanBase database connection string</span>
+      </el-form-item>
+
+      <el-form-item v-if="form.enable_memory && form.short_term_memory === 'oceanbase'" label="Table Name">
+        <el-input
+          v-model="oceanbaseShortTermTableName"
+          placeholder="agent_conversation"
+        />
+        <span class="hint">Table name for storing conversation history</span>
+      </el-form-item>
     </el-form>
 
     <!-- Live Preview -->
@@ -120,6 +191,18 @@ const extensions = ref<any>({
 const activePreviewTab = ref('agent')
 const enableLongTerm = ref(false)
 const mem0ApiKey = ref('')
+
+// OceanBase configurations
+const oceanbaseConnectionString = ref('')
+const oceanbaseTableName = ref('agent_memory')
+const oceanbaseShortTermConnectionString = ref('')
+const oceanbaseShortTermTableName = ref('agent_conversation')
+
+// Redis configurations
+const redisHost = ref('localhost')
+const redisPort = ref(6379)
+const redisDb = ref(0)
+const redisPassword = ref('')
 
 const updateField = (field: string, value: any) => {
   configStore.setField(field as any, value)

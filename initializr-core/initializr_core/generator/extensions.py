@@ -22,16 +22,43 @@ class ExtensionGenerator:
     AgentScope extension points.
     """
 
-    def generate_config(self, metadata: AgentScopeMetadata) -> str:
+    def generate_config_init(self, metadata: AgentScopeMetadata) -> str:
         """
-        Generate complete configuration module.
+        Generate config/__init__.py with Settings class and imports.
 
         Args:
             metadata: Project metadata
 
         Returns:
-            Configuration module code
+            Configuration __init__ module code
         """
+        # Build import statements based on enabled features
+        imports = [
+            "from .settings import settings",
+            "from .model import get_model",
+            "from .memory import get_memory",
+            "from .toolkit import get_toolkit",
+        ]
+
+        # Build __all__ list
+        all_exports = [
+            '"settings"',
+            '"get_model"',
+            '"get_memory"',
+            '"get_toolkit"',
+        ]
+
+        if metadata.enable_rag:
+            imports.append("from .rag import get_rag_retriever")
+            all_exports.append('"get_rag_retriever"')
+
+        if metadata.enable_pipeline:
+            imports.append("from .pipeline import get_pipeline")
+            all_exports.append('"get_pipeline"')
+
+        imports_str = "\n".join(imports)
+        all_exports_str = ",\n    ".join(all_exports)
+
         return f'''"""
 Configuration module for {metadata.name}.
 
@@ -39,47 +66,56 @@ This module contains all configuration settings and initialization
 functions for AgentScope components.
 """
 
+{imports_str}
+
+
+__all__ = [
+    {all_exports_str},
+]
+'''
+
+    def generate_settings_file(self, metadata: AgentScopeMetadata) -> str:
+        """Generate settings.py file with Settings class."""
+        return f'''"""
+Application settings for {metadata.name}.
+
+This module loads all configuration from environment variables.
+Settings are accessed via the `settings` object.
+"""
+
 import os
 from dotenv import load_dotenv
 
+# Load environment variables from .env file
 load_dotenv()
 
 
 class Settings:
-    """Application settings."""
+    """Application settings loaded from environment variables."""
 
-    # Agent Configuration
-    AGENT_NAME = "{metadata.name}"
-    SYSTEM_PROMPT = """You are a helpful AI assistant named {metadata.name}.
+    # Agent Configuration (from .env)
+    AGENT_NAME = os.getenv("AGENT_NAME", "{metadata.name}")
+    SYSTEM_PROMPT = os.getenv("SYSTEM_PROMPT", """You are a helpful AI assistant named {metadata.name}.
 {metadata.description}
-You should respond in a friendly and professional manner."""
+You should respond in a friendly and professional.""")
 
-    # Model Configuration
-    MODEL_PROVIDER = "{metadata.model_provider.value}"
-    ENABLE_STREAMING = {str(metadata.enable_streaming).lower()}
-    ENABLE_THINKING = {str(metadata.enable_thinking).lower()}
-    PARALLEL_TOOL_CALLS = {str(metadata.parallel_tool_calls).lower()}
+    # Model Configuration (from .env)
+    MODEL_PROVIDER = os.getenv("MODEL_PROVIDER", "{metadata.model_provider.value}")
+    ENABLE_STREAMING = os.getenv("ENABLE_STREAMING", "true").lower() == "true"
+    ENABLE_THINKING = os.getenv("ENABLE_THINKING", "false").lower() == "true"
+    PARALLEL_TOOL_CALLS = os.getenv("PARALLEL_TOOL_CALLS", "true").lower() == "true"
 
-    # Memory Configuration
-    MEMORY_TYPE = "{metadata.memory_type.value}"
-    SHORT_TERM_MEMORY = {f'"{metadata.short_term_memory}"' if metadata.short_term_memory else 'None'}
-    LONG_TERM_MEMORY = {f'"{metadata.long_term_memory}"' if metadata.long_term_memory else 'None'}
+    # Memory Configuration (from .env)
+    MEMORY_TYPE = os.getenv("MEMORY_TYPE", "{metadata.memory_type.value}")
+    LONG_TERM_MEMORY = os.getenv("LONG_TERM_MEMORY", {f'"{metadata.long_term_memory}"' if metadata.long_term_memory else 'None'})
 
-    # Formatter Configuration
-    FORMATTER_TYPE = "{metadata.formatter.value}"
-    FORMATTER_NAME = {f'"{metadata.formatter_name}"' if metadata.formatter_name else 'None'}
+    # RAG Configuration (from .env)
+    ENABLE_RAG = os.getenv("ENABLE_RAG", "true").lower() == "true"
 
-    # Skills Configuration
-    ENABLE_SKILLS = {str(metadata.enable_skills).lower()}
-    SKILLS = {metadata.skills}
+    # Pipeline Configuration (from .env)
+    ENABLE_PIPELINE = os.getenv("ENABLE_PIPELINE", "false").lower() == "true"
 
-    # RAG Configuration
-    ENABLE_RAG = {str(metadata.enable_rag).lower()}
-
-    # Pipeline Configuration
-    ENABLE_PIPELINE = {str(metadata.enable_pipeline).lower()}
-
-    # Logging Configuration
+    # Logging Configuration (from .env)
     LOG_DIR = os.getenv("LOG_DIR", "logs")
     LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
     LOG_TO_FILE = os.getenv("LOG_TO_FILE", "true").lower() == "true"
@@ -89,22 +125,8 @@ You should respond in a friendly and professional manner."""
     LOG_RETENTION_DAYS = int(os.getenv("LOG_RETENTION_DAYS", "30"))  # 30 days
 
 
+# Create global settings instance
 settings = Settings()
-
-
-{self._generate_model_config(metadata)}
-
-{self._generate_memory_config(metadata)}
-
-{self._generate_toolkit_config(metadata)}
-
-{self._generate_formatter_config(metadata)}
-
-{self._generate_skills_config(metadata)}
-
-{self._generate_rag_config(metadata)}
-
-{self._generate_pipeline_config(metadata)}
 '''
 
     def _generate_model_config(self, metadata: AgentScopeMetadata) -> str:
@@ -382,7 +404,7 @@ def get_skills():
 '''
 
         config = metadata.rag_config or {}
-        store_type = config.get("store_type", "chroma")
+        store_type = config.get("store_type", "qdrant")
         embedding_model = config.get("embedding_model", "openai")
         chunk_size = config.get("chunk_size", 500)
         chunk_overlap = config.get("chunk_overlap", 50)
@@ -397,47 +419,31 @@ RAG_CHUNK_OVERLAP = {chunk_overlap}
         ]
 
         # Generate client instantiation code based on store type
-        if store_type == "chroma":
+        if store_type == "qdrant":
             lines.append(f'''
 def get_vector_store():
-    """Get configured ChromaDB vector store instance."""
-    import chromadb
-    from agentscope.rag import ChromaVectorStore
+    """Get configured Qdrant vector store instance."""
+    from agentscope.rag import QdrantVectorStore
+    from qdrant_client import QdrantClient
 
-    client = chromadb.HttpClient(
-        host=os.getenv("CHROMA_HOST", "localhost"),
-        port=int(os.getenv("CHROMA_PORT", "8000")),
+    client = QdrantClient(
+        url=os.getenv("QDRANT_URL", f"http://{{os.getenv('QDRANT_HOST', 'localhost')}}:{{os.getenv('QDRANT_PORT', '6333')}}"),
     )
 
-    return ChromaVectorStore(
+    return QdrantVectorStore(
         client=client,
-        collection_name=os.getenv("CHROMA_COLLECTION", "agent_documents"),
+        collection_name=os.getenv("QDRANT_COLLECTION", "agent_documents"),
         embedding_model="{embedding_model}",
     )
 ''')
-        elif store_type == "faiss":
+        elif store_type == "kbase":
             lines.append(f'''
 def get_vector_store():
-    """Get configured FAISS vector store instance."""
-    from agentscope.rag import FAISSVectorStore
-    from pathlib import Path
+    """Get configured KBase vector store instance."""
+    from agentscope.rag import KBaseVectorStore
 
-    return FAISSVectorStore(
-        index_path=Path(os.getenv("FAISS_INDEX_PATH", "./faiss_index")),
-        embedding_model="{embedding_model}",
-        dimension=int(os.getenv("FAISS_DIMENSION", "1536")),
-    )
-''')
-        elif store_type == "pinecone":
-            lines.append(f'''
-def get_vector_store():
-    """Get configured Pinecone vector store instance."""
-    from agentscope.rag import PineconeVectorStore
-
-    return PineconeVectorStore(
-        api_key=os.getenv("PINECONE_API_KEY"),
-        environment=os.getenv("PINECONE_ENVIRONMENT", "us-west1-gcp"),
-        index_name=os.getenv("PINECONE_INDEX", "agent-docs"),
+    return KBaseVectorStore(
+        retrieval_url=os.getenv("KBASE_RETRIEVAL_URL"),
         embedding_model="{embedding_model}",
     )
 ''')
@@ -530,6 +536,86 @@ def get_pipeline():
 ''')
 
         return "\n".join(lines)
+
+    def generate_model_config_file(self, metadata: AgentScopeMetadata) -> str:
+        """Generate model.py configuration file."""
+        config = self._generate_model_config(metadata)
+
+        return f'''"""
+Model configuration for {metadata.name}.
+
+This module contains the model client initialization.
+"""
+
+import os
+from .settings import settings
+
+{config}
+'''
+
+    def generate_memory_config_file(self, metadata: AgentScopeMetadata) -> str:
+        """Generate memory.py configuration file."""
+        config = self._generate_memory_config(metadata)
+
+        return f'''"""
+Memory configuration for {metadata.name}.
+
+This module contains the memory client initialization.
+"""
+
+import os
+from .settings import settings
+
+{config}
+'''
+
+    def generate_rag_config_file(self, metadata: AgentScopeMetadata) -> str:
+        """Generate rag.py configuration file."""
+        config = self._generate_rag_config(metadata)
+
+        return f'''"""
+RAG configuration for {metadata.name}.
+
+This module contains the RAG and vector store client initialization.
+"""
+
+import os
+from .settings import settings
+
+{config}
+'''
+
+    def generate_pipeline_config_file(self, metadata: AgentScopeMetadata) -> str:
+        """Generate pipeline.py configuration file."""
+        config = self._generate_pipeline_config(metadata)
+
+        return f'''"""
+Pipeline configuration for {metadata.name}.
+
+This module contains the pipeline client initialization.
+"""
+
+import os
+from .settings import settings
+
+{config}
+'''
+
+    def generate_toolkit_config_file(self, metadata: AgentScopeMetadata) -> str:
+        """Generate toolkit.py configuration file."""
+        config = self._generate_toolkit_config(metadata)
+
+        return f'''"""
+Toolkit configuration for {metadata.name}.
+
+This module contains the toolkit initialization.
+"""
+
+import os
+from .settings import settings
+
+{config}
+'''
 
     def generate_hooks_code(self, metadata: AgentScopeMetadata) -> str:
         """Generate hooks implementation code."""

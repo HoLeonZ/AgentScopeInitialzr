@@ -294,9 +294,27 @@ MIT
 
     def _generate_env_example(self, metadata: AgentScopeMetadata) -> str:
         """Generate .env.example content."""
-        lines = ["# Agent Configuration"]
+        lines = []
 
-        # Model provider configuration
+        # Agent Configuration
+        lines.append("# ==============================================")
+        lines.append("# Agent Configuration")
+        lines.append("# ==============================================")
+        lines.append(f"AGENT_NAME={metadata.name}")
+        lines.append(f'SYSTEM_PROMPT="You are a helpful AI assistant named {metadata.name}."')
+        lines.append("")
+
+        # Model Configuration
+        lines.append("# ==============================================")
+        lines.append("# Model Configuration")
+        lines.append("# ==============================================")
+        lines.append("MODEL_PROVIDER=openai")
+        lines.append("ENABLE_STREAMING=true")
+        lines.append("ENABLE_THINKING=false")
+        lines.append("PARALLEL_TOOL_CALLS=true")
+        lines.append("")
+
+        # Model API Keys
         if metadata.model_provider.value == "openai":
             lines.append("OPENAI_API_KEY=your-api-key-here")
             lines.append("OPENAI_MODEL=gpt-4")
@@ -309,62 +327,69 @@ MIT
         elif metadata.model_provider.value == "gemini":
             lines.append("GEMINI_API_KEY=your-api-key-here")
             lines.append("GEMINI_MODEL=gemini-pro")
+        lines.append("")
 
-        # Memory configuration
+        # Memory Configuration
+        lines.append("# ==============================================")
+        lines.append("# Memory Configuration")
+        lines.append("# ==============================================")
+        lines.append(f"MEMORY_TYPE={metadata.memory_type.value}")
+        if metadata.long_term_memory:
+            lines.append(f"LONG_TERM_MEMORY={metadata.long_term_memory}")
+
+        # Memory backend configuration
         if metadata.memory_type.value == "long-term" and metadata.long_term_memory:
-            lines.append("")
-            lines.append("# Long-term Memory Configuration")
-
             if metadata.long_term_memory == "mem0":
                 lines.append("MEM0_API_KEY=your-mem0-api-key")
-            elif metadata.long_term_memory == "zep":
-                lines.append("ZEP_API_KEY=your-zep-api-key")
-                lines.append("ZEP_ENDPOINT=https://api.zep.ai")
-                lines.append("ZEP_SESSION_ID=default")
             elif metadata.long_term_memory == "oceanbase":
                 lines.append("OCEANBASE_CONNECTION_STRING=postgresql://user:password@localhost:2881/tenant")
                 lines.append("OCEANBASE_TABLE_NAME=agent_memory")
-            elif metadata.long_term_memory == "redis":
-                lines.append("REDIS_HOST=localhost")
-                lines.append("REDIS_PORT=6379")
-                lines.append("REDIS_DB=0")
-                lines.append("REDIS_PASSWORD=")
+        lines.append("")
 
-        # RAG configuration
+        # RAG Configuration
         if metadata.enable_rag:
-            lines.append("")
+            lines.append("# ==============================================")
             lines.append("# RAG Configuration")
+            lines.append("# ==============================================")
+            lines.append("ENABLE_RAG=true")
 
             rag_config = metadata.rag_config or {}
-            store_type = rag_config.get("store_type", "chroma")
+            store_type = rag_config.get("store_type", "qdrant")
 
-            if store_type == "chroma":
-                lines.append("CHROMA_HOST=localhost")
-                lines.append("CHROMA_PORT=8000")
-                lines.append("CHROMA_COLLECTION=agent_documents")
-            elif store_type == "faiss":
-                lines.append("FAISS_INDEX_PATH=./faiss_index")
-                lines.append("FAISS_DIMENSION=1536")
-            elif store_type == "pinecone":
-                lines.append("PINECONE_API_KEY=your-pinecone-api-key")
-                lines.append("PINECONE_ENVIRONMENT=us-west1-gcp")
-                lines.append("PINECONE_INDEX=agent-docs")
-
-        # Pipeline configuration
-        if metadata.enable_pipeline:
+            if store_type == "qdrant":
+                lines.append("# Qdrant vector database configuration")
+                lines.append("RAG_STORE_TYPE=qdrant")
+                lines.append("QDRANT_HOST=localhost")
+                lines.append("QDRANT_PORT=6333")
+                lines.append("QDRANT_COLLECTION=agent_documents")
+                lines.append("# Or use full URL: QDRANT_URL=http://localhost:6333")
+            elif store_type == "kbase":
+                lines.append("# KBase knowledge base configuration")
+                lines.append("RAG_STORE_TYPE=kbase")
+                lines.append("KBASE_RETRIEVAL_URL=https://kbase.example.com/api/retrieve")
             lines.append("")
+
+        # Pipeline Configuration
+        if metadata.enable_pipeline:
+            lines.append("# ==============================================")
             lines.append("# Pipeline Configuration")
+            lines.append("# ==============================================")
+            lines.append("ENABLE_PIPELINE=true")
             lines.append("PIPELINE_MAX_CONCURRENCY=3")
+            lines.append("")
 
         # Research agent search API
         if metadata.agent_type.value == "research":
-            lines.append("")
+            lines.append("# ==============================================")
             lines.append("# Search API Configuration")
+            lines.append("# ==============================================")
             lines.append("TAVILY_API_KEY=your-tavily-api-key")
+            lines.append("")
 
-        # Add logging configuration
-        lines.append("")
+        # Logging Configuration
+        lines.append("# ==============================================")
         lines.append("# Logging Configuration")
+        lines.append("# ==============================================")
         lines.append("# Log directory path (relative or absolute)")
         lines.append("LOG_DIR=logs")
         lines.append("LOG_LEVEL=INFO")
@@ -1544,34 +1569,37 @@ def get_browser_agent_prompt() -> str:
         (prompts_dir / "__init__.py").write_text(init_content)
 
     def _generate_config(self, pkg_dir: Path, metadata: AgentScopeMetadata):
-        """Generate configuration files."""
-        config_content = self.extension_generator.generate_config(metadata)
-        (pkg_dir / "config" / "__init__.py").write_text(config_content)
+        """Generate configuration files with separate modules for each middleware."""
+        # Generate settings.py first
+        settings_content = self.extension_generator.generate_settings_file(metadata)
+        (pkg_dir / "config" / "settings.py").write_text(settings_content)
 
-        # Generate YAML config
-        yaml_config = f'''# AgentScope Configuration
-# Generated for {metadata.name}
+        # Generate main __init__.py with Settings class only
+        init_content = self.extension_generator.generate_config_init(metadata)
+        (pkg_dir / "config" / "__init__.py").write_text(init_content)
 
-agents:
-  - name: {metadata.name}
-    type: {metadata.agent_type.value}
-    model_provider: {metadata.model_provider.value}
-    model: {self._get_default_model(metadata.model_provider.value)}
-    memory_type: {metadata.memory_type.value}
-    system_prompt: "You are a helpful assistant."
+        # Generate separate config files for each component
+        # Model configuration
+        model_content = self.extension_generator.generate_model_config_file(metadata)
+        (pkg_dir / "config" / "model.py").write_text(model_content)
 
-models:
-  {metadata.model_provider.value}:
-    api_key_env: "{self._get_api_key_env(metadata.model_provider.value)}"
-    model: {self._get_default_model(metadata.model_provider.value)}
+        # Memory configuration
+        memory_content = self.extension_generator.generate_memory_config_file(metadata)
+        (pkg_dir / "config" / "memory.py").write_text(memory_content)
 
-tools:
-  - name: calculate
-    enabled: true
-  - name: get_current_time
-    enabled: true
-'''
-        (pkg_dir / "config" / "agents.yaml").write_text(yaml_config)
+        # Toolkit configuration
+        toolkit_content = self.extension_generator.generate_toolkit_config_file(metadata)
+        (pkg_dir / "config" / "toolkit.py").write_text(toolkit_content)
+
+        # RAG configuration (if enabled)
+        if metadata.enable_rag:
+            rag_content = self.extension_generator.generate_rag_config_file(metadata)
+            (pkg_dir / "config" / "rag.py").write_text(rag_content)
+
+        # Pipeline configuration (if enabled)
+        if metadata.enable_pipeline:
+            pipeline_content = self.extension_generator.generate_pipeline_config_file(metadata)
+            (pkg_dir / "config" / "pipeline.py").write_text(pipeline_content)
 
     def _generate_examples(self, project_path: Path, metadata: AgentScopeMetadata):
         """Generate example usage files."""
