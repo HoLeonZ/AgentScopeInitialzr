@@ -295,53 +295,6 @@
       </template>
     </el-card>
 
-    <!-- Advanced Options -->
-    <el-card class="testing-card advanced-card" shadow="hover">
-      <template #header>
-        <div class="card-header">
-          <div class="header-left">
-            <el-icon class="header-icon"><Setting /></el-icon>
-            <span class="header-title">Advanced Options</span>
-          </div>
-        </div>
-      </template>
-
-      <el-row :gutter="20">
-        <el-col :span="8">
-          <el-form-item label="Enable Logging">
-            <el-switch v-model="enableLogging" size="large" />
-          </el-form-item>
-        </el-col>
-
-        <el-col :span="8">
-          <el-form-item label="Test Output Format">
-            <el-select v-model="testOutputFormat" size="large">
-              <el-option label="JSON" value="json" />
-              <el-option label="JUnit XML" value="junit" />
-              <el-option label="HTML Report" value="html" />
-            </el-select>
-          </el-form-item>
-        </el-col>
-
-        <el-col :span="8">
-          <el-form-item label="Parallel Execution">
-            <el-switch v-model="parallelTests" size="large" />
-          </el-form-item>
-        </el-col>
-      </el-row>
-
-      <el-form-item v-if="parallelTests" label="Max Workers">
-        <el-input-number
-          v-model="maxWorkers"
-          :min="2"
-          :max="16"
-          :step="2"
-          size="large"
-        />
-        <span class="hint">Maximum number of parallel test workers</span>
-      </el-form-item>
-    </el-card>
-
     <!-- Summary Card -->
     <el-card class="summary-card" shadow="never">
       <template #header>
@@ -419,10 +372,6 @@ const includeCoverage = ref(true)
 const benchmarkSuite = ref('custom')
 const datasetUrl = ref('')
 const enableBenchmarks = ref(localForm.initial_benchmark_tasks > 0)
-const enableLogging = ref(true)
-const testOutputFormat = ref('json')
-const parallelTests = ref(false)
-const maxWorkers = ref(4)
 
 // Extensions data from API
 const extensions = ref<ExtensionsResponse>({
