@@ -46,7 +46,17 @@
       "Bash(curl -X POST -F \"file=@/tmp/test-skill.zip\" http://localhost:8000/api/skills/upload)",
       "Bash(/tmp/improve_config.sh:*)",
       "Bash(__NEW_LINE_12ecc059d1a3546e__ bash:*)",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "Bash(kill 7673 5905 5882)",
+      "Bash(echo:*)",
+      "Bash(/tmp/test_project.json:*)",
+      "Bash(curl -X POST http://localhost:8000/api/projects/generate -H \"Content-Type: application/json\" -d @/tmp/test_project.json)",
+      "Bash(curl -s http://localhost:8000/docs)",
+      "Bash(curl -X POST http://localhost:8000/api/v1/projects/generate -H \"Content-Type: application/json\" -d @/tmp/test_project.json)",
+      "Bash(git checkout:*)",
+      "Bash(ping:*)",
+      "Bash(export GIT_TERMINAL_PROMPT=0)",
+      "Bash(GIT_CURL_VERBOSE=1 git push)"
     ]
   }
 }
