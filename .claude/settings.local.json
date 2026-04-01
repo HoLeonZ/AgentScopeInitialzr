@@ -56,7 +56,13 @@
       "Bash(git checkout:*)",
       "Bash(ping:*)",
       "Bash(export GIT_TERMINAL_PROMPT=0)",
-      "Bash(GIT_CURL_VERBOSE=1 git push)"
+      "Bash(GIT_CURL_VERBOSE=1 git push)",
+      "Bash(git config:*)",
+      "Read(//tmp/**)",
+      "Bash(lsof -ti:8000)",
+      "Bash(lsof -ti:5173)",
+      "Bash(lsof -i:8000 -i:5173)",
+      "Bash(lsof:*)"
     ]
   }
 }
