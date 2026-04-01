@@ -1,5 +1,37 @@
 <template>
   <div class="extensions-settings">
+    <!-- 统一头部卡片 -->
+    <div class="unified-header-card">
+      <div class="header-background">
+        <el-icon :size="32" color="#FFFFFF" class="header-icon"><Tools /></el-icon>
+        <div class="header-content">
+          <h2 class="header-title">扩展功能配置</h2>
+          <p class="header-description">配置高级扩展功能，包括工具、格式化器、生命周期钩子和管道</p>
+        </div>
+        <el-tag type="primary" size="large" effect="dark">高级配置</el-tag>
+      </div>
+    </div>
+
+    <!-- 配置提示 -->
+    <el-alert
+      type="info"
+      :closable="false"
+      show-icon
+      class="config-hint"
+    >
+      <template #default>
+        <div class="hint-content">
+          <div class="hint-title">💡 配置说明</div>
+          <ul class="hint-list">
+            <li><strong>Tools：</strong>扩展智能体能力，提供强大的功能函数</li>
+            <li><strong>Formatter：</strong>为不同模型提供商配置消息格式化</li>
+            <li><strong>Hooks：</strong>添加生命周期钩子以在关键点拦截智能体执行</li>
+            <li><strong>Pipeline：</strong>多智能体管道，用于复杂的工作流编排</li>
+          </ul>
+        </div>
+      </template>
+    </el-alert>
+
     <!-- Tools Extension -->
     <el-card class="extension-card tools-card" shadow="hover">
       <template #header>
@@ -603,7 +635,79 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 24px;
-  padding: 20px 0;
+  padding: 0;
+}
+
+/* 统一头部卡片 */
+.unified-header-card {
+  margin-bottom: 20px;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+}
+
+.header-background {
+  background: linear-gradient(135deg, #909399 0%, #b3b8bd 100%);
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  color: #FFFFFF;
+}
+
+.header-icon {
+  flex-shrink: 0;
+}
+
+.header-content {
+  flex: 1;
+}
+
+.header-title {
+  margin: 0 0 8px 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #FFFFFF;
+  line-height: 1.2;
+}
+
+.header-description {
+  margin: 0;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.5;
+}
+
+/* 配置提示 */
+.config-hint {
+  margin-bottom: 24px;
+  border-radius: 6px;
+}
+
+.hint-content {
+  line-height: 1.6;
+}
+
+.hint-title {
+  font-weight: 600;
+  color: #909399;
+  margin-bottom: 8px;
+}
+
+.hint-list {
+  margin: 8px 0 0 0;
+  padding-left: 20px;
+  color: #606266;
+}
+
+.hint-list li {
+  margin: 6px 0;
+  line-height: 1.5;
+}
+
+.hint-list strong {
+  color: #303133;
+  font-weight: 600;
 }
 
 /* Extension Card Styles */
@@ -902,5 +1006,31 @@ onMounted(() => {
 
 :deep(.el-collapse-item__content) {
   padding-top: 16px;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .header-background {
+    flex-direction: column;
+    text-align: center;
+    padding: 20px;
+  }
+
+  .header-icon {
+    align-self: center;
+  }
+
+  .header-title {
+    font-size: 18px;
+  }
+
+  .header-description {
+    font-size: 13px;
+  }
+
+  .tools-grid,
+  .hooks-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

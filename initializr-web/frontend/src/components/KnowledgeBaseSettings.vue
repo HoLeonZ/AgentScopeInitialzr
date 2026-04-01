@@ -1,17 +1,33 @@
 <template>
   <div class="knowledge-base-settings">
-    <!-- 知识库配置概述 -->
+    <!-- 统一头部卡片 -->
+    <div class="unified-header-card">
+      <div class="header-background">
+        <el-icon :size="32" color="#FFFFFF" class="header-icon"><Reading /></el-icon>
+        <div class="header-content">
+          <h2 class="header-title">知识库配置</h2>
+          <p class="header-description">启用知识库以提供外部信息检索能力，配置向量数据库和检索参数</p>
+        </div>
+        <el-tag type="warning" size="large" effect="dark">可选配置</el-tag>
+      </div>
+    </div>
+
+    <!-- 配置提示 -->
     <el-alert
-      title="📚 知识库配置"
       type="info"
       :closable="false"
       show-icon
-      class="knowledge-overview"
+      class="config-hint"
     >
       <template #default>
-        <p class="overview-text">
-          启用知识库以提供外部信息检索能力。配置向量数据库、上传文档并设置检索参数。
-        </p>
+        <div class="hint-content">
+          <div class="hint-title">💡 配置说明</div>
+          <ul class="hint-list">
+            <li><strong>KBase：</strong>企业知识库服务，只需提供服务地址</li>
+            <li><strong>Qdrant：</strong>高性能向量数据库，需配置连接信息和参数</li>
+            <li>知识库通过向量相似度搜索为智能体提供外部知识检索能力</li>
+          </ul>
+        </div>
       </template>
     </el-alert>
 
@@ -244,16 +260,76 @@ const updateKnowledgeConfig = () => {
   padding: 0;
 }
 
-/* 总（Overview）样式 */
-.knowledge-overview {
-  margin-bottom: 32px;
+/* 统一头部卡片 */
+.unified-header-card {
+  margin-bottom: 20px;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
 }
 
-.overview-text {
+.header-background {
+  background: linear-gradient(135deg, #E6A23C 0%, #f0c78a 100%);
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  color: #FFFFFF;
+}
+
+.header-icon {
+  flex-shrink: 0;
+}
+
+.header-content {
+  flex: 1;
+}
+
+.header-title {
+  margin: 0 0 8px 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #FFFFFF;
+  line-height: 1.2;
+}
+
+.header-description {
   margin: 0;
-  line-height: 1.8;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.5;
+}
+
+/* 配置提示 */
+.config-hint {
+  margin-bottom: 24px;
+  border-radius: 6px;
+}
+
+.hint-content {
+  line-height: 1.6;
+}
+
+.hint-title {
+  font-weight: 600;
+  color: #E6A23C;
+  margin-bottom: 8px;
+}
+
+.hint-list {
+  margin: 8px 0 0 0;
+  padding-left: 20px;
   color: #606266;
-  font-size: 15px;
+}
+
+.hint-list li {
+  margin: 6px 0;
+  line-height: 1.5;
+}
+
+.hint-list strong {
+  color: #303133;
+  font-weight: 600;
 }
 
 /* 分（Detailed Configuration）样式 */
@@ -426,6 +502,24 @@ const updateKnowledgeConfig = () => {
 
   .knowledge-card {
     margin: 0;
+  }
+
+  .header-background {
+    flex-direction: column;
+    text-align: center;
+    padding: 20px;
+  }
+
+  .header-icon {
+    align-self: center;
+  }
+
+  .header-title {
+    font-size: 18px;
+  }
+
+  .header-description {
+    font-size: 13px;
   }
 }
 </style>

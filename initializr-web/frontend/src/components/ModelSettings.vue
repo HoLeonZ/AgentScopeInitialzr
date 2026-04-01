@@ -1,17 +1,33 @@
 <template>
   <div class="model-settings">
-    <!-- 模型配置概述 -->
+    <!-- 统一头部卡片 -->
+    <div class="unified-header-card">
+      <div class="header-background">
+        <el-icon :size="32" color="#FFFFFF" class="header-icon"><Connection /></el-icon>
+        <div class="header-content">
+          <h2 class="header-title">模型配置</h2>
+          <p class="header-description">配置为智能体提供动力的语言模型，选择提供商、模型并调整参数</p>
+        </div>
+        <el-tag type="primary" size="large" effect="dark">核心配置</el-tag>
+      </div>
+    </div>
+
+    <!-- 配置提示 -->
     <el-alert
-      title="🤖 模型配置"
       type="info"
       :closable="false"
       show-icon
-      class="model-overview"
+      class="config-hint"
     >
       <template #default>
-        <p class="overview-text">
-          配置为智能体提供动力的语言模型。选择提供商、选择模型并调整参数以控制智能体的行为。
-        </p>
+        <div class="hint-content">
+          <div class="hint-title">💡 配置说明</div>
+          <ul class="hint-list">
+            <li>支持 OpenAI、Anthropic 等主流模型提供商</li>
+            <li>Temperature 控制输出的随机性，建议从默认值 0.7 开始</li>
+            <li>API 密钥将安全保存在生成的 .env 文件中</li>
+          </ul>
+        </div>
       </template>
     </el-alert>
 
@@ -207,15 +223,71 @@ onMounted(async () => {
   padding: 0;
 }
 
-/* 总（Overview）样式 */
-.model-overview {
-  margin-bottom: 24px;
+/* 统一头部卡片 */
+.unified-header-card {
+  margin-bottom: 20px;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
 }
 
-.overview-text {
+.header-background {
+  background: linear-gradient(135deg, #409EFF 0%, #53a8ff 100%);
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  color: #FFFFFF;
+}
+
+.header-icon {
+  flex-shrink: 0;
+}
+
+.header-content {
+  flex: 1;
+}
+
+.header-title {
+  margin: 0 0 8px 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #FFFFFF;
+  line-height: 1.2;
+}
+
+.header-description {
   margin: 0;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.5;
+}
+
+/* 配置提示 */
+.config-hint {
+  margin-bottom: 24px;
+  border-radius: 6px;
+}
+
+.hint-content {
   line-height: 1.6;
+}
+
+.hint-title {
+  font-weight: 600;
+  color: #409EFF;
+  margin-bottom: 8px;
+}
+
+.hint-list {
+  margin: 8px 0 0 0;
+  padding-left: 20px;
   color: #606266;
+}
+
+.hint-list li {
+  margin: 6px 0;
+  line-height: 1.5;
 }
 
 /* 分（Detailed Configuration）样式 */
@@ -333,6 +405,24 @@ onMounted(async () => {
 
   .preset-buttons {
     width: 100%;
+  }
+
+  .header-background {
+    flex-direction: column;
+    text-align: center;
+    padding: 20px;
+  }
+
+  .header-icon {
+    align-self: center;
+  }
+
+  .header-title {
+    font-size: 18px;
+  }
+
+  .header-description {
+    font-size: 13px;
   }
 }
 </style>

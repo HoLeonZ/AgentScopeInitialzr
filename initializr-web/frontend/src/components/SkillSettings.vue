@@ -1,17 +1,33 @@
 <template>
   <div class="skill-settings">
-    <!-- 技能配置概述 -->
+    <!-- 统一头部卡片 -->
+    <div class="unified-header-card">
+      <div class="header-background">
+        <el-icon :size="32" color="#FFFFFF" class="header-icon"><Star /></el-icon>
+        <div class="header-content">
+          <h2 class="header-title">技能配置</h2>
+          <p class="header-description">配置专业技能以扩展智能体的能力，选择您想要启用的技能</p>
+        </div>
+        <el-tag type="success" size="large" effect="dark">可选配置</el-tag>
+      </div>
+    </div>
+
+    <!-- 配置提示 -->
     <el-alert
-      title="🛠️ 技能配置"
       type="info"
       :closable="false"
       show-icon
-      class="skill-overview"
+      class="config-hint"
     >
       <template #default>
-        <p class="overview-text">
-          配置专业技能以扩展智能体的能力。从下方可选技能中选择您想要启用的技能。
-        </p>
+        <div class="hint-content">
+          <div class="hint-title">💡 配置说明</div>
+          <ul class="hint-list">
+            <li>技能可以扩展智能体的专业能力，提供特定领域的功能</li>
+            <li>支持对话响应、代码执行、数据分析、网页搜索等多种技能</li>
+            <li>根据使用场景选择合适的技能组合</li>
+          </ul>
+        </div>
       </template>
     </el-alert>
 
@@ -252,16 +268,71 @@ onMounted(() => {
   padding: 0;
 }
 
-/* 总（Overview）样式 */
-.skill-overview {
-  margin-bottom: 32px;
+/* 统一头部卡片 */
+.unified-header-card {
+  margin-bottom: 20px;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
 }
 
-.overview-text {
+.header-background {
+  background: linear-gradient(135deg, #F56C6C 0%, #f89898 100%);
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  color: #FFFFFF;
+}
+
+.header-icon {
+  flex-shrink: 0;
+}
+
+.header-content {
+  flex: 1;
+}
+
+.header-title {
+  margin: 0 0 8px 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #FFFFFF;
+  line-height: 1.2;
+}
+
+.header-description {
   margin: 0;
-  line-height: 1.8;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.5;
+}
+
+/* 配置提示 */
+.config-hint {
+  margin-bottom: 24px;
+  border-radius: 6px;
+}
+
+.hint-content {
+  line-height: 1.6;
+}
+
+.hint-title {
+  font-weight: 600;
+  color: #F56C6C;
+  margin-bottom: 8px;
+}
+
+.hint-list {
+  margin: 8px 0 0 0;
+  padding-left: 20px;
   color: #606266;
-  font-size: 15px;
+}
+
+.hint-list li {
+  margin: 6px 0;
+  line-height: 1.5;
 }
 
 /* 分（Detailed Configuration）样式 */
@@ -515,6 +586,24 @@ onMounted(() => {
 
   .skills-grid {
     grid-template-columns: 1fr;
+  }
+
+  .header-background {
+    flex-direction: column;
+    text-align: center;
+    padding: 20px;
+  }
+
+  .header-icon {
+    align-self: center;
+  }
+
+  .header-title {
+    font-size: 18px;
+  }
+
+  .header-description {
+    font-size: 13px;
   }
 }
 </style>

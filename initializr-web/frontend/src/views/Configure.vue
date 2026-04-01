@@ -17,100 +17,37 @@
             <!-- 项目基础配置 -->
             <transition name="fade-slide" mode="out-in">
               <div v-if="activeSection === 'basic'" key="basic" class="config-form-container">
-                <el-card shadow="hover" class="config-card">
-                  <template #header>
-                    <div class="card-header">
-                      <el-icon :size="20" color="#409EFF"><Document /></el-icon>
-                      <span class="card-title">项目基础信息</span>
-                      <el-tag size="small" type="info">必填</el-tag>
-                    </div>
-                  </template>
-                  <BasicSettings />
-                </el-card>
+                <BasicSettings />
               </div>
 
               <!-- 模型配置 -->
               <div v-else-if="activeSection === 'model'" key="model" class="config-form-container">
-                <el-card shadow="hover" class="config-card">
-                  <template #header>
-                    <div class="card-header">
-                      <el-icon :size="20" color="#67C23A"><Connection /></el-icon>
-                      <span class="card-title">模型配置</span>
-                      <el-tag size="small" type="info">核心</el-tag>
-                    </div>
-                  </template>
-                  <ModelSettings />
-                </el-card>
+                <ModelSettings />
               </div>
 
               <!-- 记忆配置 -->
               <div v-else-if="activeSection === 'memory'" key="memory" class="config-form-container">
-                <el-card shadow="hover" class="config-card">
-                  <template #header>
-                    <div class="card-header">
-                      <el-icon :size="20" color="#E6A23C"><Memo /></el-icon>
-                      <span class="card-title">记忆配置</span>
-                      <el-tag size="small" type="warning">可选</el-tag>
-                    </div>
-                  </template>
-                  <MemorySettings />
-                </el-card>
+                <MemorySettings />
               </div>
 
               <!-- 知识库配置 -->
               <div v-else-if="activeSection === 'knowledge'" key="knowledge" class="config-form-container">
-                <el-card shadow="hover" class="config-card">
-                  <template #header>
-                    <div class="card-header">
-                      <el-icon :size="20" color="#409EFF"><Reading /></el-icon>
-                      <span class="card-title">知识库配置</span>
-                      <el-tag size="small" type="info">可选</el-tag>
-                    </div>
-                  </template>
-                  <KnowledgeBaseSettings />
-                </el-card>
+                <KnowledgeBaseSettings />
               </div>
 
               <!-- Skill配置 -->
               <div v-else-if="activeSection === 'skills'" key="skills" class="config-form-container">
-                <el-card shadow="hover" class="config-card">
-                  <template #header>
-                    <div class="card-header">
-                      <el-icon :size="20" color="#67C23A"><Star /></el-icon>
-                      <span class="card-title">Skill配置</span>
-                      <el-tag size="small" type="info">可选</el-tag>
-                    </div>
-                  </template>
-                  <SkillSettings />
-                </el-card>
+                <SkillSettings />
               </div>
 
               <!-- 扩展功能配置 -->
-              <div v-else-if="activeSection === 'extensions'" key="extensions" class="config-form-container">
-                <el-card shadow="hover" class="config-card">
-                  <template #header>
-                    <div class="card-header">
-                      <el-icon :size="20" color="#F56C6C"><Tools /></el-icon>
-                      <span class="card-title">扩展功能</span>
-                      <el-tag size="small" type="info">高级</el-tag>
-                    </div>
-                  </template>
-                  <ExtensionsSettings />
-                </el-card>
+              <div v-else-if="activeSection === 'extensions'" key="extensions" class="config-container">
+                <ExtensionsSettings />
               </div>
 
               <!-- 测试评估配置 -->
               <div v-else-if="activeSection === 'testing'" key="testing" class="config-form-container">
-                <el-card shadow="hover" class="config-card">
-                  <template #header>
-                    <div class="card-header">
-                      <el-icon :size="20" color="#909399"><DataAnalysis /></el-icon>
-                      <span class="card-title">测试与评估</span>
-                      <el-tag size="small" type="success">推荐</el-tag>
-                    </div>
-                  </template>
-                  <TestingSettings />
-                </el-card>
+                <TestingSettings />
               </div>
             </transition>
           </div>

@@ -1,21 +1,33 @@
 <template>
   <div class="memory-settings">
-    <!-- 记忆系统概述 -->
+    <!-- 统一头部卡片 -->
+    <div class="unified-header-card">
+      <div class="header-background">
+        <el-icon :size="32" color="#FFFFFF" class="header-icon"><Memo /></el-icon>
+        <div class="header-content">
+          <h2 class="header-title">记忆配置</h2>
+          <p class="header-description">配置智能体如何存储和检索信息，支持短期和长期记忆</p>
+        </div>
+        <el-tag type="success" size="large" effect="dark">可选配置</el-tag>
+      </div>
+    </div>
+
+    <!-- 配置提示 -->
     <el-alert
-      title="📚 记忆配置"
       type="info"
       :closable="false"
       show-icon
-      class="memory-overview"
+      class="config-hint"
     >
       <template #default>
-        <p class="overview-text">
-          配置智能体如何存储和检索信息。AgentScope 支持两种类型的记忆：
-        </p>
-        <ul class="overview-list">
-          <li><strong>短期记忆：</strong>在当前会话期间存储对话历史（例如：Redis、OceanBase）</li>
-          <li><strong>长期记忆：</strong>跨多个会话持久化知识（例如：Mem0、OceanBase）</li>
-        </ul>
+        <div class="hint-content">
+          <div class="hint-title">💡 配置说明</div>
+          <ul class="hint-list">
+            <li><strong>短期记忆：</strong>在当前会话期间存储对话历史（支持 Redis、OceanBase）</li>
+            <li><strong>长期记忆：</strong>跨多个会话持久化知识（支持 Mem0、OceanBase）</li>
+            <li>根据使用场景选择合适的记忆存储方案</li>
+          </ul>
+        </div>
       </template>
     </el-alert>
 
@@ -297,26 +309,76 @@ onMounted(async () => {
   padding: 0;
 }
 
-/* 概述样式 */
-.memory-overview {
-  margin-bottom: 24px;
+/* 统一头部卡片 */
+.unified-header-card {
+  margin-bottom: 20px;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
 }
 
-.overview-text {
-  margin: 0 0 12px 0;
-  line-height: 1.6;
-  color: #606266;
+.header-background {
+  background: linear-gradient(135deg, #67C23A 0%, #85ce61 100%);
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  color: #FFFFFF;
 }
 
-.overview-list {
+.header-icon {
+  flex-shrink: 0;
+}
+
+.header-content {
+  flex: 1;
+}
+
+.header-title {
+  margin: 0 0 8px 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #FFFFFF;
+  line-height: 1.2;
+}
+
+.header-description {
   margin: 0;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.5;
+}
+
+/* 配置提示 */
+.config-hint {
+  margin-bottom: 24px;
+  border-radius: 6px;
+}
+
+.hint-content {
+  line-height: 1.6;
+}
+
+.hint-title {
+  font-weight: 600;
+  color: #67C23A;
+  margin-bottom: 8px;
+}
+
+.hint-list {
+  margin: 8px 0 0 0;
   padding-left: 20px;
   color: #606266;
 }
 
-.overview-list li {
-  margin: 8px 0;
-  line-height: 1.6;
+.hint-list li {
+  margin: 6px 0;
+  line-height: 1.5;
+}
+
+.hint-list strong {
+  color: #303133;
+  font-weight: 600;
 }
 
 /* 详细配置样式 */
@@ -383,6 +445,24 @@ onMounted(async () => {
 
   .card-header {
     flex-wrap: wrap;
+  }
+
+  .header-background {
+    flex-direction: column;
+    text-align: center;
+    padding: 20px;
+  }
+
+  .header-icon {
+    align-self: center;
+  }
+
+  .header-title {
+    font-size: 18px;
+  }
+
+  .header-description {
+    font-size: 13px;
   }
 }
 </style>

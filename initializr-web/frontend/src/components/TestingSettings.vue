@@ -1,5 +1,37 @@
 <template>
   <div class="testing-settings">
+    <!-- 统一头部卡片 -->
+    <div class="unified-header-card">
+      <div class="header-background">
+        <el-icon :size="32" color="#FFFFFF" class="header-icon"><DocumentChecked /></el-icon>
+        <div class="header-content">
+          <h2 class="header-title">测试与评估配置</h2>
+          <p class="header-description">配置测试框架、评估模块和基准测试，确保智能体质量</p>
+        </div>
+        <el-tag type="danger" size="large" effect="dark">质量保证</el-tag>
+      </div>
+    </div>
+
+    <!-- 配置提示 -->
+    <el-alert
+      type="info"
+      :closable="false"
+      show-icon
+      class="config-hint"
+    >
+      <template #default>
+        <div class="hint-content">
+          <div class="hint-title">💡 配置说明</div>
+          <ul class="hint-list">
+            <li><strong>测试生成：</strong>使用pytest框架生成综合测试套件</li>
+            <li><strong>评估模块：</strong>评估智能体性能和质量指标</li>
+            <li><strong>OpenJudge：</strong>自动评分系统，用于评估智能体响应</li>
+            <li><strong>基准测试：</strong>生成初始基准任务以进行性能测试</li>
+          </ul>
+        </div>
+      </template>
+    </el-alert>
+
     <!-- Test Generation -->
     <el-card class="testing-card test-gen-card" shadow="hover">
       <template #header>
@@ -453,7 +485,79 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 24px;
-  padding: 20px 0;
+  padding: 0;
+}
+
+/* 统一头部卡片 */
+.unified-header-card {
+  margin-bottom: 20px;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+}
+
+.header-background {
+  background: linear-gradient(135deg, #F56C6C 0%, #ff8a8a 100%);
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  color: #FFFFFF;
+}
+
+.header-icon {
+  flex-shrink: 0;
+}
+
+.header-content {
+  flex: 1;
+}
+
+.header-title {
+  margin: 0 0 8px 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #FFFFFF;
+  line-height: 1.2;
+}
+
+.header-description {
+  margin: 0;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.5;
+}
+
+/* 配置提示 */
+.config-hint {
+  margin-bottom: 24px;
+  border-radius: 6px;
+}
+
+.hint-content {
+  line-height: 1.6;
+}
+
+.hint-title {
+  font-weight: 600;
+  color: #F56C6C;
+  margin-bottom: 8px;
+}
+
+.hint-list {
+  margin: 8px 0 0 0;
+  padding-left: 20px;
+  color: #606266;
+}
+
+.hint-list li {
+  margin: 6px 0;
+  line-height: 1.5;
+}
+
+.hint-list strong {
+  color: #303133;
+  font-weight: 600;
 }
 
 /* Testing Card Styles */
@@ -681,5 +785,30 @@ onMounted(() => {
 
 :deep(.el-alert__content) {
   line-height: 1.6;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .header-background {
+    flex-direction: column;
+    text-align: center;
+    padding: 20px;
+  }
+
+  .header-icon {
+    align-self: center;
+  }
+
+  .header-title {
+    font-size: 18px;
+  }
+
+  .header-description {
+    font-size: 13px;
+  }
+
+  .graders-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

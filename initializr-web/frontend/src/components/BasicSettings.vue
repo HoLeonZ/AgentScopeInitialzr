@@ -1,16 +1,33 @@
 <template>
   <div class="basic-settings">
+    <!-- 统一头部卡片 -->
+    <div class="unified-header-card">
+      <div class="header-background">
+        <el-icon :size="32" color="#FFFFFF" class="header-icon"><Document /></el-icon>
+        <div class="header-content">
+          <h2 class="header-title">项目基础信息</h2>
+          <p class="header-description">配置您的 AgentScope 项目的基础信息，包括项目名称、类型和描述</p>
+        </div>
+        <el-tag type="info" size="large" effect="dark">必填配置</el-tag>
+      </div>
+    </div>
+
+    <!-- 配置提示 -->
     <el-alert
-      title="📋 项目基础信息"
       type="info"
       :closable="false"
       show-icon
-      class="settings-alert"
+      class="config-hint"
     >
       <template #default>
-        <p class="overview-text">
-          配置您的 AgentScope 项目的基础信息。
-        </p>
+        <div class="hint-content">
+          <div class="hint-title">💡 配置说明</div>
+          <ul class="hint-list">
+            <li>项目名称将作为生成代码的目录名和包名</li>
+            <li>Basic Agent 适合单智能体场景，Multi-Agent 适合多智能体协作</li>
+            <li>描述信息将出现在 README 文件中</li>
+          </ul>
+        </div>
       </template>
     </el-alert>
 
@@ -71,6 +88,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useConfigStore } from '@/stores/config'
+import { Document } from '@element-plus/icons-vue'
 
 const configStore = useConfigStore()
 const form = computed(() => configStore.form)
@@ -85,16 +103,74 @@ const updateField = (field: string, value: any) => {
   padding: 0;
 }
 
-.settings-alert {
-  margin-bottom: 24px;
+/* 统一头部卡片 */
+.unified-header-card {
+  margin-bottom: 20px;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
 }
 
-.overview-text {
+.header-background {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  color: #FFFFFF;
+}
+
+.header-icon {
+  flex-shrink: 0;
+}
+
+.header-content {
+  flex: 1;
+}
+
+.header-title {
+  margin: 0 0 8px 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #FFFFFF;
+  line-height: 1.2;
+}
+
+.header-description {
   margin: 0;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.5;
+}
+
+/* 配置提示 */
+.config-hint {
+  margin-bottom: 24px;
+  border-radius: 6px;
+}
+
+.hint-content {
   line-height: 1.6;
+}
+
+.hint-title {
+  font-weight: 600;
+  color: #409EFF;
+  margin-bottom: 8px;
+}
+
+.hint-list {
+  margin: 8px 0 0 0;
+  padding-left: 20px;
   color: #606266;
 }
 
+.hint-list li {
+  margin: 6px 0;
+  line-height: 1.5;
+}
+
+/* 表单样式 */
 .settings-form {
   padding: 0 8px;
 }
@@ -133,5 +209,26 @@ const updateField = (field: string, value: any) => {
 :deep(.el-select-dropdown__item) {
   height: auto;
   padding: 8px 12px;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .header-background {
+    flex-direction: column;
+    text-align: center;
+    padding: 20px;
+  }
+
+  .header-icon {
+    align-self: center;
+  }
+
+  .header-title {
+    font-size: 18px;
+  }
+
+  .header-description {
+    font-size: 13px;
+  }
 }
 </style>
