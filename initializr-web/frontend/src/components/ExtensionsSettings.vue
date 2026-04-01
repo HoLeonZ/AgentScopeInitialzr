@@ -212,239 +212,6 @@
       </template>
     </el-card>
 
-    <!-- Skills Extension -->
-    <el-card class="extension-card skills-card" shadow="hover">
-      <template #header>
-        <div class="card-header">
-          <div class="header-left">
-            <el-icon class="header-icon" color="#F56C6C"><Star /></el-icon>
-            <span class="header-title">Skills Extension</span>
-          </div>
-          <el-switch
-            v-model="localForm.enable_skills"
-            size="large"
-            @change="updateField('enable_skills', $event)"
-          />
-        </div>
-        <div class="card-description">
-          Select specialized skills from the skill management system
-        </div>
-      </template>
-
-      <template v-if="localForm.enable_skills">
-        <el-alert
-          type="info"
-          :closable="false"
-          show-icon
-          style="margin-bottom: 20px"
-        >
-          Skills are uploaded by administrators via the Skill Management System. Select the skills you want to include in your project.
-        </el-alert>
-
-        <SkillSelector v-model="localForm.skills" @update:model-value="updateField('skills', $event)" />
-
-        <!-- Code Preview -->
-        <el-collapse style="margin-top: 20px">
-          <el-collapse-item name="skillsPreview">
-            <template #title>
-              <div class="preview-title">
-                <el-icon><View /></el-icon>
-                <span>Code Preview - Skills Configuration</span>
-              </div>
-            </template>
-            <div class="code-preview-container">
-              <div class="code-preview">
-                <pre><code>{{ skillsCodePreview }}</code></pre>
-              </div>
-            </div>
-          </el-collapse-item>
-        </el-collapse>
-      </template>
-    </el-card>
-
-    <!-- RAG Extension -->
-    <el-card class="extension-card rag-card" shadow="hover">
-      <template #header>
-        <div class="card-header">
-          <div class="header-left">
-            <el-icon class="header-icon" color="#909399"><Reading /></el-icon>
-            <span class="header-title">RAG Extension</span>
-            <el-tag size="small" type="warning">Advanced</el-tag>
-          </div>
-          <el-switch
-            v-model="localForm.enable_rag"
-            size="large"
-            @change="updateField('enable_rag', $event)"
-          />
-        </div>
-        <div class="card-description">
-          Enable Retrieval-Augmented Generation for knowledge base integration
-        </div>
-      </template>
-
-      <template v-if="localForm.enable_rag">
-        <el-alert
-          type="info"
-          :closable="false"
-          show-icon
-          style="margin-bottom: 20px"
-        >
-          RAG enhances your agent with external knowledge retrieval capabilities.
-        </el-alert>
-
-        <el-divider content-position="left">
-          <el-icon><Setting /></el-icon>
-          Vector Store Configuration
-        </el-divider>
-
-        <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item label="Vector Store">
-              <el-select
-                v-model="ragConfig.store_type"
-                placeholder="Select store"
-                size="large"
-                @change="updateRagConfig"
-              >
-                <el-option label="Qdrant" value="qdrant">
-                  <div class="option-item">
-                    <div class="option-label">Qdrant</div>
-                    <div class="option-desc">High-performance vector database</div>
-                  </div>
-                </el-option>
-                <el-option label="KBase" value="kbase">
-                  <div class="option-item">
-                    <div class="option-label">KBase</div>
-                    <div class="option-desc">Enterprise knowledge base service</div>
-                  </div>
-                </el-option>
-              </el-select>
-            </el-form-item>
-          </el-col>
-
-          <el-col :span="12">
-            <el-form-item label="Embedding Model">
-              <el-input
-                v-model="ragConfig.embedding_model"
-                placeholder="openai:text-embedding-ada-002"
-                @input="updateRagConfig"
-              />
-            </el-form-item>
-          </el-col>
-        </el-row>
-
-        <!-- Qdrant Configuration -->
-        <template v-if="ragConfig.store_type === 'qdrant'">
-          <el-divider content-position="left">
-            <el-icon><Setting /></el-icon>
-            Qdrant Configuration
-          </el-divider>
-
-          <el-row :gutter="20">
-            <el-col :span="12">
-              <el-form-item label="Qdrant Host">
-                <el-input
-                  v-model="ragConfig.qdrant_host"
-                  placeholder="localhost"
-                  @input="updateRagConfig"
-                />
-                <span class="hint">Qdrant server hostname</span>
-              </el-form-item>
-            </el-col>
-
-            <el-col :span="12">
-              <el-form-item label="Qdrant Port">
-                <el-input-number
-                  v-model="ragConfig.qdrant_port"
-                  :min="1"
-                  :max="65535"
-                  placeholder="6333"
-                  @change="updateRagConfig"
-                />
-                <span class="hint">Qdrant server port</span>
-              </el-form-item>
-            </el-col>
-          </el-row>
-
-          <el-form-item label="Collection Name">
-            <el-input
-              v-model="ragConfig.collection_name"
-              placeholder="agent_documents"
-              @input="updateRagConfig"
-            />
-            <span class="hint">Qdrant collection name for storing documents</span>
-          </el-form-item>
-        </template>
-
-        <!-- KBase Configuration -->
-        <template v-if="ragConfig.store_type === 'kbase'">
-          <el-divider content-position="left">
-            <el-icon><Setting /></el-icon>
-            KBase Configuration
-          </el-divider>
-
-          <el-form-item label="KBase Retrieval URL">
-            <el-input
-              v-model="ragConfig.kbase_retrieval_url"
-              placeholder="https://kbase.example.com/api/retrieve"
-              @input="updateRagConfig"
-            />
-            <span class="hint">KBase retrieval service URL</span>
-          </el-form-item>
-        </template>
-
-        <el-divider content-position="left">
-          <el-icon><Setting /></el-icon>
-          Chunking Configuration
-        </el-divider>
-
-        <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item label="Chunk Size">
-              <el-input-number
-                v-model="ragConfig.chunk_size"
-                :min="100"
-                :max="2000"
-                :step="100"
-                size="large"
-                @change="updateRagConfig"
-              />
-            </el-form-item>
-          </el-col>
-
-          <el-col :span="12">
-            <el-form-item label="Chunk Overlap">
-              <el-input-number
-                v-model="ragConfig.chunk_overlap"
-                :min="0"
-                :max="500"
-                :step="50"
-                size="large"
-                @change="updateRagConfig"
-              />
-            </el-form-item>
-          </el-col>
-        </el-row>
-
-        <!-- Code Preview -->
-        <el-collapse style="margin-top: 20px">
-          <el-collapse-item name="ragPreview">
-            <template #title>
-              <div class="preview-title">
-                <el-icon><View /></el-icon>
-                <span>Code Preview - RAG Configuration</span>
-              </div>
-            </template>
-            <div class="code-preview-container">
-              <div class="code-preview">
-                <pre><code>{{ ragCodePreview }}</code></pre>
-              </div>
-            </div>
-          </el-collapse-item>
-        </el-collapse>
-      </template>
-    </el-card>
-
     <!-- Pipeline Extension (Only for Multi-Agent) -->
     <el-card v-if="form.agent_type === 'multi-agent'" class="extension-card pipeline-card" shadow="hover">
       <template #header>
@@ -584,20 +351,6 @@
           <el-tag v-else type="info">Disabled</el-tag>
         </el-descriptions-item>
 
-        <el-descriptions-item label="Skills">
-          <el-tag v-if="localForm.enable_skills" type="success">
-            {{ localForm.skills.length }} Skills
-          </el-tag>
-          <el-tag v-else type="info">Disabled</el-tag>
-        </el-descriptions-item>
-
-        <el-descriptions-item label="RAG">
-          <el-tag v-if="localForm.enable_rag" type="warning">
-            {{ ragConfig.store_type || 'Not Configured' }}
-          </el-tag>
-          <el-tag v-else type="info">Disabled</el-tag>
-        </el-descriptions-item>
-
         <el-descriptions-item v-if="form.agent_type === 'multi-agent'" label="Pipeline">
           <el-tag v-if="localForm.enable_pipeline" type="warning">
             {{ pipelineConfig.type || 'Not Configured' }}
@@ -614,18 +367,14 @@ import { ref, reactive, onMounted, computed } from 'vue'
 import { useConfigStore } from '@/stores/config'
 import { api } from '@/api'
 import type { ExtensionsResponse } from '@/types'
-import SkillSelector from './SkillSelector.vue'
 import {
   Tools,
   Document,
   Link,
-  Star,
-  Reading,
   Operation,
   Setting,
   InfoFilled,
   Connection,
-  Medal,
   View
 } from '@element-plus/icons-vue'
 
@@ -640,23 +389,7 @@ const localForm = reactive({
   formatter: form.value.formatter || null,
   enable_hooks: form.value.enable_hooks ?? false,
   hooks: form.value.hooks || [],
-  enable_skills: form.value.enable_skills ?? false,
-  skills: form.value.skills || [],
-  enable_rag: form.value.enable_rag ?? false,
   enable_pipeline: form.value.enable_pipeline ?? false,
-})
-
-const ragConfig = reactive({
-  store_type: form.value.rag_config?.store_type || 'qdrant',
-  embedding_model: form.value.rag_config?.embedding_model || 'openai:text-embedding-ada-002',
-  chunk_size: form.value.rag_config?.chunk_size || 500,
-  chunk_overlap: form.value.rag_config?.chunk_overlap || 50,
-  // Qdrant configuration
-  qdrant_host: form.value.rag_config?.qdrant_host || 'localhost',
-  qdrant_port: form.value.rag_config?.qdrant_port || 6333,
-  collection_name: form.value.rag_config?.collection_name || 'agent_documents',
-  // KBase configuration
-  kbase_retrieval_url: form.value.rag_config?.kbase_retrieval_url || '',
 })
 
 const pipelineConfig = reactive({
@@ -832,60 +565,6 @@ async def ${hook}_hook(data):
   return code
 })
 
-const skillsCodePreview = computed(() => {
-  if (!localForm.enable_skills || localForm.skills.length === 0) {
-    return `# Skills Extension - Disabled
-
-# No specialized skills configured`
-  }
-
-  let code = `# Skills Configuration
-
-ENABLE_SKILLS = True
-SKILLS = ${JSON.stringify(localForm.skills, null, 4)}
-
-def get_skills():
-    """Get configured skills list."""
-    skills = []
-
-`
-  for (const skill of localForm.skills) {
-    code += `    # skills.append(${skill})\n`
-    code += `    # TODO: Implement ${skill} skill\n\n`
-  }
-
-  code += `    return skills`
-
-  return code
-})
-
-const ragCodePreview = computed(() => {
-  if (!localForm.enable_rag) {
-    return `# RAG Extension - Disabled
-
-# No RAG configuration`
-  }
-
-  return `# RAG Configuration
-
-RAG_STORE_TYPE = "${ragConfig.store_type}"
-RAG_EMBEDDING_MODEL = "${ragConfig.embedding_model}"
-RAG_CHUNK_SIZE = ${ragConfig.chunk_size}
-RAG_CHUNK_OVERLAP = ${ragConfig.chunk_overlap}
-
-def get_rag_retriever():
-    """Get configured RAG retriever instance."""
-    from agentscope.rag import RAGRetriever
-
-    return RAGRetriever(
-        store_type="${ragConfig.store_type}",
-        embedding_model="${ragConfig.embedding_model}",
-        chunk_size=${ragConfig.chunk_size},
-        chunk_overlap=${ragConfig.chunk_overlap},
-    )
-`
-})
-
 const pipelineCodePreview = computed(() => {
   if (!localForm.enable_pipeline) {
     return `# Pipeline Extension - Disabled
@@ -951,11 +630,6 @@ onMounted(() => {
   border-left: 4px solid #E6A23C;
 }
 
-.extension-card.skills-card {
-  border-left: 4px solid #F56C6C;
-}
-
-.extension-card.rag-card,
 .extension-card.pipeline-card {
   border-left: 4px solid #909399;
 }

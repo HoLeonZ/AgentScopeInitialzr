@@ -1,106 +1,162 @@
 <template>
   <div class="model-settings">
-    <el-form :model="form" label-width="150px" size="large">
-      <el-form-item label="Model Provider" required>
-        <el-select
-          v-model="form.model_provider"
-          placeholder="Select provider"
-          @change="updateField('model_provider', $event)"
-        >
-          <el-option
-            v-for="provider in providers"
-            :key="provider.id"
-            :value="provider.id"
-            :label="provider.name"
-          />
-        </el-select>
-      </el-form-item>
+    <!-- 模型配置概述 -->
+    <el-alert
+      title="🤖 模型配置"
+      type="info"
+      :closable="false"
+      show-icon
+      class="model-overview"
+    >
+      <template #default>
+        <p class="overview-text">
+          配置为智能体提供动力的语言模型。选择提供商、选择模型并调整参数以控制智能体的行为。
+        </p>
+      </template>
+    </el-alert>
 
-      <el-form-item label="Model Name">
-        <el-input
-          :model-value="form.model_config?.model"
-          placeholder="e.g., gpt-4, claude-3-sonnet"
-          @input="updateModelConfig('model', $event)"
-        />
-        <span class="hint">Specific model to use (e.g., gpt-4, claude-3-sonnet)</span>
-      </el-form-item>
-
-      <el-form-item label="API Key">
-        <el-input
-          :model-value="form.model_config?.api_key"
-          type="password"
-          placeholder="Your API key"
-          show-password
-          @input="updateModelConfig('api_key', $event)"
-        />
-        <span class="hint">API key for authentication (stored in .env file)</span>
-      </el-form-item>
-
-      <el-form-item label="Temperature">
-        <el-slider
-          :model-value="form.model_config?.temperature ?? 0.7"
-          :min="0"
-          :max="2"
-          :step="0.1"
-          :marks="{ 0: 'Precise', 1: 'Balanced', 2: 'Creative' }"
-          @change="updateModelConfig('temperature', $event)"
-        />
-        <span class="hint">Controls randomness: 0 = focused, 2 = creative</span>
-      </el-form-item>
-
-      <el-form-item label="Max Tokens">
-        <el-input-number
-          :model-value="form.model_config?.max_tokens ?? 2000"
-          :min="1"
-          :max="128000"
-          :step="1000"
-          @change="updateModelConfig('max_tokens', $event)"
-        />
-        <span class="hint">Maximum response length</span>
-      </el-form-item>
-    </el-form>
-
-    <!-- Live Preview -->
-    <el-divider content-position="left">
-      <el-icon><View /></el-icon>
-      Live Preview - Configuration Code
-    </el-divider>
-
-    <div class="preview-container">
-      <el-tabs v-model="activePreviewTab">
-        <el-tab-pane label=".env File" name="env">
-          <div class="code-preview">
-            <pre><code>{{ envPreview }}</code></pre>
+    <!-- 详细配置区块 -->
+    <div class="model-sections">
+      <!-- 模型选择区块 -->
+      <el-card class="model-card" shadow="hover">
+        <template #header>
+          <div class="card-header">
+            <el-icon :size="20" color="#409EFF"><Connection /></el-icon>
+            <span class="card-title">模型选择</span>
           </div>
-        </el-tab-pane>
+        </template>
 
-        <el-tab-pane label="config.json" name="config">
-          <div class="code-preview">
-            <pre><code>{{ configPreview }}</code></pre>
-          </div>
-        </el-tab-pane>
+        <el-form :model="form" label-width="140px" size="large">
+          <el-form-item label="提供商" required>
+            <el-select
+              v-model="form.model_provider"
+              placeholder="选择提供商"
+              @change="updateField('model_provider', $event)"
+              style="width: 100%"
+            >
+              <el-option
+                v-for="provider in providers"
+                :key="provider.id"
+                :value="provider.id"
+                :label="provider.name"
+              />
+            </el-select>
+            <span class="hint">选择模型提供商（OpenAI、Anthropic等）</span>
+          </el-form-item>
 
-        <el-tab-pane label="Project Structure" name="structure">
-          <div class="structure-preview">
-            <pre><code>{{ structurePreview }}</code></pre>
+          <el-form-item label="模型名称">
+            <el-input
+              :model-value="form.model_config?.model"
+              placeholder="例如：gpt-4、claude-3-sonnet"
+              @input="updateModelConfig('model', $event)"
+            />
+            <span class="hint">具体的模型标识符</span>
+          </el-form-item>
+
+          <el-form-item label="API密钥">
+            <el-input
+              :model-value="form.model_config?.api_key"
+              type="password"
+              placeholder="您的API密钥"
+              show-password
+              @input="updateModelConfig('api_key', $event)"
+            />
+            <span class="hint">认证密钥（将保存在.env文件中）</span>
+          </el-form-item>
+        </el-form>
+      </el-card>
+
+      <!-- 参数配置区块 -->
+      <el-card class="model-card" shadow="hover">
+        <template #header>
+          <div class="card-header">
+            <el-icon :size="20" color="#67C23A"><Operation /></el-icon>
+            <span class="card-title">模型参数</span>
+            <el-tag size="small" type="success">可选</el-tag>
           </div>
-        </el-tab-pane>
-      </el-tabs>
+        </template>
+
+        <el-form :model="form" label-width="140px" size="large">
+          <el-form-item label="温度" required>
+            <div class="temperature-config">
+              <el-input-number
+                :model-value="form.model_config?.temperature ?? 0.7"
+                :min="0"
+                :max="1"
+                :step="0.01"
+                :precision="2"
+                :controls-position="right"
+                placeholder="0.7"
+                style="width: 150px"
+                @change="updateModelConfig('temperature', $event)"
+              />
+
+              <el-button-group class="preset-buttons">
+                <el-button
+                  size="small"
+                  @click="setTemperature(0.3)"
+                  :type="(form.model_config?.temperature ?? 0.7) === 0.3 ? 'primary' : ''"
+                >
+                  专注
+                </el-button>
+                <el-button
+                  size="small"
+                  @click="setTemperature(0.7)"
+                  :type="(form.model_config?.temperature ?? 0.7) === 0.7 ? 'primary' : ''"
+                >
+                  平衡
+                </el-button>
+                <el-button
+                  size="small"
+                  @click="setTemperature(0.9)"
+                  :type="(form.model_config?.temperature ?? 0.7) === 0.9 ? 'primary' : ''"
+                >
+                  创意
+                </el-button>
+              </el-button-group>
+            </div>
+
+            <div class="parameter-hint">
+              <div class="hint-tags">
+                <el-tag type="info" size="small">✓ 取值范围: 0.0 - 1.0</el-tag>
+                <el-tag type="success" size="small">📍 默认值: 0.7</el-tag>
+              </div>
+              <div class="hint-description">
+                <div>💡 <strong>使用建议：</strong></div>
+                <div>• 0.0 - 0.3: 输出更确定、集中（适合代码生成）</div>
+                <div>• 0.4 - 0.6: 平衡确定性和多样性</div>
+                <div>• 0.7 - 1.0: 输出更多样、创意（适合创意写作）</div>
+              </div>
+            </div>
+          </el-form-item>
+
+          <el-form-item label="最大令牌数">
+            <el-input-number
+              :model-value="form.model_config?.max_tokens ?? 2000"
+              :min="1"
+              :max="128000"
+              :step="1000"
+              style="width: 100%"
+              @change="updateModelConfig('max_tokens', $event)"
+            />
+            <span class="hint">模型响应中的最大令牌数</span>
+          </el-form-item>
+        </el-form>
+      </el-card>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useConfigStore } from '@/stores/config'
 import { api } from '@/api'
-import { View } from '@element-plus/icons-vue'
+import { Connection, Operation } from '@element-plus/icons-vue'
 
 const configStore = useConfigStore()
-const form = computed(() => configStore.form)
+const form = configStore.form
 
 const providers = ref<any[]>([])
-const activePreviewTab = ref('env')
 
 const updateField = (field: string, value: any) => {
   configStore.setField(field as any, value)
@@ -108,75 +164,81 @@ const updateField = (field: string, value: any) => {
 
 const updateModelConfig = (key: string, value: any) => {
   configStore.setField('model_config', {
-    ...form.value.model_config,
+    ...form.model_config,
     [key]: value
   })
 }
 
-// Live preview computations
-const envPreview = computed(() => {
-  const provider = form.value.model_provider || 'openai'
-  const apiKey = form.value.model_config?.api_key || 'your-api-key-here'
+// 快速设置温度值
+const setTemperature = (value: number) => {
+  updateModelConfig('temperature', value)
+}
 
-  const envVars: Record<string, string> = {
-    openai: `# OpenAI Configuration
-OPENAI_API_KEY=${apiKey}
-OPENAI_API_BASE=https://api.openai.com/v1`,
-    dashscope: `# DashScope Configuration
-DASHSCOPE_API_KEY=${apiKey}`,
-    gemini: `# Gemini Configuration
-GEMINI_API_KEY=${apiKey}`,
-    anthropic: `# Anthropic Configuration
-ANTHROPIC_API_KEY=${apiKey}`,
-    ollama: `# Ollama Configuration
-OLLAMA_BASE_URL=http://localhost:11434`
+// 初始化和加载
+onMounted(async () => {
+  // 确保 model_config 对象存在
+  if (!form.model_config) {
+    updateModelConfig('model', undefined)
+    updateModelConfig('api_key', undefined)
   }
 
-  return envVars[provider] || envVars.openai
-})
+  // 确保 temperature 有默认值 0.7
+  if (form.model_config?.temperature === undefined) {
+    updateModelConfig('temperature', 0.7)
+  }
 
-const configPreview = computed(() => {
-  const model = form.value.model_config?.model || 'gpt-4'
-  const temperature = form.value.model_config?.temperature ?? 0.7
-  const maxTokens = form.value.model_config?.max_tokens ?? 2000
+  // 确保 max_tokens 有默认值
+  if (form.model_config?.max_tokens === undefined) {
+    updateModelConfig('max_tokens', 2000)
+  }
 
-  return JSON.stringify({
-    model: {
-      config_name: model,
-      temperature: temperature,
-      max_tokens: maxTokens
-    }
-  }, null, 2)
-})
-
-const structurePreview = computed(() => {
-  const packageName = form.value.name.replace(/-/g, '_') || 'my_agent'
-  return `${packageName}/
-├── src/
-│   └── ${packageName}/
-│       ├── config/
-│       │   ├── config.json          # Model configuration
-│       │   └── .env.example         # Environment variables template
-│       ├── agents/
-│       │   └── agent.py             # Agent with model configuration
-│       └── main.py
-├── .env                             # API keys (not in git)
-└── .env.example                     # Template for env vars`
-})
-
-onMounted(async () => {
+  // 加载模型提供商列表
   try {
     const response = await api.getModels()
     providers.value = response.providers
   } catch (error) {
-    console.error('Failed to load model providers:', error)
+    console.error('加载模型提供商失败:', error)
   }
 })
 </script>
 
 <style scoped>
 .model-settings {
-  padding: 20px 0;
+  padding: 0;
+}
+
+/* 总（Overview）样式 */
+.model-overview {
+  margin-bottom: 24px;
+}
+
+.overview-text {
+  margin: 0;
+  line-height: 1.6;
+  color: #606266;
+}
+
+/* 分（Detailed Configuration）样式 */
+.model-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.model-card {
+  border-radius: 8px;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.card-title {
+  font-size: 16px;
+  font-weight: 600;
+  flex: 1;
 }
 
 .hint {
@@ -184,36 +246,93 @@ onMounted(async () => {
   color: #909399;
   display: block;
   margin-top: 4px;
+  line-height: 1.4;
 }
 
-.preview-container {
-  margin-top: 30px;
+/* Temperature 配置样式 */
+.temperature-config {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.preset-buttons {
+  display: flex;
+  gap: 4px;
+}
+
+.parameter-hint {
+  margin-top: 12px;
+  padding: 12px;
   background: #f5f7fa;
-  border-radius: 8px;
+  border-radius: 6px;
+  border: 1px solid #e4e7ed;
+}
+
+.hint-tags {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.hint-description {
+  font-size: 0.85em;
+  color: #606266;
+  line-height: 1.6;
+}
+
+.hint-description div {
+  margin: 4px 0;
+}
+
+.hint-description strong {
+  color: #303133;
+  font-weight: 600;
+}
+
+:deep(.el-card__header) {
+  padding: 16px 20px;
+  background: #f5f7fa;
+  border-bottom: 1px solid #ebeef5;
+}
+
+:deep(.el-card__body) {
   padding: 20px;
 }
 
-.code-preview,
-.structure-preview {
-  background: #1e1e1e;
-  border-radius: 4px;
-  padding: 15px;
-  overflow-x: auto;
+:deep(.el-divider__text) {
+  font-size: 0.95em;
+  font-weight: 600;
+  color: #409EFF;
 }
 
-pre {
-  margin: 0;
-  color: #d4d4d4;
-  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-  font-size: 0.9em;
-  line-height: 1.5;
+:deep(.el-divider--horizontal) {
+  margin: 24px 0 20px 0;
 }
 
-code {
-  color: inherit;
-}
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .model-sections {
+    gap: 16px;
+  }
 
-:deep(.el-slider__marks-text) {
-  font-size: 0.8em;
+  .model-card {
+    margin: 0;
+  }
+
+  .card-header {
+    flex-wrap: wrap;
+  }
+
+  .temperature-config {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .preset-buttons {
+    width: 100%;
+  }
 }
 </style>

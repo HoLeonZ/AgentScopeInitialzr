@@ -1,0 +1,431 @@
+<template>
+  <div class="knowledge-base-settings">
+    <!-- 知识库配置概述 -->
+    <el-alert
+      title="📚 知识库配置"
+      type="info"
+      :closable="false"
+      show-icon
+      class="knowledge-overview"
+    >
+      <template #default>
+        <p class="overview-text">
+          启用知识库以提供外部信息检索能力。配置向量数据库、上传文档并设置检索参数。
+        </p>
+      </template>
+    </el-alert>
+
+    <!-- 详细配置区块 -->
+    <div class="knowledge-sections">
+      <!-- 启用开关 -->
+      <el-card class="knowledge-card" shadow="hover">
+        <template #header>
+          <div class="card-header">
+            <div class="header-left">
+              <el-icon :size="20" color="#409EFF"><Reading /></el-icon>
+              <span class="card-title">启用知识库</span>
+            </div>
+            <el-switch
+              v-model="localForm.enable_knowledge"
+              size="large"
+              @change="updateField('enable_knowledge', $event)"
+            />
+          </div>
+        </template>
+
+        <template v-if="localForm.enable_knowledge">
+          <el-alert
+            type="info"
+            :closable="false"
+            show-icon
+            style="margin-bottom: 24px"
+          >
+            知识库通过向量相似度搜索为智能体提供外部知识检索能力。
+          </el-alert>
+
+          <!-- 知识库类型选择 -->
+          <el-divider content-position="left">
+            <el-icon><Setting /></el-icon>
+            知识库类型
+          </el-divider>
+
+          <el-form-item label="知识库类型">
+            <el-radio-group v-model="knowledgeConfig.type" @change="updateKnowledgeConfig">
+              <el-radio value="kbase">
+                <div class="radio-content">
+                  <div class="radio-label">KBase</div>
+                  <div class="radio-desc">企业知识库服务</div>
+                </div>
+              </el-radio>
+              <el-radio value="qdrant">
+                <div class="radio-content">
+                  <div class="radio-label">Qdrant</div>
+                  <div class="radio-desc">高性能向量数据库</div>
+                </div>
+              </el-radio>
+            </el-radio-group>
+          </el-form-item>
+
+          <!-- KBase 配置 -->
+          <template v-if="knowledgeConfig.type === 'kbase'">
+            <el-divider content-position="left">
+              <el-icon><Setting /></el-icon>
+              KBase 配置
+            </el-divider>
+
+            <el-form-item label="服务地址">
+              <el-input
+                v-model="knowledgeConfig.kbase_url"
+                placeholder="https://kbase.example.com"
+                @input="updateKnowledgeConfig"
+              />
+              <span class="hint">KBase服务地址</span>
+            </el-form-item>
+          </template>
+
+          <!-- Qdrant 配置 -->
+          <template v-if="knowledgeConfig.type === 'qdrant'">
+            <el-divider content-position="left">
+              <el-icon><Setting /></el-icon>
+              Qdrant 配置
+            </el-divider>
+
+            <el-row :gutter="20">
+              <el-col :span="12">
+                <el-form-item label="主机地址">
+                  <el-input
+                    v-model="knowledgeConfig.qdrant_host"
+                    placeholder="localhost"
+                    @input="updateKnowledgeConfig"
+                  />
+                  <span class="hint">Qdrant服务器地址</span>
+                </el-form-item>
+              </el-col>
+
+              <el-col :span="12">
+                <el-form-item label="端口">
+                  <el-input-number
+                    v-model="knowledgeConfig.qdrant_port"
+                    :min="1"
+                    :max="65535"
+                    placeholder="6333"
+                    @change="updateKnowledgeConfig"
+                  />
+                  <span class="hint">Qdrant服务器端口</span>
+                </el-form-item>
+              </el-col>
+            </el-row>
+
+            <el-row :gutter="20">
+              <el-col :span="12">
+                <el-form-item label="集合名称">
+                  <el-input
+                    v-model="knowledgeConfig.collection_name"
+                    placeholder="agent_knowledge"
+                    @input="updateKnowledgeConfig"
+                  />
+                  <span class="hint">向量集合名称</span>
+                </el-form-item>
+              </el-col>
+
+              <el-col :span="12">
+                <el-form-item label="嵌入模型">
+                  <el-input
+                    v-model="knowledgeConfig.embedding_model"
+                    placeholder="text-embedding-ada-002"
+                    @input="updateKnowledgeConfig"
+                  />
+                  <span class="hint">向量嵌入模型</span>
+                </el-form-item>
+              </el-col>
+            </el-row>
+
+            <el-row :gutter="20">
+              <el-col :span="8">
+                <el-form-item label="向量维度">
+                  <el-input-number
+                    v-model="knowledgeConfig.dimension"
+                    :min="128"
+                    :max="3072"
+                    :step="128"
+                    @change="updateKnowledgeConfig"
+                  />
+                  <span class="hint">向量维度</span>
+                </el-form-item>
+              </el-col>
+            </el-row>
+          </template>
+
+          <!-- 检索设置 -->
+          <el-divider content-position="left">
+            <el-icon><Operation /></el-icon>
+            检索设置
+          </el-divider>
+
+          <el-row :gutter="20">
+            <el-col :span="8">
+              <el-form-item label="返回数量">
+                <el-input-number
+                  v-model="knowledgeConfig.top_k"
+                  :min="1"
+                  :max="20"
+                  @change="updateKnowledgeConfig"
+                />
+                <span class="hint">返回最相关的 K 个结果</span>
+              </el-form-item>
+            </el-col>
+
+            <el-col :span="8">
+              <el-form-item label="相似度阈值">
+                <el-slider
+                  v-model="knowledgeConfig.similarity_threshold"
+                  :min="0"
+                  :max="1"
+                  :step="0.1"
+                  show-input
+                  @change="updateKnowledgeConfig"
+                />
+                <span class="hint">相似度阈值</span>
+              </el-form-item>
+            </el-col>
+          </el-row>
+        </template>
+      </el-card>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { reactive, computed } from 'vue'
+import { useConfigStore } from '@/stores/config'
+import {
+  Reading,
+  Setting,
+  Operation
+} from '@element-plus/icons-vue'
+
+const configStore = useConfigStore()
+const form = computed(() => configStore.form)
+
+// 本地表单状态
+const localForm = reactive({
+  enable_knowledge: form.value.enable_knowledge ?? false,
+})
+
+// 知识库配置
+const knowledgeConfig = reactive({
+  type: form.value.knowledge_config?.type || 'qdrant',
+  // KBase配置
+  kbase_url: form.value.knowledge_config?.kbase_url || '',
+  // Qdrant配置
+  qdrant_host: form.value.knowledge_config?.qdrant_host || 'localhost',
+  qdrant_port: form.value.knowledge_config?.qdrant_port || 6333,
+  collection_name: form.value.knowledge_config?.collection_name || 'agent_knowledge',
+  embedding_model: form.value.knowledge_config?.embedding_model || 'text-embedding-ada-002',
+  dimension: form.value.knowledge_config?.dimension || 1536,
+  // 检索配置
+  top_k: form.value.knowledge_config?.top_k || 5,
+  similarity_threshold: form.value.knowledge_config?.similarity_threshold || 0.7,
+})
+
+// 更新字段到存储
+const updateField = (field: string, value: any) => {
+  configStore.setField(field as any, value)
+}
+
+// 更新知识库配置
+const updateKnowledgeConfig = () => {
+  configStore.setField('knowledge_config', { ...knowledgeConfig })
+}
+</script>
+
+<style scoped>
+.knowledge-base-settings {
+  padding: 0;
+}
+
+/* 总（Overview）样式 */
+.knowledge-overview {
+  margin-bottom: 32px;
+}
+
+.overview-text {
+  margin: 0;
+  line-height: 1.8;
+  color: #606266;
+  font-size: 15px;
+}
+
+/* 分（Detailed Configuration）样式 */
+.knowledge-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.knowledge-card {
+  border-radius: 12px;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.card-title {
+  font-size: 18px;
+  font-weight: 600;
+  flex: 1;
+}
+
+.hint {
+  font-size: 0.9em;
+  color: #909399;
+  display: block;
+  margin-top: 8px;
+  line-height: 1.6;
+}
+
+/* Radio Content */
+.radio-content {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 0;
+}
+
+.radio-label {
+  font-weight: 600;
+  color: #303133;
+  font-size: 15px;
+}
+
+.radio-desc {
+  font-size: 13px;
+  color: #909399;
+  line-height: 1.5;
+}
+
+/* Option Items */
+.option-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.option-label {
+  font-weight: 600;
+  color: #303133;
+  font-size: 14px;
+}
+
+.option-desc {
+  font-size: 13px;
+  color: #909399;
+}
+
+:deep(.el-card__header) {
+  padding: 20px 24px;
+  background: #f5f7fa;
+  border-bottom: 1px solid #ebeef5;
+}
+
+:deep(.el-card__body) {
+  padding: 28px 24px;
+}
+
+:deep(.el-divider__text) {
+  font-size: 1em;
+  font-weight: 600;
+  color: #409EFF;
+}
+
+:deep(.el-divider--horizontal) {
+  margin: 32px 0 24px 0;
+}
+
+:deep(.el-form-item) {
+  margin-bottom: 28px;
+}
+
+:deep(.el-form-item__label) {
+  font-weight: 500;
+  font-size: 15px;
+  color: #303133;
+}
+
+:deep(.el-input__inner),
+:deep(.el-input-number__input) {
+  font-size: 14px;
+}
+
+:deep(.el-radio) {
+  margin-right: 24px;
+  height: auto;
+  padding: 12px 16px;
+  margin-bottom: 12px;
+}
+
+:deep(.el-radio__label) {
+  font-size: 15px;
+}
+
+/* Upload Area */
+:deep(.el-upload-dragger) {
+  width: 100%;
+  min-height: 220px;
+  padding: 40px 20px;
+}
+
+:deep(.el-upload__text) {
+  font-size: 15px;
+}
+
+:deep(.el-upload__tip) {
+  font-size: 14px;
+  margin-top: 12px;
+}
+
+/* Slider */
+:deep(.el-slider) {
+  margin-top: 16px;
+}
+
+:deep(.el-slider__runway) {
+  height: 8px;
+}
+
+:deep(.el-slider__button) {
+  width: 20px;
+  height: 20px;
+}
+
+/* Checkbox Group */
+:deep(.el-checkbox-group) {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+:deep(.el-checkbox) {
+  margin-right: 0;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .knowledge-sections {
+    gap: 16px;
+  }
+
+  .knowledge-card {
+    margin: 0;
+  }
+}
+</style>

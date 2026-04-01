@@ -1,212 +1,242 @@
 <template>
   <div class="memory-settings">
-    <el-form :model="form" label-width="180px" size="large">
-      <!-- Short-term Memory -->
-      <el-divider content-position="left">
-        <el-icon><Memo /></el-icon>
-        Short-term Memory
-      </el-divider>
-
-      <el-form-item label="Enable Short-term Memory">
-        <el-switch
-          v-model="form.enable_memory"
-          @change="updateField('enable_memory', $event)"
-        />
-        <span class="hint">Store conversation history in memory</span>
-      </el-form-item>
-
-      <el-form-item v-if="form.enable_memory" label="Memory Type">
-        <el-select
-          v-model="form.short_term_memory"
-          placeholder="Select memory type"
-          @change="updateField('short_term_memory', $event)"
-        >
-          <el-option
-            v-for="type in extensions.memory.short_term"
-            :key="type"
-            :value="type"
-            :label="formatMemoryName(type)"
-          />
-        </el-select>
-        <span class="hint">Storage backend for conversation history</span>
-      </el-form-item>
-
-      <!-- Long-term Memory -->
-      <el-divider content-position="left">
-        <el-icon><FolderOpened /></el-icon>
-        Long-term Memory
-      </el-divider>
-
-      <el-form-item label="Enable Long-term Memory">
-        <el-switch
-          v-model="enableLongTerm"
-          @change="handleLongTermToggle"
-        />
-        <span class="hint">Persist memories across sessions</span>
-      </el-form-item>
-
-      <el-form-item v-if="enableLongTerm" label="Long-term Memory Type">
-        <el-select
-          v-model="form.long_term_memory"
-          placeholder="Select long-term memory"
-          @change="updateField('long_term_memory', $event)"
-        >
-          <el-option
-            v-for="type in extensions.memory.long_term"
-            :key="type"
-            :value="type"
-            :label="formatMemoryName(type)"
-          />
-        </el-select>
-        <span class="hint">Persistent storage for long-term knowledge</span>
-      </el-form-item>
-
-      <el-form-item v-if="enableLongTerm && form.long_term_memory === 'mem0'" label="Mem0 API Key">
-        <el-input
-          v-model="mem0ApiKey"
-          type="password"
-          placeholder="Your Mem0 API key"
-          show-password
-        />
-        <span class="hint">Required for Mem0 memory service</span>
-      </el-form-item>
-
-      <el-form-item v-if="enableLongTerm && form.long_term_memory === 'mem0'" label="Mem0 API URL">
-        <el-input
-          v-model="mem0ApiUrl"
-          placeholder="https://api.mem0.ai"
-        />
-        <span class="hint">Mem0 API endpoint URL (optional, uses default if not provided)</span>
-      </el-form-item>
-
-      <el-form-item v-if="enableLongTerm && form.long_term_memory === 'oceanbase'" label="OceanBase Connection String">
-        <el-input
-          v-model="oceanbaseConnectionString"
-          placeholder="postgresql://user:password@localhost:2881/tenant"
-        />
-        <span class="hint">OceanBase database connection string</span>
-      </el-form-item>
-
-      <el-form-item v-if="enableLongTerm && form.long_term_memory === 'oceanbase'" label="Table Name">
-        <el-input
-          v-model="oceanbaseTableName"
-          placeholder="agent_memory"
-        />
-        <span class="hint">Table name for storing agent memories</span>
-      </el-form-item>
-
-      <!-- Short-term Memory Configurations -->
-      <el-form-item v-if="form.enable_memory && form.short_term_memory === 'redis'" label="Redis Connection Mode">
-        <el-radio-group v-model="redisConnectionMode">
-          <el-radio label="manual">Manual Configuration</el-radio>
-          <el-radio label="url">URL Connection</el-radio>
-        </el-radio-group>
-        <span class="hint">Choose how to connect to Redis server</span>
-      </el-form-item>
-
-      <template v-if="form.enable_memory && form.short_term_memory === 'redis' && redisConnectionMode === 'manual'">
-        <el-form-item label="Redis Host">
-          <el-input
-            v-model="redisHost"
-            placeholder="localhost"
-          />
-          <span class="hint">Redis server hostname</span>
-        </el-form-item>
-
-        <el-form-item label="Redis Port">
-          <el-input-number
-            v-model="redisPort"
-            :min="1"
-            :max="65535"
-            placeholder="6379"
-          />
-          <span class="hint">Redis server port</span>
-        </el-form-item>
-
-        <el-form-item label="Redis DB">
-          <el-input-number
-            v-model="redisDb"
-            :min="0"
-            :max="15"
-            placeholder="0"
-          />
-          <span class="hint">Redis database number</span>
-        </el-form-item>
-
-        <el-form-item label="Redis Password (Optional)">
-          <el-input
-            v-model="redisPassword"
-            type="password"
-            placeholder="Leave empty if no authentication"
-            show-password
-          />
-          <span class="hint">Redis server password</span>
-        </el-form-item>
+    <!-- 记忆系统概述 -->
+    <el-alert
+      title="📚 记忆配置"
+      type="info"
+      :closable="false"
+      show-icon
+      class="memory-overview"
+    >
+      <template #default>
+        <p class="overview-text">
+          配置智能体如何存储和检索信息。AgentScope 支持两种类型的记忆：
+        </p>
+        <ul class="overview-list">
+          <li><strong>短期记忆：</strong>在当前会话期间存储对话历史（例如：Redis、OceanBase）</li>
+          <li><strong>长期记忆：</strong>跨多个会话持久化知识（例如：Mem0、OceanBase）</li>
+        </ul>
       </template>
+    </el-alert>
 
-      <el-form-item v-if="form.enable_memory && form.short_term_memory === 'redis' && redisConnectionMode === 'url'" label="Redis URL">
-        <el-input
-          v-model="redisUrl"
-          placeholder="redis://localhost:6379/0 or rediss://user:pass@host:port/db"
-        />
-        <span class="hint">Complete Redis connection URL (for cloud services like Redis Cloud)</span>
-      </el-form-item>
-
-      <el-form-item v-if="form.enable_memory && form.short_term_memory === 'oceanbase'" label="OceanBase Connection String">
-        <el-input
-          v-model="oceanbaseShortTermConnectionString"
-          placeholder="postgresql://user:password@localhost:2881/tenant"
-        />
-        <span class="hint">OceanBase database connection string</span>
-      </el-form-item>
-
-      <el-form-item v-if="form.enable_memory && form.short_term_memory === 'oceanbase'" label="Table Name">
-        <el-input
-          v-model="oceanbaseShortTermTableName"
-          placeholder="agent_conversation"
-        />
-        <span class="hint">Table name for storing conversation history</span>
-      </el-form-item>
-    </el-form>
-
-    <!-- Live Preview -->
-    <el-divider content-position="left">
-      <el-icon><View /></el-icon>
-      Live Preview - Memory Configuration
-    </el-divider>
-
-    <div class="preview-container">
-      <el-tabs v-model="activePreviewTab">
-        <el-tab-pane label="Agent Code" name="agent">
-          <div class="code-preview">
-            <pre><code>{{ agentCodePreview }}</code></pre>
+    <!-- 详细配置区块 -->
+    <div class="memory-sections">
+      <!-- 短期记忆区块 -->
+      <el-card class="memory-card" shadow="hover">
+        <template #header>
+          <div class="card-header">
+            <el-icon :size="20" color="#409EFF"><Memo /></el-icon>
+            <span class="card-title">短期记忆</span>
+            <el-tag size="small" type="primary">基于会话</el-tag>
           </div>
-        </el-tab-pane>
+        </template>
 
-        <el-tab-pane label="config.json" name="config">
-          <div class="code-preview">
-            <pre><code>{{ configPreview }}</code></pre>
-          </div>
-        </el-tab-pane>
+        <el-form :model="form" label-width="140px" size="large">
+          <el-form-item label="启用">
+            <el-switch
+              v-model="form.enable_memory"
+              @change="updateField('enable_memory', $event)"
+            />
+            <span class="hint">在会话期间将对话历史存储在内存中</span>
+          </el-form-item>
 
-        <el-tab-pane label="Project Structure" name="structure">
-          <div class="structure-preview">
-            <pre><code>{{ structurePreview }}</code></pre>
+          <template v-if="form.enable_memory">
+            <el-form-item label="记忆类型">
+              <el-select
+                v-model="form.short_term_memory"
+                placeholder="选择记忆类型"
+                @change="updateField('short_term_memory', $event)"
+                style="width: 100%"
+              >
+                <el-option
+                  v-for="type in extensions.memory.short_term"
+                  :key="type"
+                  :value="type"
+                  :label="formatMemoryName(type)"
+                />
+              </el-select>
+              <span class="hint">选择对话历史的存储后端</span>
+            </el-form-item>
+
+            <!-- Redis 配置 -->
+            <template v-if="form.short_term_memory === 'redis'">
+              <el-divider content-position="left">Redis 配置</el-divider>
+
+              <el-form-item label="连接模式">
+                <el-radio-group v-model="redisConnectionMode">
+                  <el-radio label="manual">手动配置</el-radio>
+                  <el-radio label="url">URL 连接</el-radio>
+                </el-radio-group>
+                <span class="hint">选择如何连接到 Redis 服务器</span>
+              </el-form-item>
+
+              <template v-if="redisConnectionMode === 'manual'">
+                <el-form-item label="主机">
+                  <el-input
+                    v-model="redisHost"
+                    placeholder="localhost"
+                  />
+                </el-form-item>
+
+                <el-form-item label="端口">
+                  <el-input-number
+                    v-model="redisPort"
+                    :min="1"
+                    :max="65535"
+                    placeholder="6379"
+                    style="width: 100%"
+                  />
+                </el-form-item>
+
+                <el-form-item label="数据库">
+                  <el-input-number
+                    v-model="redisDb"
+                    :min="0"
+                    :max="15"
+                    placeholder="0"
+                    style="width: 100%"
+                  />
+                </el-form-item>
+
+                <el-form-item label="密码">
+                  <el-input
+                    v-model="redisPassword"
+                    type="password"
+                    placeholder="如果不需要认证则留空"
+                    show-password
+                  />
+                  <span class="hint">可选，仅当您的 Redis 需要认证时</span>
+                </el-form-item>
+              </template>
+
+              <el-form-item v-if="redisConnectionMode === 'url'" label="连接 URL">
+                <el-input
+                  v-model="redisUrl"
+                  placeholder="redis://localhost:6379/0 或 rediss://user:pass@host:port/db"
+                />
+                <span class="hint">用于云服务如 Redis Cloud</span>
+              </el-form-item>
+            </template>
+
+            <!-- OceanBase 配置 -->
+            <template v-if="form.short_term_memory === 'oceanbase'">
+              <el-divider content-position="left">OceanBase 配置</el-divider>
+
+              <el-form-item label="连接字符串">
+                <el-input
+                  v-model="oceanbaseShortTermConnectionString"
+                  placeholder="postgresql://user:password@localhost:2881/tenant"
+                />
+                <span class="hint">OceanBase 的 PostgreSQL 兼容连接字符串</span>
+              </el-form-item>
+
+              <el-form-item label="表名">
+                <el-input
+                  v-model="oceanbaseShortTermTableName"
+                  placeholder="agent_conversation"
+                />
+                <span class="hint">用于存储对话历史的表名</span>
+              </el-form-item>
+            </template>
+          </template>
+        </el-form>
+      </el-card>
+
+      <!-- 长期记忆区块 -->
+      <el-card class="memory-card" shadow="hover">
+        <template #header>
+          <div class="card-header">
+            <el-icon :size="20" color="#67C23A"><FolderOpened /></el-icon>
+            <span class="card-title">长期记忆</span>
+            <el-tag size="small" type="success">持久化</el-tag>
           </div>
-        </el-tab-pane>
-      </el-tabs>
+        </template>
+
+        <el-form :model="form" label-width="140px" size="large">
+          <el-form-item label="启用">
+            <el-switch
+              v-model="enableLongTerm"
+              @change="handleLongTermToggle"
+            />
+            <span class="hint">跨多个会话持久化记忆</span>
+          </el-form-item>
+
+          <template v-if="enableLongTerm">
+            <el-form-item label="记忆类型">
+              <el-select
+                v-model="form.long_term_memory"
+                placeholder="选择长期记忆类型"
+                @change="updateField('long_term_memory', $event)"
+                style="width: 100%"
+              >
+                <el-option
+                  v-for="type in extensions.memory.long_term"
+                  :key="type"
+                  :value="type"
+                  :label="formatMemoryName(type)"
+                />
+              </el-select>
+              <span class="hint">选择长期知识的持久化存储</span>
+            </el-form-item>
+
+            <!-- Mem0 配置 -->
+            <template v-if="form.long_term_memory === 'mem0'">
+              <el-divider content-position="left">Mem0 配置</el-divider>
+
+              <el-form-item label="API 密钥">
+                <el-input
+                  v-model="mem0ApiKey"
+                  type="password"
+                  placeholder="您的 Mem0 API 密钥"
+                  show-password
+                />
+                <span class="hint">Mem0 记忆服务所需</span>
+              </el-form-item>
+
+              <el-form-item label="API 地址">
+                <el-input
+                  v-model="mem0ApiUrl"
+                  placeholder="https://api.mem0.ai"
+                />
+                <span class="hint">可选，如果未提供则使用默认端点</span>
+              </el-form-item>
+            </template>
+
+            <!-- OceanBase 长期配置 -->
+            <template v-if="form.long_term_memory === 'oceanbase'">
+              <el-divider content-position="left">OceanBase 配置</el-divider>
+
+              <el-form-item label="连接字符串">
+                <el-input
+                  v-model="oceanbaseConnectionString"
+                  placeholder="postgresql://user:password@localhost:2881/tenant"
+                />
+                <span class="hint">OceanBase 的 PostgreSQL 兼容连接字符串</span>
+              </el-form-item>
+
+              <el-form-item label="表名">
+                <el-input
+                  v-model="oceanbaseTableName"
+                  placeholder="agent_memory"
+                />
+                <span class="hint">用于存储智能体记忆的表名</span>
+              </el-form-item>
+            </template>
+          </template>
+        </el-form>
+      </el-card>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useConfigStore } from '@/stores/config'
 import { api } from '@/api'
-import { View, Memo, FolderOpened } from '@element-plus/icons-vue'
+import { Memo, FolderOpened } from '@element-plus/icons-vue'
 
 const configStore = useConfigStore()
-const form = computed(() => configStore.form)
+const form = configStore.form
 
 const extensions = ref<any>({
   memory: {
@@ -214,18 +244,17 @@ const extensions = ref<any>({
     long_term: []
   }
 })
-const activePreviewTab = ref('agent')
 const enableLongTerm = ref(false)
 const mem0ApiKey = ref('')
 const mem0ApiUrl = ref('')
 
-// OceanBase configurations
+// OceanBase 配置
 const oceanbaseConnectionString = ref('')
 const oceanbaseTableName = ref('agent_memory')
 const oceanbaseShortTermConnectionString = ref('')
 const oceanbaseShortTermTableName = ref('agent_conversation')
 
-// Redis configurations
+// Redis 配置
 const redisConnectionMode = ref('manual')
 const redisHost = ref('localhost')
 const redisPort = ref(6379)
@@ -253,169 +282,65 @@ const formatMemoryName = (type: string) => {
     .join(' ')
 }
 
-// Live preview computations
-const agentCodePreview = computed(() => {
-  const shortTerm = form.value.enable_memory
-    ? (form.value.short_term_memory || 'in-memory')
-    : null
-
-  const longTerm = enableLongTerm.value
-    ? (form.value.long_term_memory || 'mem0')
-    : null
-
-  let code = `# Agent initialization with memory configuration`
-
-  if (shortTerm && shortTerm !== 'in-memory') {
-    if (shortTerm === 'redis') {
-      if (redisConnectionMode.value === 'url') {
-        code += `
-
-# Configure Redis memory with URL
-from agentscope.memory import RedisMemory
-
-memory = RedisMemory(
-    url="${redisUrl.value || 'redis://localhost:6379/0'}"
-)`
-      } else {
-        code += `
-
-# Configure Redis memory with manual settings
-from agentscope.memory import RedisMemory
-
-memory = RedisMemory(
-    host="${redisHost.value || 'localhost'}",
-    port=${redisPort.value || 6379},
-    db=${redisDb.value || 0},
-    ${redisPassword.value ? `password="${redisPassword.value}",` : ''}
-)`
-      }
-    } else if (shortTerm === 'oceanbase') {
-      code += `
-
-# Configure OceanBase short-term memory
-from agentscope.memory import OceanBaseMemory
-
-memory = OceanBaseMemory(
-    connection_string="${oceanbaseShortTermConnectionString.value || 'postgresql://user:password@localhost:2881/tenant'}",
-    table_name="${oceanbaseShortTermTableName.value || 'agent_conversation'}",
-)`
-    }
-  } else if (shortTerm === 'in-memory') {
-    code += `
-
-# Configure in-memory storage
-from agentscope.memory import InMemoryMemory
-
-memory = InMemoryMemory()`
-  }
-
-  if (longTerm && longTerm !== 'none') {
-    code += `
-
-# Configure long-term memory with ${formatMemoryName(longTerm)}
-agent.memory.add_long_term(
-    type="${longTerm}",
-    config={
-        "api_key": "${mem0ApiKey.value || 'your-api-key'}"${mem0ApiUrl.value ? `,
-        "api_url": "${mem0ApiUrl.value}"` : ''}
-    }
-)`
-  }
-
-  if (!shortTerm && !longTerm) {
-    code += `
-
-# Memory is disabled for this agent`
-  }
-
-  return code
-})
-
-const configPreview = computed(() => {
-  const config: any = {}
-
-  if (form.value.enable_memory && form.value.short_term_memory) {
-    config.short_term_memory = {
-      type: form.value.short_term_memory
-    }
-    if (form.value.short_term_memory === 'redis') {
-      if (redisConnectionMode.value === 'url') {
-        config.short_term_memory.url = redisUrl.value || 'redis://localhost:6379/0'
-      } else {
-        config.short_term_memory.host = redisHost.value || 'localhost'
-        config.short_term_memory.port = redisPort.value || 6379
-        config.short_term_memory.db = redisDb.value || 0
-        if (redisPassword.value) {
-          config.short_term_memory.password = redisPassword.value
-        }
-      }
-    } else if (form.value.short_term_memory === 'oceanbase') {
-      config.short_term_memory.connection_string = oceanbaseShortTermConnectionString.value || 'postgresql://user:password@localhost:2881/tenant'
-      config.short_term_memory.table_name = oceanbaseShortTermTableName.value || 'agent_conversation'
-    }
-  }
-
-  if (enableLongTerm.value && form.value.long_term_memory) {
-    config.long_term_memory = {
-      type: form.value.long_term_memory
-    }
-    if (form.value.long_term_memory === 'mem0') {
-      config.long_term_memory.api_key = mem0ApiKey.value || 'your-api-key'
-      if (mem0ApiUrl.value) {
-        config.long_term_memory.api_url = mem0ApiUrl.value
-      }
-    }
-  }
-
-  if (Object.keys(config).length === 0) {
-    return `# Memory is disabled`
-  }
-
-  return JSON.stringify({ memory: config }, null, 2)
-})
-
-const structurePreview = computed(() => {
-  const packageName = form.value.name.replace(/-/g, '_') || 'my_agent'
-  const hasShortTerm = form.value.enable_memory && form.value.short_term_memory
-  const hasLongTerm = enableLongTerm.value && form.value.long_term_memory && form.value.long_term_memory !== 'none'
-
-  let structure = `${packageName}/
-├── src/
-│   └── ${packageName}/
-│       ├── agents/
-│       │   └── agent.py`
-
-  if (hasShortTerm) {
-    structure += `         # Agent with memory configuration`
-  }
-
-  if (hasLongTerm) {
-    structure += `
-│       ├── memory/
-│       │   └── long_term_mem.py    # Long-term memory implementation`
-  }
-
-  structure += `
-│       └── config/
-│           └── config.json
-└── .env`
-
-  return structure
-})
-
 onMounted(async () => {
   try {
     const response = await api.getExtensions()
     extensions.value = response
   } catch (error) {
-    console.error('Failed to load extensions:', error)
+    console.error('加载扩展失败:', error)
   }
 })
 </script>
 
 <style scoped>
 .memory-settings {
-  padding: 20px 0;
+  padding: 0;
+}
+
+/* 概述样式 */
+.memory-overview {
+  margin-bottom: 24px;
+}
+
+.overview-text {
+  margin: 0 0 12px 0;
+  line-height: 1.6;
+  color: #606266;
+}
+
+.overview-list {
+  margin: 0;
+  padding-left: 20px;
+  color: #606266;
+}
+
+.overview-list li {
+  margin: 8px 0;
+  line-height: 1.6;
+}
+
+/* 详细配置样式 */
+.memory-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.memory-card {
+  border-radius: 8px;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.card-title {
+  font-size: 16px;
+  font-weight: 600;
+  flex: 1;
 }
 
 .hint {
@@ -423,37 +348,41 @@ onMounted(async () => {
   color: #909399;
   display: block;
   margin-top: 4px;
+  line-height: 1.4;
 }
 
-.preview-container {
-  margin-top: 30px;
+:deep(.el-card__header) {
+  padding: 16px 20px;
   background: #f5f7fa;
-  border-radius: 8px;
+  border-bottom: 1px solid #ebeef5;
+}
+
+:deep(.el-card__body) {
   padding: 20px;
 }
 
-.code-preview,
-.structure-preview {
-  background: #1e1e1e;
-  border-radius: 4px;
-  padding: 15px;
-  overflow-x: auto;
-}
-
-pre {
-  margin: 0;
-  color: #d4d4d4;
-  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-  font-size: 0.9em;
-  line-height: 1.5;
-}
-
-code {
-  color: inherit;
-}
-
 :deep(.el-divider__text) {
-  font-size: 1.1em;
+  font-size: 0.95em;
   font-weight: 600;
+  color: #409EFF;
+}
+
+:deep(.el-divider--horizontal) {
+  margin: 24px 0 20px 0;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .memory-sections {
+    gap: 16px;
+  }
+
+  .memory-card {
+    margin: 0;
+  }
+
+  .card-header {
+    flex-wrap: wrap;
+  }
 }
 </style>

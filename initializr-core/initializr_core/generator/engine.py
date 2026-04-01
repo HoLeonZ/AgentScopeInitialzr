@@ -187,6 +187,14 @@ class ProjectGenerator:
         # Generate utils files
         self._generate_utils(pkg_dir, metadata)
 
+        # Generate agent factory
+        agent_factory_content = self._generate_agent_factory(metadata)
+        (pkg_dir / "agent_factory.py").write_text(agent_factory_content)
+
+        # Generate example usage file (instead of CLI)
+        example_content = self._generate_example_usage(metadata)
+        (pkg_dir / "example_usage.py").write_text(example_content)
+
         # Generate examples
         self._generate_examples(project_path, metadata)
 
@@ -199,7 +207,7 @@ class ProjectGenerator:
         # Generate tests and evaluation
         self._generate_tests_and_evaluation(project_path, metadata)
 
-        # Generate main.py
+        # Generate main.py (simplified, following single responsibility principle)
         main_content = self._generate_main(metadata)
         main_path.write_text(main_content)
 
@@ -599,44 +607,243 @@ markers = [
 __version__ = "{metadata.version}"
 '''
 
+    def _generate_agent_factory(self, metadata: AgentScopeMetadata) -> str:
+        """Generate agent_factory.py - responsible for creating and configuring agents."""
+        return f'''"""
+Agent Factory Module
+
+This module is responsible for creating and configuring agents.
+Following Single Responsibility Principle, it handles all agent creation logic.
+"""
+
+from typing import Optional
+from agentscope.agent import ReActAgent
+from {metadata.package_name}.config import settings
+from {metadata.package_name}.config.lifecycle import ApplicationLifecycle
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+class AgentFactory:
+    """Factory class for creating agents with proper configuration."""
+
+    @staticmethod
+    def create_agent(
+        name: str,
+        sys_prompt: Optional[str] = None,
+    ) -> ReActAgent:
+        """
+        Create and configure an agent.
+
+        Args:
+            name: Agent name
+            sys_prompt: System prompt (uses default if not provided)
+
+        Returns:
+            Configured ReActAgent instance
+
+        Raises:
+            RuntimeError: If agent creation fails
+        """
+        try:
+            # Get agent parameters with auto-injected middlewares
+            agent_params = ApplicationLifecycle.get_agent_params()
+
+            # Use provided prompt or default from settings
+            prompt = sys_prompt or settings.SYSTEM_PROMPT
+
+            # Create agent with all middlewares auto-injected
+            agent = ReActAgent(
+                name=name,
+                sys_prompt=prompt,
+                **agent_params  # Auto-includes: model, formatter, toolkit, memory, etc.
+            )
+
+            logger.info(f"Agent '{{name}}' created successfully")
+            return agent
+
+        except Exception as e:
+            logger.error(f"Failed to create agent '{{name}}': {{str(e)}}", exc_info=True)
+            raise RuntimeError(f"Agent creation failed: {{str(e)}}") from e
+
+
+def create_agent(
+    name: str,
+    sys_prompt: Optional[str] = None,
+) -> ReActAgent:
+    """
+    Convenience function to create an agent.
+
+    Args:
+        name: Agent name
+        sys_prompt: Optional system prompt
+
+    Returns:
+        Configured ReActAgent instance
+    """
+    return AgentFactory.create_agent(name, sys_prompt)
+'''
+
+
+    def _generate_example_usage(self, metadata: AgentScopeMetadata) -> str:
+        """Generate example_usage.py - demonstrates various agent usage patterns."""
+        return f'''"""
+Example Usage for {metadata.name}
+
+This module demonstrates various ways to use your agent.
+"""
+
+import asyncio
+import logging
+from {metadata.package_name}.agent_factory import create_agent
+from {metadata.package_name}.config.lifecycle import ApplicationLifecycle
+
+logger = logging.getLogger(__name__)
+
+
+async def example_basic_conversation():
+    """Example 1: Basic conversation with the agent."""
+    print("\\n" + "="*50)
+    print("Example 1: Basic Conversation")
+    print("="*50)
+
+    # Initialize lifecycle
+    ApplicationLifecycle.initialize()
+
+    # Create agent
+    agent = create_agent(
+        name="{metadata.name}",
+        sys_prompt="You are a helpful assistant."
+    )
+
+    # Simple conversation
+    responses = []
+    questions = [
+        "Hello! Can you help me?",
+        "What's the capital of France?",
+        "Thank you for your help!"
+    ]
+
+    for question in questions:
+        print(f"\\n👤 User: {{question}}")
+        response = await agent(question)
+        print(f"🤖 Agent: {{response}}")
+        responses.append(response)
+
+    # Cleanup
+    ApplicationLifecycle.shutdown()
+
+    return responses
+
+
+async def example_with_context():
+    """Example 2: Multi-turn conversation with context."""
+    print("\\n" + "="*50)
+    print("Example 2: Multi-turn Conversation")
+    print("="*50)
+
+    ApplicationLifecycle.initialize()
+
+    agent = create_agent(
+        name="{metadata.name}",
+        sys_prompt="You are a research assistant specializing in technology."
+    )
+
+    # Conversation with context
+    conversation = [
+        "I'm interested in learning about artificial intelligence.",
+        "Can you explain machine learning in simple terms?",
+        "What's the difference between supervised and unsupervised learning?",
+        "Can you give me a practical example of each?"
+    ]
+
+    for message in conversation:
+        print(f"\\n👤 User: {{message}}")
+        response = await agent(message)
+        print(f"🤖 Agent: {{response}}")
+
+    ApplicationLifecycle.shutdown()
+
+
+async def example_programmatic_usage():
+    """Example 3: Using the agent programmatically in your code."""
+    print("\\n" + "="*50)
+    print("Example 3: Programmatic Usage")
+    print("="*50)
+
+    ApplicationLifecycle.initialize()
+
+    agent = create_agent(name="{metadata.name}")
+
+    # Use agent to process data
+    data = {
+        "topic": "renewable energy",
+        "aspects": ["solar", "wind", "hydroelectric"]
+    }
+
+    prompt = f"Provide a brief overview of {{data['topic']}}, covering: {{', '.join(data['aspects'])}}"
+
+    print(f"\\n📊 Processing data...")
+    result = await agent(prompt)
+    print(f"🤖 Result:\\n{{result}}")
+
+    ApplicationLifecycle.shutdown()
+
+    return result
+
+
+async def main():
+    """Run all examples."""
+    examples = [
+        ("Basic Conversation", example_basic_conversation),
+        ("Multi-turn Conversation", example_with_context),
+        ("Programmatic Usage", example_programmatic_usage),
+    ]
+
+    print("\\n🚀 {metadata.name} - Usage Examples")
+    print("="*50)
+
+    for name, example_func in examples:
+        try:
+            await example_func()
+            print(f"\\n✅ {{name}} completed successfully")
+        except Exception as e:
+            print(f"\\n❌ {{name}} failed: {{str(e)}}")
+            logger.error(f"Example failed: {{str(e)}}", exc_info=True)
+
+    print("\\n" + "="*50)
+    print("All examples completed!")
+    print("="*50)
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
+'''
+
+
     def _generate_main(self, metadata: AgentScopeMetadata) -> str:
-        """Generate main.py entry point."""
-        agent_type_display = self._get_display_agent_type(metadata.agent_type.value)
-        skills_import = ""
-        skills_usage = ""
-
-        if metadata.enable_skills and metadata.skills:
-            skills_import = f"""
-from {metadata.package_name}.skills import (
-    conversational_response,
-    analyze_input,
-    summarize_text,
-)
-"""
-            skills_usage = """
-    # Skills are available through the agent's toolkit
-    # Custom skills can be called directly:
-    # result = await conversational_response(input_text)
-"""
-
+        """Generate main.py entry point - simplified following Single Responsibility Principle."""
         return f'''"""
 Main entry point for {metadata.name}.
 
-This module initializes and runs the AgentScope agent.
+This module follows Single Responsibility Principle:
+- Loads logging configuration
+- Creates the agent
+- Provides basic agent interaction example
+
+For more usage examples, see example_usage.py
 """
 
 import asyncio
 import logging
 import sys
 import os
-from datetime import datetime
 from dotenv import load_dotenv
-from pathlib import Path
 
 from {metadata.package_name}.config import settings
 from {metadata.package_name}.config.lifecycle import ApplicationLifecycle
-from agentscope.agent import ReActAgent
-{skills_import}
+from {metadata.package_name}.agent_factory import create_agent
 
 # Load environment variables
 load_dotenv()
@@ -654,102 +861,37 @@ logger = setup_logging(
 
 
 async def main():
-    """Main entry point."""
+    """Main entry point - demonstrates basic agent usage."""
     try:
-        # Log startup
+        # Step 1: Initialize logging
         logger.info(f"Starting {metadata.name}...")
-        logger.info(f"Agent Type: {agent_type_display}")
-        logger.info(f"Model Provider: {metadata.model_provider.value}")
-        logger.info(f"Log Level: {os.getenv('LOG_LEVEL', 'INFO')}")
+        logger.info(f"Log Level: {{os.getenv('LOG_LEVEL', 'INFO')}}")
 
-        # Clean up old logs
+        # Step 2: Clean up old logs
         cleanup_old_logs(
             retention_days=settings.LOG_RETENTION_DAYS,
             log_dir=settings.LOG_DIR
         )
 
-        # Initialize application lifecycle (includes agentscope.init() and middleware injection)
+        # Step 3: Initialize application lifecycle (includes agentscope.init() and middleware injection)
         ApplicationLifecycle.initialize()
         logger.info("Application lifecycle initialized")
 
-        # Get agent parameters with auto-injected middlewares
-        agent_params = ApplicationLifecycle.get_agent_params()
-
-        # Create agent with all middlewares auto-injected
-        agent = ReActAgent(
+        # Step 4: Create agent (delegated to agent_factory)
+        agent = create_agent(
             name="{metadata.name}",
-            sys_prompt=settings.SYSTEM_PROMPT,
-            **agent_params  # Auto-includes: model, formatter, toolkit, memory, etc.
+            sys_prompt=settings.SYSTEM_PROMPT
         )
+        logger.info("Agent created successfully")
 
-        logger.info("Agent initialized successfully")
-{skills_usage}
-        # Start interaction
-        print(f"🤖 {metadata.name} is ready!")
-        print(f"   Type: {agent_type_display}")
-        print(f"   Model: {metadata.model_provider.value}")
-        print(f"   Started at: {{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}}")
-        print(f"   Type 'exit' or 'quit' to stop, 'help' for commands")
-        print()
+        # Step 5: Example usage
+        print(f"🤖 Agent '{{metadata.name}}' is ready!")
+        print(f"   See example_usage.py for more examples\\n")
 
-        while True:
-            try:
-                user_input = input("\\n💬 You: ")
-
-                # Handle commands
-                if user_input.lower() in ['exit', 'quit']:
-                    print("\\n👋 Goodbye!")
-                    logger.info("Agent shutdown by user")
-                    break
-
-                if user_input.lower() == 'help':
-                    print("\\n📖 Available commands:")
-                    print("  - help: Show this help message")
-                    print("  - exit/quit: Exit the agent")
-                    print("  - stats: Show agent statistics")
-                    print("  - logs: Show log configuration")
-                    print("  - Any other text will be sent to the agent")
-                    continue
-
-                if user_input.lower() == 'stats':
-                    print("\\n📊 Agent Statistics:")
-                    print(f"  Name: {metadata.name}")
-                    print(f"  Type: {agent_type_display}")
-                    print(f"  Model: {metadata.model_provider.value}")
-                    print(f"  Memory: {metadata.memory_type.value}")
-                    print(f"  Log Level: {{logging.getLevelName(logger.level)}}")
-                    print(f"  Log Retention: {{settings.LOG_RETENTION_DAYS}} days")
-                    continue
-
-                if user_input.lower() == 'logs':
-                    print("\\n📝 Log Configuration:")
-                    print(f"  Log Directory: logs/")
-                    print(f"  Log Level: {{logging.getLevelName(logger.level)}}")
-                    print(f"  File Logging: {{'Enabled' if settings.LOG_TO_FILE else 'Disabled'}}")
-                    print(f"  Console Logging: {{'Enabled' if settings.LOG_TO_CONSOLE else 'Disabled'}}")
-                    print(f"  Max File Size: {{settings.LOG_FILE_MAX_BYTES / 1024 / 1024:.1f}} MB")
-                    print(f"  Backup Count: {{settings.LOG_FILE_BACKUP_COUNT}}")
-                    print(f"  Retention Days: {{settings.LOG_RETENTION_DAYS}}")
-                    continue
-
-                if not user_input.strip():
-                    continue
-
-                # Process input
-                logger.info(f"User input: {{user_input[:50]}}...")
-                response = await agent(user_input)
-                print(f"\\n🤖 {metadata.name}:")
-                print(f"{{response}}")
-                logger.info("Response generated")
-
-            except KeyboardInterrupt:
-                print("\\n\\n👋 Interrupted. Goodbye!")
-                logger.info("Agent shutdown by interrupt")
-                break
-            except Exception as e:
-                error_msg = f"Error processing request: {{str(e)}}"
-                print(f"\\n❌ {{error_msg}}")
-                logger.error(error_msg, exc_info=True)
+        # Simple example
+        response = await agent("Hello! Please introduce yourself.")
+        print(f"Agent: {{response}}")
+        logger.info("Example interaction completed")
 
     except Exception as e:
         logger.error(f"Fatal error: {{str(e)}}", exc_info=True)
@@ -764,8 +906,7 @@ async def main():
             logger.error(f"Error during shutdown: {{str(e)}}", exc_info=True)
 
 
-def run_cli():
-    """Entry point for CLI."""
+if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
@@ -774,10 +915,6 @@ def run_cli():
     except Exception as e:
         logger.error(f"Unexpected error: {{str(e)}}", exc_info=True)
         sys.exit(1)
-
-
-if __name__ == "__main__":
-    run_cli()
 '''
 
     def _generate_init_files(

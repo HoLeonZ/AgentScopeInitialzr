@@ -10,6 +10,8 @@ export interface ProjectRequest {
   enable_memory?: boolean
   short_term_memory?: string | null
   long_term_memory?: string | null
+  enable_knowledge?: boolean
+  knowledge_config?: Record<string, any> | null
   enable_tools?: boolean
   tools?: string[]
   enable_skills?: boolean
@@ -18,8 +20,6 @@ export interface ProjectRequest {
   hooks?: string[]
   enable_formatter?: boolean
   formatter?: string | null
-  enable_rag?: boolean
-  rag_config?: Record<string, any> | null
   enable_pipeline?: boolean
   pipeline_config?: Record<string, any> | null
   generate_tests?: boolean

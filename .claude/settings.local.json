@@ -64,7 +64,9 @@
       "Bash(lsof -i:8000 -i:5173)",
       "Bash(lsof:*)",
       "Bash(find . -name \"*.py\" -exec grep -l \"init.*agent\\\\|agent.*init\\\\|lifecycle\\\\|生命周期\" {} \\\\;)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(curl -s http://localhost:5173)",
+      "Bash(curl -s http://localhost:8000/api/v1/templates)"
     ]
   }
 }
