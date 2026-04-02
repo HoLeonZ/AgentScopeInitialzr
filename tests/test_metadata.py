@@ -21,7 +21,7 @@ def test_basic_metadata():
     assert metadata.description == "Test agent"
     assert metadata.package_name == "test_agent"
     assert metadata.agent_type == AgentType.BASIC
-    assert metadata.model_provider == ModelProvider.OPENAI
+    assert metadata.model_provider == ModelProvider.DASHSCOPE
 
 
 def test_metadata_package_name_normalization():
@@ -38,14 +38,14 @@ def test_metadata_to_dict():
     metadata = AgentScopeMetadata(
         name="test-agent",
         agent_type=AgentType.MULTI_AGENT,
-        model_provider=ModelProvider.ANTHROPIC,
+        model_provider=ModelProvider.DEEPSEEK,
     )
 
     data = metadata.to_dict()
 
     assert data["name"] == "test-agent"
     assert data["agent_type"] == "multi-agent"
-    assert data["model_provider"] == "anthropic"
+    assert data["model_provider"] == "deepseek"
 
 
 def test_dependency_string():

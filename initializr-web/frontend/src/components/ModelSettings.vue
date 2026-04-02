@@ -23,7 +23,7 @@
         <div class="hint-content">
           <div class="hint-title">💡 配置说明</div>
           <ul class="hint-list">
-            <li>支持 OpenAI、Anthropic 等主流模型提供商</li>
+            <li>支持 Doubao、DeepSeek、DashScope 等主流模型提供商</li>
             <li>Temperature 控制输出的随机性，建议从默认值 0.7 开始</li>
             <li>API 密钥将安全保存在生成的 .env 文件中</li>
           </ul>
@@ -57,7 +57,7 @@
                 :label="provider.name"
               />
             </el-select>
-            <span class="hint">选择模型提供商（OpenAI、Anthropic等）</span>
+            <span class="hint">选择模型提供商（Doubao、DeepSeek、DashScope等）</span>
           </el-form-item>
 
           <el-form-item label="模型名称">

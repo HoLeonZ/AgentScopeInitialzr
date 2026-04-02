@@ -66,20 +66,31 @@
           </el-divider>
 
           <el-form-item label="知识库类型">
-            <el-radio-group v-model="knowledgeConfig.type" @change="updateKnowledgeConfig">
-              <el-radio value="kbase">
-                <div class="radio-content">
-                  <div class="radio-label">KBase</div>
-                  <div class="radio-desc">企业知识库服务</div>
+            <el-select
+              v-model="knowledgeConfig.type"
+              placeholder="选择知识库类型"
+              @change="updateKnowledgeConfig"
+              style="width: 100%"
+            >
+              <el-option
+                value="kbase"
+                label="KBase - 企业知识库服务"
+              >
+                <div class="option-content">
+                  <div class="option-label">KBase</div>
+                  <div class="option-desc">企业知识库服务</div>
                 </div>
-              </el-radio>
-              <el-radio value="qdrant">
-                <div class="radio-content">
-                  <div class="radio-label">Qdrant</div>
-                  <div class="radio-desc">高性能向量数据库</div>
+              </el-option>
+              <el-option
+                value="qdrant"
+                label="Qdrant - 高性能向量数据库"
+              >
+                <div class="option-content">
+                  <div class="option-label">Qdrant</div>
+                  <div class="option-desc">高性能向量数据库</div>
                 </div>
-              </el-radio>
-            </el-radio-group>
+              </el-option>
+            </el-select>
           </el-form-item>
 
           <!-- KBase 配置 -->
@@ -369,24 +380,24 @@ const updateKnowledgeConfig = () => {
   line-height: 1.6;
 }
 
-/* Radio Content */
-.radio-content {
+/* Option Content for Select */
+.option-content {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 8px 0;
+  gap: 4px;
+  padding: 4px 0;
 }
 
-.radio-label {
+.option-label {
   font-weight: 600;
   color: #303133;
-  font-size: 15px;
+  font-size: 14px;
 }
 
-.radio-desc {
-  font-size: 13px;
+.option-desc {
+  font-size: 12px;
   color: #909399;
-  line-height: 1.5;
+  line-height: 1.4;
 }
 
 /* Option Items */
@@ -442,15 +453,10 @@ const updateKnowledgeConfig = () => {
   font-size: 14px;
 }
 
-:deep(.el-radio) {
-  margin-right: 24px;
+/* Select Option Styles */
+:deep(.el-select-dropdown__item) {
+  padding: 8px 12px;
   height: auto;
-  padding: 12px 16px;
-  margin-bottom: 12px;
-}
-
-:deep(.el-radio__label) {
-  font-size: 15px;
 }
 
 /* Upload Area */

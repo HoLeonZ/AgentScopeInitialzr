@@ -19,11 +19,9 @@ class AgentType(Enum):
 
 class ModelProvider(Enum):
     """Model provider enumeration."""
-    OPENAI = "openai"
+    DOUBAO = "doubao"
+    DEEPSEEK = "deepseek"
     DASHSCOPE = "dashscope"
-    GEMINI = "gemini"
-    ANTHROPIC = "anthropic"
-    OLLAMA = "ollama"
 
 
 class MemoryType(Enum):
@@ -92,7 +90,7 @@ class AgentScopeMetadata:
 
     # Agent configuration
     agent_type: AgentType = AgentType.BASIC
-    model_provider: ModelProvider = ModelProvider.OPENAI
+    model_provider: ModelProvider = ModelProvider.DASHSCOPE
 
     # Dependencies and tools
     dependencies: List[Dependency] = field(default_factory=list)

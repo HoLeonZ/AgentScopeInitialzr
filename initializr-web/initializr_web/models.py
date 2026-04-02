@@ -23,7 +23,7 @@ class ProjectRequest(BaseModel):
     )
 
     # Model configuration
-    model_provider: str = Field(default="openai", description="Model provider")
+    model_provider: str = Field(default="dashscope", description="Model provider")
     model_config: Dict[str, Any] = Field(
         default_factory=dict,
         description="Model configuration parameters"

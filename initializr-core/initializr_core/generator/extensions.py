@@ -140,15 +140,28 @@ settings = Settings()
         """Generate model configuration code."""
         provider = metadata.model_provider
 
-        if provider == ModelProvider.OPENAI:
+        if provider == ModelProvider.DOUBAO:
+            return '''
+def get_model():
+    """Get configured model instance."""
+    from agentscope.model import DashScopeChatModel
+
+    return DashScopeChatModel(
+        api_key=os.getenv("DOUBAO_API_KEY"),
+        model_name=os.getenv("DOUBAO_MODEL", "ep-20241105120336-m7qwl"),
+        stream=settings.ENABLE_STREAMING,
+    )
+'''
+        elif provider == ModelProvider.DEEPSEEK:
             return '''
 def get_model():
     """Get configured model instance."""
     from agentscope.model import OpenAIChatModel
 
     return OpenAIChatModel(
-        api_key=os.getenv("OPENAI_API_KEY"),
-        model_name=os.getenv("OPENAI_MODEL", "gpt-4"),
+        api_key=os.getenv("DEEPSEEK_API_KEY"),
+        model_name=os.getenv("DEEPSEEK_MODEL", "deepseek-chat"),
+        base_url=os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com"),
         stream=settings.ENABLE_STREAMING,
     )
 '''
@@ -161,41 +174,6 @@ def get_model():
     return DashScopeChatModel(
         api_key=os.getenv("DASHSCOPE_API_KEY"),
         model_name=os.getenv("DASHSCOPE_MODEL", "qwen-max"),
-        stream=settings.ENABLE_STREAMING,
-    )
-'''
-        elif provider == ModelProvider.ANTHROPIC:
-            return '''
-def get_model():
-    """Get configured model instance."""
-    from agentscope.model import AnthropicChatModel
-
-    return AnthropicChatModel(
-        api_key=os.getenv("ANTHROPIC_API_KEY"),
-        model_name=os.getenv("ANTHROPIC_MODEL", "claude-3-5-sonnet-20241022"),
-        stream=settings.ENABLE_STREAMING,
-    )
-'''
-        elif provider == ModelProvider.GEMINI:
-            return '''
-def get_model():
-    """Get configured model instance."""
-    from agentscope.model import GeminiChatModel
-
-    return GeminiChatModel(
-        api_key=os.getenv("GEMINI_API_KEY"),
-        model_name=os.getenv("GEMINI_MODEL", "gemini-pro"),
-        stream=settings.ENABLE_STREAMING,
-    )
-'''
-        elif provider == ModelProvider.OLLAMA:
-            return '''
-def get_model():
-    """Get configured model instance."""
-    from agentscope.model import OllamaChatModel
-
-    return OllamaChatModel(
-        model_name=os.getenv("OLLAMA_MODEL", "llama2"),
         stream=settings.ENABLE_STREAMING,
     )
 '''
@@ -425,20 +403,16 @@ def get_toolkit():
         """Generate formatter configuration code."""
         # Map model providers to their formatter classes
         formatter_map = {
-            ModelProvider.OPENAI: "OpenAIChatFormatter",
+            ModelProvider.DOUBAO: "DashScopeChatFormatter",
+            ModelProvider.DEEPSEEK: "OpenAIChatFormatter",
             ModelProvider.DASHSCOPE: "DashScopeChatFormatter",
-            ModelProvider.ANTHROPIC: "AnthropicChatFormatter",
-            ModelProvider.GEMINI: "GeminiChatFormatter",
-            ModelProvider.OLLAMA: "OllamaChatFormatter",
         }
 
         # Map for multi-agent formatters
         multi_agent_formatter_map = {
-            ModelProvider.OPENAI: "OpenAIMultiAgentFormatter",
+            ModelProvider.DOUBAO: "DashScopeMultiAgentFormatter",
+            ModelProvider.DEEPSEEK: "OpenAIMultiAgentFormatter",
             ModelProvider.DASHSCOPE: "DashScopeMultiAgentFormatter",
-            ModelProvider.ANTHROPIC: "AnthropicMultiAgentFormatter",
-            ModelProvider.GEMINI: "GeminiMultiAgentFormatter",
-            ModelProvider.OLLAMA: "OllamaMultiAgentFormatter",
         }
 
         if metadata.formatter_name:
@@ -454,7 +428,7 @@ def get_formatter():
             # Multi-agent formatter based on model provider
             formatter_class = multi_agent_formatter_map.get(
                 metadata.model_provider,
-                "OpenAIMultiAgentFormatter"
+                "DashScopeMultiAgentFormatter"
             )
             return f'''
 def get_formatter():
@@ -467,7 +441,7 @@ def get_formatter():
             # Chat formatter based on model provider (default)
             formatter_class = formatter_map.get(
                 metadata.model_provider,
-                "OpenAIChatFormatter"
+                "DashScopeChatFormatter"
             )
             return f'''
 def get_formatter():
