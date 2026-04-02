@@ -48,7 +48,7 @@
           @change="updateField('agent_type', $event)"
           style="width: 100%"
         >
-          <el-option label="Basic Agent" value="basic-agent">
+          <el-option label="Basic Agent" value="basic">
             <div class="option-content">
               <div class="option-label">Basic Agent</div>
               <div class="option-desc">单个智能体，适合简单的对话和任务处理场景</div>

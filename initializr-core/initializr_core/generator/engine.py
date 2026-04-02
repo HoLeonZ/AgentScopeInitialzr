@@ -876,11 +876,11 @@ async def example_programmatic_usage():
         "aspects": ["solar", "wind", "hydroelectric"]
     }
 
-    prompt = f"Provide a brief overview of {{data['topic']}}, covering: {{', '.join(data['aspects'])}}"
+    prompt = "Provide a brief overview of " + data["topic"] + ", covering: " + ", ".join(data["aspects"])
 
-    print(f"\\n📊 Processing data...")
+    print("\\n📊 Processing data...")
     result = await agent(prompt)
-    print(f"🤖 Result:\\n{{result}}")
+    print("🤖 Result:\\n" + str(result))
 
     ApplicationLifecycle.shutdown()
 

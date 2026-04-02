@@ -283,10 +283,10 @@ const totalCompletedModules = computed(() => {
 // 格式化 Agent 类型
 const formatAgentType = (type: string) => {
   const typeMap: Record<string, string> = {
-    'basic-agent': 'Basic Agent',
+    'basic': 'Basic Agent',
     'multi-agent': 'Multi Agent',
-    'research-agent': 'Research Agent',
-    'browser-agent': 'Browser Agent'
+    'research': 'Research Agent',
+    'browser': 'Browser Agent'
   }
   return typeMap[type] || type
 }
@@ -300,7 +300,7 @@ const envPreview = computed(() => {
   lines.push('# Agent Configuration')
   lines.push('# ==============================================')
   lines.push(`AGENT_NAME=${form.value.name || 'my-agent'}`)
-  lines.push(`AGENT_TYPE=${form.value.agent_type || 'basic-agent'}`)
+  lines.push(`AGENT_TYPE=${form.value.agent_type || 'basic'}`)
   if (form.value.description) {
     lines.push(`AGENT_DESCRIPTION="${form.value.description}"`)
   }
