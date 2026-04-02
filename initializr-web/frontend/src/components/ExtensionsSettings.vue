@@ -194,7 +194,7 @@ const configStore = useConfigStore()
 const form = computed(() => configStore.form)
 
 const localForm = reactive({
-  enable_tools: form.value.enable_tools ?? true,
+  enable_tools: form.value.enable_tools ?? false,
   tools: form.value.tools || [],
   enable_formatter: form.value.enable_formatter ?? false,
   formatter: form.value.formatter || null,

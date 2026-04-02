@@ -30,11 +30,11 @@ class ProjectRequest(BaseModel):
     )
 
     # Extension points
-    enable_memory: bool = Field(default=True, description="Enable memory")
+    enable_memory: bool = Field(default=False, description="Enable memory")
     short_term_memory: Optional[str] = Field(default=None, description="Short-term memory type")
     long_term_memory: Optional[str] = Field(default=None, description="Long-term memory type")
 
-    enable_tools: bool = Field(default=True, description="Enable tools")
+    enable_tools: bool = Field(default=False, description="Enable tools")
     tools: List[str] = Field(default_factory=list, description="Enabled tools")
 
     enable_skills: bool = Field(default=False, description="Enable skills")
@@ -69,11 +69,11 @@ class ProjectRequest(BaseModel):
         "name": "my-agent",
         "description": "My custom agent",
         "agent_type": "multi-agent",
-        "model_provider": "openai",
-        "model_config": {"model": "gpt-4", "temperature": 0.7},
-        "enable_memory": True,
-        "short_term_memory": "in-memory",
-        "long_term_memory": "mem0",
+        "model_provider": "dashscope",
+        "model_config": {"model": "qwen-max", "temperature": 0.7},
+        "enable_memory": False,
+        "short_term_memory": None,
+        "long_term_memory": None,
     }]}}
 
 
