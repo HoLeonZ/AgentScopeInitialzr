@@ -189,9 +189,15 @@ const downloadProject = () => {
   downloading.value = true
 
   try {
+    // 构建完整的下载 URL
+    const baseUrl = window.location.origin
+    const fullDownloadUrl = downloadUrl.value.startsWith('http')
+      ? downloadUrl.value
+      : `${baseUrl}${downloadUrl.value}`
+
     const link = document.createElement('a')
-    link.href = downloadUrl.value
-    link.download = `${form.value.name}_${generatedProjectId.value}.zip`
+    link.href = fullDownloadUrl
+    link.download = `${form.value.name || 'project'}_${generatedProjectId.value}.zip`
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
