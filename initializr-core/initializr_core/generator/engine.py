@@ -820,9 +820,9 @@ async def example_basic_conversation():
     ]
 
     for question in questions:
-        print(f"\\n👤 User: {{question}}")
+        print("\\n👤 User:", question)
         response = await agent(question)
-        print(f"🤖 Agent: {{response}}")
+        print("🤖 Agent:", response)
         responses.append(response)
 
     # Cleanup
@@ -853,9 +853,9 @@ async def example_with_context():
     ]
 
     for message in conversation:
-        print(f"\\n👤 User: {{message}}")
+        print("\\n👤 User:", message)
         response = await agent(message)
-        print(f"🤖 Agent: {{response}}")
+        print("🤖 Agent:", response)
 
     ApplicationLifecycle.shutdown()
 
@@ -880,7 +880,7 @@ async def example_programmatic_usage():
 
     print("\\n📊 Processing data...")
     result = await agent(prompt)
-    print("🤖 Result:\\n" + str(result))
+    print("🤖 Result:\\n", result)
 
     ApplicationLifecycle.shutdown()
 
@@ -901,10 +901,10 @@ async def main():
     for name, example_func in examples:
         try:
             await example_func()
-            print(f"\\n✅ {{name}} completed successfully")
+            print("\\n✅", name, "completed successfully")
         except Exception as e:
-            print(f"\\n❌ {{name}} failed: {{str(e)}}")
-            logger.error(f"Example failed: {{str(e)}}", exc_info=True)
+            print("\\n❌", name, "failed:", str(e))
+            logger.error("Example failed: " + str(e), exc_info=True)
 
     print("\\n" + "="*50)
     print("All examples completed!")
@@ -958,8 +958,8 @@ async def main():
     """Main entry point - demonstrates basic agent usage."""
     try:
         # Step 1: Initialize logging
-        logger.info(f"Starting {metadata.name}...")
-        logger.info(f"Log Level: {{os.getenv('LOG_LEVEL', 'INFO')}}")
+        logger.info("Starting {metadata.name}...")
+        logger.info("Log Level: " + os.getenv("LOG_LEVEL", "INFO"))
 
         # Step 2: Clean up old logs
         cleanup_old_logs(
@@ -979,17 +979,17 @@ async def main():
         logger.info("Agent created successfully")
 
         # Step 5: Example usage
-        print(f"🤖 Agent '{{metadata.name}}' is ready!")
-        print(f"   See example_usage.py for more examples\\n")
+        print("🤖 Agent '{metadata.name}' is ready!")
+        print("   See example_usage.py for more examples\\n")
 
         # Simple example
         response = await agent("Hello! Please introduce yourself.")
-        print(f"Agent: {{response}}")
+        print("Agent:", response)
         logger.info("Example interaction completed")
 
     except Exception as e:
-        logger.error(f"Fatal error: {{str(e)}}", exc_info=True)
-        print(f"\\n❌ Fatal error: {{str(e)}}")
+        logger.error("Fatal error: " + str(e), exc_info=True)
+        print("\\n❌ Fatal error:", str(e))
         sys.exit(1)
     finally:
         # Cleanup application lifecycle
@@ -997,7 +997,7 @@ async def main():
             ApplicationLifecycle.shutdown()
             logger.info("Application shutdown completed")
         except Exception as e:
-            logger.error(f"Error during shutdown: {{str(e)}}", exc_info=True)
+            logger.error("Error during shutdown: " + str(e), exc_info=True)
 
 
 if __name__ == "__main__":
@@ -1007,7 +1007,7 @@ if __name__ == "__main__":
         print("\\n\\n👋 Interrupted. Goodbye!")
         sys.exit(0)
     except Exception as e:
-        logger.error(f"Unexpected error: {{str(e)}}", exc_info=True)
+        logger.error("Unexpected error: " + str(e), exc_info=True)
         sys.exit(1)
 '''
 
@@ -1907,9 +1907,9 @@ async def main():
     ]
 
     for question in questions:
-        print(f"\\nUser: {{question}}")
+        print("\\nUser:", question)
         response = await agent(question)
-        print(f"Agent: {{response}}")
+        print("Agent:", response)
 
 
 if __name__ == "__main__":
@@ -1950,14 +1950,14 @@ async def main():
     # Example workflow
     query = "What are the latest developments in AI?"
 
-    print(f"\\nQuery: {{query}}")
-    print(f"\\n--- Researcher Agent ---")
+    print("\\nQuery:", query)
+    print("\\n--- Researcher Agent ---")
     research_result = await researcher(query)
-    print(f"Research result: {{research_result}}")
+    print("Research result:", research_result)
 
-    print(f"\\n--- Analyst Agent ---")
-    analysis = await analyst(f"Analyze this research: {{research_result}}")
-    print(f"Analysis: {{analysis}}")
+    print("\\n--- Analyst Agent ---")
+    analysis = await analyst("Analyze this research: " + str(research_result))
+    print("Analysis:", analysis)
 
 
 if __name__ == "__main__":
