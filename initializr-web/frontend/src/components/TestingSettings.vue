@@ -12,258 +12,41 @@
       </div>
     </div>
 
-    <!-- 配置表单 -->
-    <div class="config-form">
-      <el-form :model="form" label-width="120px" size="large" class="aligned-form">
-        <!-- Test Generation -->
-        <div class="form-section">
-          <div class="section-title">
-            <el-icon :size="18" color="#409EFF"><DocumentChecked /></el-icon>
-            <span>测试生成</span>
-            <el-switch
-              v-model="localForm.generate_tests"
-              size="small"
-              style="margin-left: auto"
-              @change="updateField('generate_tests', $event)"
-            />
-          </div>
-
-          <template v-if="localForm.generate_tests">
-            <el-form-item label="测试框架">
-              <el-select v-model="testFramework" disabled style="width: 200px">
-                <el-option label="pytest" value="pytest" />
-              </el-select>
-              <div class="inline-hint">使用pytest框架生成综合测试套件</div>
-            </el-form-item>
-
-            <el-form-item label="代码覆盖率">
-              <el-switch v-model="includeCoverage" />
-              <div class="inline-hint">生成pytest-cov配置文件</div>
-            </el-form-item>
-
-            <div class="generated-files">
-              <div class="file-item">
-                <el-icon><Document /></el-icon>
-                <span>tests/test_&lt;project&gt;.py</span>
-                <el-tag size="small" type="info">单元测试</el-tag>
-              </div>
-              <div class="file-item">
-                <el-icon><Document /></el-icon>
-                <span>tests/conftest.py</span>
-                <el-tag size="small" type="info">测试夹具</el-tag>
-              </div>
-            </div>
-          </template>
+    <el-alert
+      type="info"
+      :closable="false"
+      show-icon
+      class="config-hint"
+    >
+      <template #default>
+        <div class="hint-content">
+          <div class="hint-title">💡 模块说明</div>
+          <ul class="hint-list">
+            <li><strong>测试生成：</strong>生成 pytest 测试套件与配置</li>
+            <li><strong>评估模块：</strong>生成评估器与指标评估代码</li>
+            <li><strong>OpenJudge集成：</strong>启用自动评分器体系（可选）</li>
+            <li><strong>基准测试：</strong>生成初始基准任务（可选）</li>
+          </ul>
         </div>
+      </template>
+    </el-alert>
 
-        <!-- Evaluation Configuration -->
-        <div class="form-section">
-          <div class="section-title">
-            <el-icon :size="18" color="#67C23A"><DataAnalysis /></el-icon>
-            <span>评估模块</span>
-            <el-switch
-              v-model="localForm.generate_evaluation"
-              size="small"
-              style="margin-left: auto"
-              @change="updateField('generate_evaluation', $event)"
-            />
-          </div>
-
-          <template v-if="localForm.generate_evaluation">
-            <el-form-item label="评估器类型">
-              <el-select
-                v-model="localForm.evaluator_type"
-                placeholder="选择评估器"
-                style="width: 320px"
-                @change="updateField('evaluator_type', $event)"
-              >
-                <el-option
-                  v-for="evaluator in extensions.evaluators"
-                  :key="evaluator"
-                  :label="formatLabel(evaluator)"
-                  :value="evaluator"
-                />
-              </el-select>
-              <div class="inline-hint">评估智能体性能和质量指标</div>
-            </el-form-item>
-          </template>
-        </div>
-
-        <!-- OpenJudge Integration -->
-        <div class="form-section">
-          <div class="section-title">
-            <el-icon :size="18" color="#E6A23C"><Trophy /></el-icon>
-            <span>OpenJudge集成</span>
-            <el-tag size="small" type="warning" style="margin-left: auto">高级功能</el-tag>
-          </div>
-
-          <el-form-item label="启用OpenJudge">
-            <el-switch
-              v-model="localForm.enable_openjudge"
-              @change="updateField('enable_openjudge', $event)"
-            />
-            <div class="inline-hint">自动评分系统，评估智能体响应</div>
-          </el-form-item>
-
-          <template v-if="localForm.enable_openjudge">
-            <el-form-item label="评分器">
-              <el-checkbox-group
-                v-model="localForm.openjudge_graders"
-                @change="updateField('openjudge_graders', $event)"
-              >
-                <div class="graders-grid">
-                  <div
-                    v-for="grader in extensions.openjudge_graders"
-                    :key="grader"
-                    class="grader-item"
-                    :class="{ 'is-checked': localForm.openjudge_graders.includes(grader) }"
-                  >
-                    <el-checkbox :label="grader" class="grader-checkbox">
-                      <div class="grader-content">
-                        <div class="grader-name">{{ formatGraderName(grader) }}</div>
-                        <div class="grader-desc">{{ getGraderDescription(grader) }}</div>
-                      </div>
-                    </el-checkbox>
-                  </div>
-                </div>
-              </el-checkbox-group>
-            </el-form-item>
-          </template>
-        </div>
-
-        <!-- Benchmark Tasks -->
-        <div class="form-section">
-          <div class="section-title">
-            <el-icon :size="18" color="#F56C6C"><Timer /></el-icon>
-            <span>基准测试</span>
-            <el-switch
-              v-model="enableBenchmarks"
-              size="small"
-              style="margin-left: auto"
-              @change="handleBenchmarkToggle"
-            />
-          </div>
-
-          <template v-if="enableBenchmarks">
-            <el-form-item label="任务数量">
-              <el-input-number
-                v-model="localForm.initial_benchmark_tasks"
-                :min="0"
-                :max="100"
-                :step="5"
-                controls-position="right"
-                style="width: 140px"
-                @change="updateField('initial_benchmark_tasks', $event)"
-              />
-              <div class="inline-hint">生成初始基准任务数量</div>
-            </el-form-item>
-
-            <template v-if="localForm.initial_benchmark_tasks > 0">
-              <el-form-item label="测试套件">
-                <el-select
-                  v-model="benchmarkSuite"
-                  placeholder="选择测试套件"
-                  style="width: 240px"
-                >
-                  <el-option label="自定义任务" value="custom" />
-                  <el-option label="MMLU示例" value="mmlu" />
-                  <el-option label="GSM8K示例" value="gsm8k" />
-                </el-select>
-              </el-form-item>
-            </template>
-          </template>
-        </div>
-      </el-form>
+    <!-- 逐模块渲染：每个模块独立占用 1 个组件 -->
+    <div class="testing-sections">
+      <TestGenerationSettings />
+      <EvaluationSettings />
+      <OpenJudgeSettings />
+      <BenchmarkSettings />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed } from 'vue'
-import { useConfigStore } from '@/stores/config'
-import { api } from '@/api'
-import type { ExtensionsResponse } from '@/types'
-import {
-  DocumentChecked,
-  DataAnalysis,
-  Trophy,
-  Timer,
-  Document
-} from '@element-plus/icons-vue'
-
-const configStore = useConfigStore()
-const form = computed(() => configStore.form)
-
-const localForm = reactive({
-  generate_tests: form.value.generate_tests ?? false,
-  generate_evaluation: form.value.generate_evaluation ?? false,
-  evaluator_type: form.value.evaluator_type || 'general',
-  enable_openjudge: form.value.enable_openjudge ?? false,
-  openjudge_graders: form.value.openjudge_graders || [],
-  initial_benchmark_tasks: form.value.initial_benchmark_tasks || 0,
-})
-
-const testFramework = ref('pytest')
-const includeCoverage = ref(true)
-const benchmarkSuite = ref('custom')
-const enableBenchmarks = ref(localForm.initial_benchmark_tasks > 0)
-
-const extensions = ref<ExtensionsResponse>({
-  memory: {
-    short_term: [],
-    long_term: [],
-  },
-  tools: {},
-  formatters: [],
-  evaluators: [],
-  openjudge_graders: [],
-})
-
-const fetchExtensions = async () => {
-  try {
-    const response = await api.getExtensions()
-    extensions.value = response
-  } catch (error) {
-    console.error('Failed to fetch extensions:', error)
-  }
-}
-
-const updateField = (field: string, value: any) => {
-  configStore.setField(field as any, value)
-}
-
-const handleBenchmarkToggle = (value: boolean) => {
-  if (!value) {
-    updateField('initial_benchmark_tasks', 0)
-  } else if (localForm.initial_benchmark_tasks === 0) {
-    updateField('initial_benchmark_tasks', 5)
-  }
-}
-
-const formatLabel = (label: string) => {
-  return label.split('_').map(word =>
-    word.charAt(0).toUpperCase() + word.slice(1)
-  ).join(' ')
-}
-
-const formatGraderName = (name: string) => {
-  return name.replace(/([A-Z])/g, ' $1').trim()
-}
-
-const getGraderDescription = (grader: string) => {
-  const descriptions: Record<string, string> = {
-    'RelevanceGrader': '评估响应相关性',
-    'CorrectnessGrader': '检查事实正确性',
-    'HallucinationGrader': '检测生成内容中的幻觉',
-    'SafetyGrader': '评估安全性和合规性',
-    'CodeQualityGrader': '评估代码质量'
-  }
-  return descriptions[grader] || ''
-}
-
-onMounted(() => {
-  fetchExtensions()
-})
+import { DocumentChecked } from '@element-plus/icons-vue'
+import TestGenerationSettings from '@/components/TestGenerationSettings.vue'
+import EvaluationSettings from '@/components/EvaluationSettings.vue'
+import OpenJudgeSettings from '@/components/OpenJudgeSettings.vue'
+import BenchmarkSettings from '@/components/BenchmarkSettings.vue'
 </script>
 
 <style scoped>
@@ -309,6 +92,45 @@ onMounted(() => {
   font-size: 13px;
   color: rgba(255, 255, 255, 0.9);
   line-height: 1.4;
+}
+
+/* 配置提示 */
+.config-hint {
+  margin-bottom: 24px;
+  border-radius: 6px;
+}
+
+.hint-content {
+  line-height: 1.6;
+}
+
+.hint-title {
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #303133;
+}
+
+.hint-list {
+  margin: 0;
+  padding-left: 20px;
+  color: #606266;
+}
+
+.hint-list li {
+  margin: 6px 0;
+  line-height: 1.5;
+}
+
+.hint-list strong {
+  color: #303133;
+}
+
+/* 模块列表 */
+.testing-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  margin-bottom: 24px;
 }
 
 /* 配置表单 */

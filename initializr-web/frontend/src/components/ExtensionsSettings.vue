@@ -12,209 +12,43 @@
       </div>
     </div>
 
-    <!-- 配置表单 -->
-    <div class="config-form">
-      <el-form :model="form" label-width="120px" size="large" class="aligned-form">
-        <!-- Formatter Extension -->
-        <div class="form-section">
-          <div class="section-title">
-            <el-icon :size="18" color="#67C23A"><Document /></el-icon>
-            <span>格式化器</span>
-            <el-switch
-              v-model="localForm.enable_formatter"
-              size="small"
-              style="margin-left: auto"
-              @change="updateField('enable_formatter', $event)"
-            />
-          </div>
-
-          <template v-if="localForm.enable_formatter">
-            <el-form-item label="格式化器">
-              <el-select
-                v-model="localForm.formatter"
-                placeholder="选择格式化器"
-                style="width: 320px"
-                @change="updateField('formatter', $event)"
-              >
-                <el-option
-                  v-for="formatter in extensions.formatters"
-                  :key="formatter"
-                  :label="formatter"
-                  :value="formatter"
-                />
-              </el-select>
-              <div class="inline-hint">不同模型提供商的消息格式化</div>
-            </el-form-item>
-          </template>
+    <el-alert
+      type="info"
+      :closable="false"
+      show-icon
+      class="config-hint"
+    >
+      <template #default>
+        <div class="hint-content">
+          <div class="hint-title">💡 模块说明</div>
+          <ul class="hint-list">
+            <li><strong>格式化器：</strong>根据模型提供商调整消息格式</li>
+            <li><strong>生命周期钩子：</strong>在回复/观察关键点拦截并扩展逻辑</li>
+            <li><strong>多智能体管道：</strong>仅在多智能体模式下启用协作工作流</li>
+          </ul>
         </div>
+      </template>
+    </el-alert>
 
-        <!-- Hooks Extension -->
-        <div class="form-section">
-          <div class="section-title">
-            <el-icon :size="18" color="#E6A23C"><Link /></el-icon>
-            <span>生命周期钩子</span>
-            <el-switch
-              v-model="localForm.enable_hooks"
-              size="small"
-              style="margin-left: auto"
-              @change="updateField('enable_hooks', $event)"
-            />
-          </div>
-
-          <template v-if="localForm.enable_hooks">
-            <el-form-item label="可用钩子">
-              <el-checkbox-group v-model="localForm.hooks" @change="updateField('hooks', $event)">
-                <div class="hooks-grid">
-                  <div
-                    v-for="hook in availableHooks"
-                    :key="hook.value"
-                    class="hook-item"
-                    :class="{ 'is-checked': localForm.hooks.includes(hook.value) }"
-                  >
-                    <el-checkbox :label="hook.value" class="hook-checkbox">
-                      <div class="hook-content">
-                        <div class="hook-name">{{ hook.label }}</div>
-                        <div class="hook-desc">{{ hook.description }}</div>
-                      </div>
-                    </el-checkbox>
-                  </div>
-                </div>
-              </el-checkbox-group>
-            </el-form-item>
-          </template>
-        </div>
-
-        <!-- Pipeline Extension (Only for Multi-Agent) -->
-        <div v-if="form.agent_type === 'multi-agent'" class="form-section">
-          <div class="section-title">
-            <el-icon :size="18" color="#909399"><Operation /></el-icon>
-            <span>多智能体管道</span>
-            <el-tag size="small" type="warning" style="margin-left: auto">仅多智能体</el-tag>
-          </div>
-
-          <el-form-item label="启用管道">
-            <el-switch
-              v-model="localForm.enable_pipeline"
-              @change="updateField('enable_pipeline', $event)"
-            />
-            <div class="inline-hint">启用多智能体协作工作流</div>
-          </el-form-item>
-
-          <template v-if="localForm.enable_pipeline">
-            <div class="control-row">
-              <el-form-item label="管道类型" style="flex: 1">
-                <el-select
-                  v-model="pipelineConfig.type"
-                  placeholder="选择类型"
-                  @change="updatePipelineConfig"
-                >
-                  <el-option label="顺序执行" value="sequential" />
-                  <el-option label="并行执行" value="parallel" />
-                  <el-option label="条件分支" value="conditional" />
-                </el-select>
-              </el-form-item>
-
-              <el-form-item label="阶段数" style="flex: 1">
-                <el-input-number
-                  v-model="pipelineConfig.num_stages"
-                  :min="2"
-                  :max="10"
-                  controls-position="right"
-                  style="width: 140px"
-                  @change="updatePipelineConfig"
-                />
-              </el-form-item>
-            </div>
-          </template>
-        </div>
-      </el-form>
+    <!-- 逐模块渲染：每个模块独立占用 1 个组件 -->
+    <div class="extensions-sections">
+      <FormatterSettings />
+      <HooksSettings />
+      <PipelineSettings v-if="form.agent_type === 'multi-agent'" />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed } from 'vue'
+import { computed } from 'vue'
 import { useConfigStore } from '@/stores/config'
-import { api } from '@/api'
-import type { ExtensionsResponse } from '@/types'
-import {
-  Tools,
-  Document,
-  Link,
-  Operation
-} from '@element-plus/icons-vue'
+import { Tools } from '@element-plus/icons-vue'
+import FormatterSettings from '@/components/FormatterSettings.vue'
+import HooksSettings from '@/components/HooksSettings.vue'
+import PipelineSettings from '@/components/PipelineSettings.vue'
 
 const configStore = useConfigStore()
 const form = computed(() => configStore.form)
-
-const localForm = reactive({
-  enable_formatter: form.value.enable_formatter ?? false,
-  formatter: form.value.formatter || null,
-  enable_hooks: form.value.enable_hooks ?? false,
-  hooks: form.value.hooks || [],
-  enable_pipeline: form.value.enable_pipeline ?? false,
-})
-
-const pipelineConfig = reactive({
-  type: form.value.pipeline_config?.type || 'sequential',
-  num_stages: form.value.pipeline_config?.num_stages || 3,
-  error_handling: form.value.pipeline_config?.error_handling || 'stop',
-})
-
-const extensions = ref<ExtensionsResponse>({
-  memory: {
-    short_term: [],
-    long_term: [],
-  },
-  tools: {},
-  formatters: [],
-  evaluators: [],
-  openjudge_graders: [],
-})
-
-const availableHooks = [
-  {
-    value: 'pre_reply',
-    label: '回复前',
-    description: '在智能体生成响应前执行'
-  },
-  {
-    value: 'post_reply',
-    label: '回复后',
-    description: '在智能体生成响应后执行'
-  },
-  {
-    value: 'pre_observe',
-    label: '观察前',
-    description: '在智能体观察数据前拦截'
-  },
-  {
-    value: 'post_observe',
-    label: '观察后',
-    description: '在智能体观察数据后处理'
-  },
-]
-
-const fetchExtensions = async () => {
-  try {
-    const response = await api.getExtensions()
-    extensions.value = response
-  } catch (error) {
-    console.error('Failed to fetch extensions:', error)
-  }
-}
-
-const updateField = (field: string, value: any) => {
-  configStore.setField(field as any, value)
-}
-
-const updatePipelineConfig = () => {
-  configStore.setField('pipeline_config', { ...pipelineConfig })
-}
-
-onMounted(() => {
-  fetchExtensions()
-})
 </script>
 
 <style scoped>
@@ -260,6 +94,45 @@ onMounted(() => {
   font-size: 13px;
   color: rgba(255, 255, 255, 0.9);
   line-height: 1.4;
+}
+
+/* 配置提示 */
+.config-hint {
+  margin-bottom: 24px;
+  border-radius: 6px;
+}
+
+.hint-content {
+  line-height: 1.6;
+}
+
+.hint-title {
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #303133;
+}
+
+.hint-list {
+  margin: 0;
+  padding-left: 20px;
+  color: #606266;
+}
+
+.hint-list li {
+  margin: 6px 0;
+  line-height: 1.5;
+}
+
+.hint-list strong {
+  color: #303133;
+}
+
+/* 模块列表 */
+.extensions-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  margin-bottom: 24px;
 }
 
 /* 配置表单 */
