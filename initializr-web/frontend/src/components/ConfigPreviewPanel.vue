@@ -244,38 +244,15 @@
         </div>
       </div>
     </div>
-
-    <div class="preview-footer">
-      <div class="footer-left">
-        <el-text size="small" type="info">
-          <el-icon><InfoFilled /></el-icon>
-          预览实时更新，配置完成后点击"生成项目"
-        </el-text>
-      </div>
-      <div class="footer-right">
-        <el-button size="small" @click="handleCopy">
-          <el-icon><CopyDocument /></el-icon>
-          复制
-        </el-button>
-        <el-button size="small" @click="handleDownload">
-          <el-icon><Download /></el-icon>
-          下载预览
-        </el-button>
-      </div>
-    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { ElMessage } from 'element-plus'
 import {
   Document,
   Folder,
   DataAnalysis,
-  InfoFilled,
-  CopyDocument,
-  Download,
   CircleCheck,
   Clock,
   Connection,
@@ -328,91 +305,6 @@ const formatAgentType = (type: string) => {
   }
   return typeMap[type] || type
 }
-
-// 代码预览
-const agentCodePreview = computed(() => {
-  const packageName = (form.value.name || 'my-agent').replace(/-/g, '_')
-
-  let code = `# Main entry point for ${form.value.name || 'my-agent'}
-# This module follows Single Responsibility Principle
-
-import asyncio
-import logging
-import sys
-import os
-from dotenv import load_dotenv
-
-from ${packageName}.config import settings
-from ${packageName}.config.lifecycle import ApplicationLifecycle
-from ${packageName}.agent_factory import create_agent
-
-# Load environment variables
-load_dotenv()
-
-# Setup logging
-logger = setup_logging(
-    level=os.getenv("LOG_LEVEL", "INFO"),
-    log_dir=settings.LOG_DIR,
-)
-
-async def main():
-    """Main entry point - demonstrates basic agent usage."""
-    try:
-        # Initialize application lifecycle
-        ApplicationLifecycle.initialize()
-        logger.info("Application lifecycle initialized")
-
-        # Create agent (delegated to agent_factory)
-        agent = create_agent(
-            name="${form.value.name || 'my-agent'}",
-            sys_prompt=settings.SYSTEM_PROMPT
-        )
-        logger.info("Agent created successfully")
-
-        # Example usage
-        print(f"🤖 Agent '${form.value.name || 'my-agent'}' is ready!")
-        print(f"   See example_usage.py for more examples\\n")
-
-        # Simple example
-        response = await agent("Hello! Please introduce yourself.")
-        print(f"Agent: {response}")
-        logger.info("Example interaction completed")
-
-    except Exception as e:
-        logger.error(f"Fatal error: {str(e)}", exc_info=True)
-        sys.exit(1)
-    finally:
-        ApplicationLifecycle.shutdown()
-
-if __name__ == "__main__":
-    try:
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        print("\\n\\n👋 Interrupted. Goodbye!")
-        sys.exit(0)
-`
-
-  return code
-})
-
-// config.json 预览
-const configJsonPreview = computed(() => {
-  const config: any = {
-    model: {
-      config_name: form.value.model_config?.model || 'gpt-4',
-      temperature: form.value.model_config?.temperature ?? 0.7,
-      max_tokens: form.value.model_config?.max_tokens ?? 2000
-    }
-  }
-
-  if (form.value.enable_memory && form.value.short_term_memory) {
-    config.memory = {
-      type: form.value.short_term_memory
-    }
-  }
-
-  return JSON.stringify(config, null, 2)
-})
 
 // .env 预览
 const envPreview = computed(() => {
@@ -484,64 +376,6 @@ const structurePreview = computed(() => {
 
   return structure
 })
-
-// 复制功能
-const handleCopy = () => {
-  let content = ''
-  switch (activeTab.value) {
-    case 'code':
-      content = agentCodePreview.value
-      break
-    case 'config':
-      content = configJsonPreview.value
-      break
-    case 'env':
-      content = envPreview.value
-      break
-    case 'structure':
-      content = structurePreview.value
-      break
-  }
-
-  navigator.clipboard.writeText(content).then(() => {
-    ElMessage.success('已复制到剪贴板')
-  })
-}
-
-// 下载预览功能
-const handleDownload = () => {
-  let content = ''
-  let filename = ''
-
-  switch (activeTab.value) {
-    case 'code':
-      content = agentCodePreview.value
-      filename = 'main.py'
-      break
-    case 'config':
-      content = configJsonPreview.value
-      filename = 'config.json'
-      break
-    case 'env':
-      content = envPreview.value
-      filename = '.env'
-      break
-    case 'structure':
-      content = structurePreview.value
-      filename = 'structure.txt'
-      break
-  }
-
-  const blob = new Blob([content], { type: 'text/plain' })
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = filename
-  link.click()
-  URL.revokeObjectURL(url)
-
-  ElMessage.success(`已下载 ${filename}`)
-}
 </script>
 
 <style scoped>
@@ -724,34 +558,6 @@ pre {
 
 code {
   color: inherit;
-}
-
-.preview-footer {
-  padding: 12px 20px;
-  border-top: 1px solid #e4e7ed;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: #fafafa;
-}
-
-.generation-notes {
-  margin: 10px 0 0 0;
-  padding-left: 20px;
-}
-
-.generation-notes li {
-  margin: 6px 0;
-  line-height: 1.6;
-}
-
-code.inline-code {
-  background: #f5f7fa;
-  padding: 2px 6px;
-  border-radius: 3px;
-  color: #409eff;
-  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-  font-size: 0.9em;
 }
 
 /* 滚动条样式 */
