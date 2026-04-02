@@ -293,28 +293,144 @@ const formatAgentType = (type: string) => {
 
 // .env 预览
 const envPreview = computed(() => {
-  const provider = form.value.model_provider || 'openai'
-  const apiKey = form.value.model_config?.api_key || 'your-api-key-here'
-
-  const envVars: Record<string, string> = {
-    openai: `# OpenAI Configuration
-OPENAI_API_KEY=${apiKey}
-LOG_LEVEL=INFO`,
-    dashscope: `# DashScope Configuration
-DASHSCOPE_API_KEY=${apiKey}
-LOG_LEVEL=INFO`,
-    gemini: `# Gemini Configuration
-GEMINI_API_KEY=${apiKey}
-LOG_LEVEL=INFO`,
-    anthropic: `# Anthropic Configuration
-ANTHROPIC_API_KEY=${apiKey}
-LOG_LEVEL=INFO`,
-    ollama: `# Ollama Configuration
-OLLAMA_BASE_URL=http://localhost:11434
-LOG_LEVEL=INFO`
+  const lines: string[] = []
+  
+  // Agent Configuration
+  lines.push('# ==============================================')
+  lines.push('# Agent Configuration')
+  lines.push('# ==============================================')
+  lines.push(`AGENT_NAME=${form.value.name || 'my-agent'}`)
+  lines.push(`AGENT_TYPE=${form.value.agent_type || 'basic-agent'}`)
+  if (form.value.description) {
+    lines.push(`AGENT_DESCRIPTION="${form.value.description}"`)
   }
-
-  return envVars[provider] || envVars.openai
+  lines.push('')
+  
+  // Model Configuration
+  lines.push('# ==============================================')
+  lines.push('# Model Configuration')
+  lines.push('# ==============================================')
+  const provider = form.value.model_provider || 'openai'
+  const modelConfig = form.value.model_config
+  
+  if (provider === 'openai') {
+    lines.push(`OPENAI_API_KEY=${modelConfig?.api_key || 'your-api-key-here'}`)
+    lines.push(`OPENAI_MODEL=${modelConfig?.model || 'gpt-4'}`)
+    if (modelConfig?.base_url) {
+      lines.push(`OPENAI_BASE_URL=${modelConfig.base_url}`)
+    }
+  } else if (provider === 'dashscope') {
+    lines.push(`DASHSCOPE_API_KEY=${modelConfig?.api_key || 'your-api-key-here'}`)
+    lines.push(`DASHSCOPE_MODEL=${modelConfig?.model || 'qwen-max'}`)
+    if (modelConfig?.base_url) {
+      lines.push(`DASHSCOPE_BASE_URL=${modelConfig.base_url}`)
+    }
+  } else if (provider === 'anthropic') {
+    lines.push(`ANTHROPIC_API_KEY=${modelConfig?.api_key || 'your-api-key-here'}`)
+    lines.push(`ANTHROPIC_MODEL=${modelConfig?.model || 'claude-3-5-sonnet-20241022'}`)
+    if (modelConfig?.base_url) {
+      lines.push(`ANTHROPIC_BASE_URL=${modelConfig.base_url}`)
+    }
+  } else if (provider === 'gemini') {
+    lines.push(`GEMINI_API_KEY=${modelConfig?.api_key || 'your-api-key-here'}`)
+    lines.push(`GEMINI_MODEL=${modelConfig?.model || 'gemini-pro'}`)
+    if (modelConfig?.base_url) {
+      lines.push(`GEMINI_BASE_URL=${modelConfig.base_url}`)
+    }
+  }
+  
+  if (modelConfig?.temperature !== undefined) {
+    lines.push(`TEMPERATURE=${modelConfig.temperature}`)
+  }
+  if (modelConfig?.max_tokens) {
+    lines.push(`MAX_TOKENS=${modelConfig.max_tokens}`)
+  }
+  lines.push('')
+  
+  // Memory Configuration
+  if (form.value.enable_memory) {
+    lines.push('# ==============================================')
+    lines.push('# Memory Configuration')
+    lines.push('# ==============================================')
+    lines.push(`ENABLE_MEMORY=true`)
+    if (form.value.short_term_memory) {
+      lines.push(`SHORT_TERM_MEMORY=${form.value.short_term_memory}`)
+    }
+    if (form.value.long_term_memory) {
+      lines.push(`LONG_TERM_MEMORY=${form.value.long_term_memory}`)
+    }
+    lines.push('')
+  }
+  
+  // Knowledge Base Configuration
+  if (form.value.enable_knowledge && form.value.knowledge_config) {
+    lines.push('# ==============================================')
+    lines.push('# Knowledge Base Configuration')
+    lines.push('# ==============================================')
+    lines.push(`ENABLE_KNOWLEDGE=true`)
+    lines.push(`KNOWLEDGE_TYPE=${form.value.knowledge_config.type || 'qdrant'}`)
+    if (form.value.knowledge_config.type === 'kbase' && form.value.knowledge_config.kbase_url) {
+      lines.push(`KBASE_URL=${form.value.knowledge_config.kbase_url}`)
+    } else if (form.value.knowledge_config.type === 'qdrant') {
+      lines.push(`QDRANT_HOST=${form.value.knowledge_config.qdrant_host || 'localhost'}`)
+      lines.push(`QDRANT_PORT=${form.value.knowledge_config.qdrant_port || 6333}`)
+      lines.push(`COLLECTION_NAME=${form.value.knowledge_config.collection_name || 'agent_knowledge'}`)
+    }
+    lines.push('')
+  }
+  
+  // Skills Configuration
+  if (form.value.enable_skills && form.value.skills && form.value.skills.length > 0) {
+    lines.push('# ==============================================')
+    lines.push('# Skills Configuration')
+    lines.push('# ==============================================')
+    lines.push(`ENABLE_SKILLS=true`)
+    lines.push(`SKILLS=${form.value.skills.join(',')}`)
+    lines.push('')
+  }
+  
+  // Extensions Configuration
+  if (form.value.enable_formatter || form.value.enable_hooks || form.value.enable_pipeline) {
+    lines.push('# ==============================================')
+    lines.push('# Extensions Configuration')
+    lines.push('# ==============================================')
+    if (form.value.enable_formatter) {
+      lines.push(`ENABLE_FORMATTER=true`)
+    }
+    if (form.value.enable_hooks) {
+      lines.push(`ENABLE_HOOKS=true`)
+      if (form.value.hooks && form.value.hooks.length > 0) {
+        lines.push(`HOOKS=${form.value.hooks.join(',')}`)
+      }
+    }
+    if (form.value.enable_pipeline) {
+      lines.push(`ENABLE_PIPELINE=true`)
+    }
+    lines.push('')
+  }
+  
+  // Testing Configuration
+  if (form.value.generate_tests || form.value.generate_evaluation) {
+    lines.push('# ==============================================')
+    lines.push('# Testing & Evaluation Configuration')
+    lines.push('# ==============================================')
+    if (form.value.generate_tests) {
+      lines.push(`GENERATE_TESTS=true`)
+    }
+    if (form.value.generate_evaluation) {
+      lines.push(`GENERATE_EVALUATION=true`)
+      lines.push(`EVALUATOR_TYPE=${form.value.evaluator_type || 'general'}`)
+    }
+    lines.push('')
+  }
+  
+  // Logging
+  lines.push('# ==============================================')
+  lines.push('# Logging Configuration')
+  lines.push('# ==============================================')
+  lines.push('LOG_LEVEL=INFO')
+  
+  return lines.join('\n')
 })
 
 // 项目结构预览
@@ -322,12 +438,18 @@ const structurePreview = computed(() => {
   const packageName = (form.value.name || 'my-agent').replace(/-/g, '_')
   const hasTests = form.value.generate_tests
   const hasEval = form.value.generate_evaluation
+  const hasMemory = form.value.enable_memory
+  const hasKnowledge = form.value.enable_knowledge
+  const hasSkills = form.value.enable_skills && form.value.skills && form.value.skills.length > 0
+  const hasHooks = form.value.enable_hooks
+  const hasFormatter = form.value.enable_formatter
+  const hasPipeline = form.value.enable_pipeline
 
   let structure = `${form.value.name || 'my-agent'}/
 ├── src/
 │   └── ${packageName}/
 │       ├── __init__.py
-│       ├── main.py                 # 主入口（简化版）
+│       ├── main.py                 # 主入口
 │       ├── example_usage.py        # 使用示例
 │       ├── agent_factory.py        # Agent 创建工厂
 │       ├── agents/
@@ -335,10 +457,56 @@ const structurePreview = computed(() => {
 │       ├── config/
 │       │   ├── __init__.py
 │       │   ├── settings.py
-│       │   └── lifecycle.py
+│       │   └── lifecycle.py`
+
+  // Memory module
+  if (hasMemory) {
+    structure += `
+│       ├── memory/                 # ✅ 记忆模块
+│       │   ├── __init__.py
+│       │   ├── short_term.py       # ${form.value.short_term_memory || 'in-memory'}
+│       │   └── long_term.py        # ${form.value.long_term_memory || 'none'}`
+  }
+
+  // Knowledge base module
+  if (hasKnowledge) {
+    structure += `
+│       ├── knowledge/              # ✅ 知识库模块
+│       │   ├── __init__.py
+│       │   ├── retriever.py        # ${form.value.knowledge_config?.type || 'qdrant'}
+│       │   └── store.py`
+  }
+
+  // Skills module
+  if (hasSkills) {
+    structure += `
+│       ├── skills/                 # ✅ 技能模块 (${form.value.skills?.length || 0}个)
+│       │   ├── __init__.py
+│       │   └── skills.py`
+  }
+
+  // Extensions
+  if (hasFormatter || hasHooks || hasPipeline) {
+    structure += `
+│       ├── extensions/             # ✅ 扩展功能`
+    if (hasFormatter) {
+      structure += `
+│       │   ├── formatter.py        # 格式化器`
+    }
+    if (hasHooks) {
+      structure += `
+│       │   ├── hooks.py            # 生命周期钩子`
+    }
+    if (hasPipeline) {
+      structure += `
+│       │   ├── pipeline.py         # 多智能体管道`
+    }
+  }
+
+  structure += `
 │       └── utils/
 │           └── logging.py
-├── tests/                          ${hasTests ? '# ✅ 已配置' : ''}`
+├── tests/                          ${hasTests ? '# ✅ 已配置' : '# 未配置'}`
 
   if (hasTests) {
     structure += `
@@ -349,14 +517,15 @@ const structurePreview = computed(() => {
   if (hasEval) {
     structure += `
 ├── evaluation/                     # ✅ 评估模块
+│   ├── __init__.py
 │   └── evaluators.py`
   }
 
   structure += `
-├── .env                            # 环境变量
+├── .env                            # 环境变量配置
 ├── .env.example                    # 环境变量模板
-├── requirements.txt
-├── pyproject.toml
+├── requirements.txt                # 依赖清单
+├── pyproject.toml                  # 项目配置
 └── README.md                       # 项目文档`
 
   return structure
