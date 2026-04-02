@@ -19,16 +19,12 @@
 
             <div class="modules-list">
               <!-- 项目基础 -->
-              <div
-                v-if="isSectionComplete('basic')"
-                class="module-item"
-              >
+              <div class="module-item">
                 <div class="module-header">
                   <el-icon :size="16" color="#409EFF"><Document /></el-icon>
                   <span class="module-title">项目基础</span>
-                  <el-icon color="#67C23A" :size="18"><CircleCheck /></el-icon>
                 </div>
-                <div class="module-content">
+                <div v-if="isSectionComplete('basic')" class="module-content">
                   <div v-if="form.name" class="module-detail">
                     <span class="detail-label">名称:</span>
                     <span class="detail-value">{{ form.name }}</span>
@@ -42,19 +38,18 @@
                     <span class="detail-value">{{ form.description }}</span>
                   </div>
                 </div>
+                <div v-else class="module-pending-hint">
+                  <span>待配置：项目名称和描述</span>
+                </div>
               </div>
 
               <!-- 模型配置 -->
-              <div
-                v-if="isSectionComplete('model')"
-                class="module-item"
-              >
+              <div class="module-item">
                 <div class="module-header">
                   <el-icon :size="16" color="#67C23A"><Connection /></el-icon>
                   <span class="module-title">模型配置</span>
-                  <el-icon color="#67C23A" :size="18"><CircleCheck /></el-icon>
                 </div>
-                <div class="module-content">
+                <div v-if="isSectionComplete('model')" class="module-content">
                   <div v-if="form.model_provider" class="module-detail">
                     <span class="detail-label">Provider:</span>
                     <span class="detail-value">{{ form.model_provider }}</span>
@@ -62,6 +57,10 @@
                   <div v-if="form.model_config?.model" class="module-detail">
                     <span class="detail-label">Model:</span>
                     <span class="detail-value">{{ form.model_config.model }}</span>
+                  </div>
+                  <div v-if="form.model_config?.base_url" class="module-detail">
+                    <span class="detail-label">API地址:</span>
+                    <span class="detail-value">{{ form.model_config.base_url }}</span>
                   </div>
                   <div v-if="form.model_config?.temperature !== undefined" class="module-detail">
                     <span class="detail-label">Temperature:</span>
@@ -72,19 +71,18 @@
                     <span class="detail-value">{{ form.model_config.max_tokens }}</span>
                   </div>
                 </div>
+                <div v-else class="module-pending-hint">
+                  <span>待配置：提供商、模型名称和API密钥</span>
+                </div>
               </div>
 
               <!-- 记忆配置 -->
-              <div
-                v-if="isSectionComplete('memory')"
-                class="module-item"
-              >
+              <div class="module-item">
                 <div class="module-header">
                   <el-icon :size="16" color="#E6A23C"><Memo /></el-icon>
                   <span class="module-title">记忆配置</span>
-                  <el-icon color="#67C23A" :size="18"><CircleCheck /></el-icon>
                 </div>
-                <div class="module-content">
+                <div v-if="isSectionComplete('memory')" class="module-content">
                   <div v-if="form.enable_memory !== undefined" class="module-detail">
                     <span class="detail-label">短期记忆:</span>
                     <span class="detail-value">
@@ -96,19 +94,18 @@
                     <span class="detail-value">{{ form.long_term_memory }}</span>
                   </div>
                 </div>
+                <div v-else class="module-pending-hint">
+                  <span>待配置：启用或禁用记忆功能</span>
+                </div>
               </div>
 
               <!-- 知识库 -->
-              <div
-                v-if="isSectionComplete('knowledge')"
-                class="module-item"
-              >
+              <div class="module-item">
                 <div class="module-header">
                   <el-icon :size="16" color="#409EFF"><Reading /></el-icon>
-                  <span class="module-title">知识库</span>
-                  <el-icon color="#67C23A" :size="18"><CircleCheck /></el-icon>
+                  <span class="module-title">知识库配置</span>
                 </div>
-                <div class="module-content">
+                <div v-if="isSectionComplete('knowledge')" class="module-content">
                   <div v-if="form.enable_knowledge !== undefined" class="module-detail">
                     <span class="detail-label">状态:</span>
                     <span class="detail-value">{{ form.enable_knowledge ? '已启用' : '未启用' }}</span>
@@ -118,19 +115,18 @@
                     <span class="detail-value">{{ form.knowledge_config.type }}</span>
                   </div>
                 </div>
+                <div v-else class="module-pending-hint">
+                  <span>待配置：启用或禁用知识库</span>
+                </div>
               </div>
 
               <!-- Skill配置 -->
-              <div
-                v-if="isSectionComplete('skills')"
-                class="module-item"
-              >
+              <div class="module-item">
                 <div class="module-header">
                   <el-icon :size="16" color="#67C23A"><Star /></el-icon>
                   <span class="module-title">Skill配置</span>
-                  <el-icon color="#67C23A" :size="18"><CircleCheck /></el-icon>
                 </div>
-                <div class="module-content">
+                <div v-if="isSectionComplete('skills')" class="module-content">
                   <div v-if="form.enable_skills !== undefined" class="module-detail">
                     <span class="detail-label">状态:</span>
                     <span class="detail-value">{{ form.enable_skills ? '已启用' : '未启用' }}</span>
@@ -140,37 +136,43 @@
                     <span class="detail-value">{{ form.skills.length }} 个</span>
                   </div>
                 </div>
+                <div v-else class="module-pending-hint">
+                  <span>待配置：启用或禁用技能</span>
+                </div>
               </div>
 
               <!-- 扩展功能 -->
-              <div
-                v-if="isSectionComplete('extensions')"
-                class="module-item"
-              >
+              <div class="module-item">
                 <div class="module-header">
                   <el-icon :size="16" color="#F56C6C"><Tools /></el-icon>
                   <span class="module-title">扩展功能</span>
-                  <el-icon color="#67C23A" :size="18"><CircleCheck /></el-icon>
                 </div>
-                <div class="module-content">
+                <div v-if="isSectionComplete('extensions')" class="module-content">
                   <div v-if="form.enable_formatter !== undefined" class="module-detail">
                     <span class="detail-label">格式化:</span>
                     <span class="detail-value">{{ form.enable_formatter ? '已启用' : '未启用' }}</span>
                   </div>
+                  <div v-if="form.enable_hooks !== undefined" class="module-detail">
+                    <span class="detail-label">钩子:</span>
+                    <span class="detail-value">{{ form.enable_hooks ? '已启用' : '未启用' }}</span>
+                  </div>
+                  <div v-if="form.enable_pipeline !== undefined" class="module-detail">
+                    <span class="detail-label">管道:</span>
+                    <span class="detail-value">{{ form.enable_pipeline ? '已启用' : '未启用' }}</span>
+                  </div>
+                </div>
+                <div v-else class="module-pending-hint">
+                  <span>待配置：启用格式化器、钩子或管道</span>
                 </div>
               </div>
 
               <!-- 测试评估 -->
-              <div
-                v-if="isSectionComplete('testing')"
-                class="module-item"
-              >
+              <div class="module-item">
                 <div class="module-header">
                   <el-icon :size="16" color="#909399"><DataAnalysis /></el-icon>
                   <span class="module-title">测试评估</span>
-                  <el-icon color="#67C23A" :size="18"><CircleCheck /></el-icon>
                 </div>
-                <div class="module-content">
+                <div v-if="isSectionComplete('testing')" class="module-content">
                   <div v-if="form.generate_tests !== undefined" class="module-detail">
                     <span class="detail-label">测试:</span>
                     <span class="detail-value">{{ form.generate_tests ? '已启用' : '未启用' }}</span>
@@ -180,22 +182,9 @@
                     <span class="detail-value">{{ form.generate_evaluation ? `已启用 (${form.evaluator_type})` : '未启用' }}</span>
                   </div>
                 </div>
-              </div>
-
-              <!-- 提示：未配置的模块 -->
-              <div v-if="totalCompletedModules === 0" class="empty-state">
-                <el-empty
-                  description="开始配置以查看模块摘要"
-                  :image-size="60"
-                />
-              </div>
-
-              <!-- 未配置模块提示 -->
-              <div v-else-if="totalCompletedModules < 7" class="pending-modules">
-                <el-text size="small" type="info">
-                  <el-icon><Clock /></el-icon>
-                  还有 {{ 7 - totalCompletedModules }} 个模块未配置
-                </el-text>
+                <div v-else class="module-pending-hint">
+                  <span>待配置：启用测试或评估功能</span>
+                </div>
               </div>
             </div>
           </div>
@@ -475,8 +464,15 @@ const structurePreview = computed(() => {
   background: #ffffff;
   border-radius: 6px;
   padding: 12px;
-  border-left: 3px solid #67c23a;
+  border-left: 3px solid #409EFF;
   transition: all 0.3s;
+}
+
+.module-pending-hint {
+  padding-left: 24px;
+  font-size: 12px;
+  color: #909399;
+  font-style: italic;
 }
 
 .pending-modules {

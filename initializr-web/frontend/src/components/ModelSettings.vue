@@ -57,6 +57,16 @@
               @input="updateModelConfig('api_key', $event)"
             />
           </el-form-item>
+
+          <el-form-item label="API地址">
+            <el-input
+              :model-value="form.model_config?.base_url"
+              placeholder="例如: https://api.openai.com/v1（可选，用于自定义端点）"
+              style="width: 320px"
+              @input="updateModelConfig('base_url', $event)"
+            />
+            <div class="inline-hint">可选，用于自定义API端点或私有部署</div>
+          </el-form-item>
         </div>
 
         <!-- 参数配置 -->

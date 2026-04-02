@@ -34,6 +34,9 @@ class ProjectRequest(BaseModel):
     short_term_memory: Optional[str] = Field(default=None, description="Short-term memory type")
     long_term_memory: Optional[str] = Field(default=None, description="Long-term memory type")
 
+    enable_knowledge: bool = Field(default=False, description="Enable knowledge base")
+    knowledge_config: Optional[Dict[str, Any]] = Field(default=None, description="Knowledge base configuration")
+
     enable_tools: bool = Field(default=False, description="Enable tools")
     tools: List[str] = Field(default_factory=list, description="Enabled tools")
 

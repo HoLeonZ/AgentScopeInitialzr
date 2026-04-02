@@ -111,6 +111,10 @@ class AgentScopeMetadata:
     enable_skills: bool = False
     skills: List[str] = field(default_factory=list)
 
+    # Knowledge base configuration
+    enable_knowledge: bool = False
+    knowledge_config: Dict[str, Any] = field(default_factory=dict)
+
     # RAG configuration
     enable_rag: bool = False
     rag_config: Dict[str, Any] = field(default_factory=dict)
@@ -163,6 +167,8 @@ class AgentScopeMetadata:
             "formatter_name": self.formatter_name,
             "enable_skills": self.enable_skills,
             "skills": self.skills,
+            "enable_knowledge": self.enable_knowledge,
+            "knowledge_config": self.knowledge_config,
             "enable_rag": self.enable_rag,
             "rag_config": self.rag_config,
             "enable_pipeline": self.enable_pipeline,

@@ -322,19 +322,23 @@ MIT
         lines.append("PARALLEL_TOOL_CALLS=true")
         lines.append("")
 
-        # Model API Keys
+        # Model API Keys and Base URL
         if metadata.model_provider.value == "openai":
             lines.append("OPENAI_API_KEY=your-api-key-here")
             lines.append("OPENAI_MODEL=gpt-4")
+            lines.append("# OPENAI_BASE_URL=https://api.openai.com/v1  # Optional, for custom endpoints")
         elif metadata.model_provider.value == "dashscope":
             lines.append("DASHSCOPE_API_KEY=your-api-key-here")
             lines.append("DASHSCOPE_MODEL=qwen-max")
+            lines.append("# DASHSCOPE_BASE_URL=  # Optional, for custom endpoints")
         elif metadata.model_provider.value == "anthropic":
             lines.append("ANTHROPIC_API_KEY=your-api-key-here")
             lines.append("ANTHROPIC_MODEL=claude-3-5-sonnet-20241022")
+            lines.append("# ANTHROPIC_BASE_URL=https://api.anthropic.com  # Optional, for custom endpoints")
         elif metadata.model_provider.value == "gemini":
             lines.append("GEMINI_API_KEY=your-api-key-here")
             lines.append("GEMINI_MODEL=gemini-pro")
+            lines.append("# GEMINI_BASE_URL=https://generativelanguage.googleapis.com  # Optional, for custom endpoints")
         lines.append("")
 
         # Memory Configuration
@@ -424,6 +428,96 @@ MIT
             lines.append("# Search API Configuration")
             lines.append("# ==============================================")
             lines.append("TAVILY_API_KEY=your-tavily-api-key")
+            lines.append("")
+
+        # Knowledge Base Configuration
+        if metadata.enable_knowledge:
+            lines.append("# ==============================================")
+            lines.append("# Knowledge Base Configuration")
+            lines.append("# ==============================================")
+            lines.append("ENABLE_KNOWLEDGE=true")
+
+            knowledge_config = metadata.knowledge_config or {}
+            kb_type = knowledge_config.get("type", "qdrant")
+
+            if kb_type == "qdrant":
+                lines.append("# Qdrant Knowledge Base Configuration")
+                lines.append("KNOWLEDGE_STORE_TYPE=qdrant")
+                lines.append(f"QDRANT_HOST={knowledge_config.get('qdrant_host', 'localhost')}")
+                lines.append(f"QDRANT_PORT={knowledge_config.get('qdrant_port', 6333)}")
+                lines.append(f"QDRANT_COLLECTION={knowledge_config.get('collection_name', 'agent_knowledge')}")
+                lines.append(f"EMBEDDING_MODEL={knowledge_config.get('embedding_model', 'text-embedding-ada-002')}")
+                lines.append(f"EMBEDDING_DIMENSION={knowledge_config.get('dimension', 1536)}")
+                lines.append(f"RETRIEVAL_TOP_K={knowledge_config.get('top_k', 5)}")
+                lines.append(f"SIMILARITY_THRESHOLD={knowledge_config.get('similarity_threshold', 0.7)}")
+            elif kb_type == "kbase":
+                lines.append("# KBase Knowledge Base Configuration")
+                lines.append("KNOWLEDGE_STORE_TYPE=kbase")
+                lines.append(f"KBASE_URL={knowledge_config.get('kbase_url', 'https://kbase.example.com')}")
+                lines.append(f"RETRIEVAL_TOP_K={knowledge_config.get('top_k', 5)}")
+                lines.append(f"SIMILARITY_THRESHOLD={knowledge_config.get('similarity_threshold', 0.7)}")
+            lines.append("")
+
+        # Skills Configuration
+        if metadata.enable_skills and metadata.skills:
+            lines.append("# ==============================================")
+            lines.append("# Skills Configuration")
+            lines.append("# ==============================================")
+            lines.append("ENABLE_SKILLS=true")
+            lines.append(f"ENABLED_SKILLS={','.join(metadata.skills)}")
+            lines.append("")
+
+        # Hooks Configuration
+        if metadata.hooks:
+            lines.append("# ==============================================")
+            lines.append("# Hooks Configuration")
+            lines.append("# ==============================================")
+            lines.append("ENABLE_HOOKS=true")
+            enabled_hooks = [h.hook_type for h in metadata.hooks if h.enabled]
+            if enabled_hooks:
+                lines.append(f"ENABLED_HOOKS={','.join(enabled_hooks)}")
+            lines.append("")
+
+        # Formatter Configuration
+        if metadata.formatter_name:
+            lines.append("# ==============================================")
+            lines.append("# Formatter Configuration")
+            lines.append("# ==============================================")
+            lines.append("ENABLE_FORMATTER=true")
+            lines.append(f"FORMATTER_TYPE={metadata.formatter_name}")
+            lines.append("")
+
+        # Testing & Evaluation Configuration
+        if metadata.generate_tests or metadata.generate_evaluation:
+            lines.append("# ==============================================")
+            lines.append("# Testing & Evaluation Configuration")
+            lines.append("# ==============================================")
+            if metadata.generate_tests:
+                lines.append("GENERATE_TESTS=true")
+                lines.append("TEST_FRAMEWORK=pytest")
+                lines.append("TEST_COVERAGE=true")
+            if metadata.generate_evaluation:
+                lines.append("ENABLE_EVALUATION=true")
+                lines.append(f"EVALUATOR_TYPE={metadata.evaluator_type}")
+            lines.append("")
+
+        # OpenJudge Configuration
+        if metadata.enable_openjudge:
+            lines.append("# ==============================================")
+            lines.append("# OpenJudge Configuration")
+            lines.append("# ==============================================")
+            lines.append("ENABLE_OPENJUDGE=true")
+            if metadata.openjudge_graders:
+                lines.append(f"OPENJUDGE_GRADERS={','.join(metadata.openjudge_graders)}")
+            lines.append("")
+
+        # Benchmark Configuration
+        if metadata.initial_benchmark_tasks > 0:
+            lines.append("# ==============================================")
+            lines.append("# Benchmark Configuration")
+            lines.append("# ==============================================")
+            lines.append(f"INITIAL_BENCHMARK_TASKS={metadata.initial_benchmark_tasks}")
+            lines.append("BENCHMARK_SUITE=custom")
             lines.append("")
 
         # Logging Configuration

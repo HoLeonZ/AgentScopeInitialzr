@@ -9,6 +9,7 @@ export const useConfigStore = defineStore('config', () => {
   const form = ref<ProjectRequest>({
     name: '',
     description: '',
+    author: '',
     agent_type: 'basic',
     python_version: '3.14',
     model_provider: 'dashscope',
@@ -58,6 +59,7 @@ export const useConfigStore = defineStore('config', () => {
     form.value = {
       name: '',
       description: '',
+      author: '',
       agent_type: 'basic',
       python_version: '3.14',
       model_provider: 'dashscope',

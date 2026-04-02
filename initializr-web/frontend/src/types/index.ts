@@ -3,6 +3,7 @@
 export interface ProjectRequest {
   name: string
   description?: string
+  author?: string
   agent_type?: string
   python_version?: string
   model_provider?: string

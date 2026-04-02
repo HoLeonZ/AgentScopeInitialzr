@@ -100,6 +100,10 @@ def project_request_to_metadata(request: ProjectRequest) -> AgentScopeMetadata:
         enable_skills=request.enable_skills,
         skills=request.skills or [],
 
+        # Knowledge Base
+        enable_knowledge=request.enable_knowledge,
+        knowledge_config=request.knowledge_config or {},
+
         # RAG
         enable_rag=request.enable_rag,
         rag_config=request.rag_config or {},
