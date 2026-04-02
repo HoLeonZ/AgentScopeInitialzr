@@ -134,7 +134,7 @@
       <template #footer>
         <el-button @click="showDetailDialog = false">关闭</el-button>
         <el-button
-          v-if="!selectedSkills.includes(currentSkill?.skill_id)"
+          v-if="currentSkill && !selectedSkills.includes(currentSkill.skill_id)"
           type="primary"
           @click="selectCurrentSkill"
         >

@@ -101,7 +101,7 @@
                 :max="1"
                 :step="0.01"
                 :precision="2"
-                :controls-position="right"
+                controls-position="right"
                 placeholder="0.7"
                 style="width: 150px"
                 @change="updateModelConfig('temperature', $event)"

@@ -20,6 +20,8 @@ export interface ProjectRequest {
   hooks?: string[]
   enable_formatter?: boolean
   formatter?: string | null
+  enable_rag?: boolean
+  rag_config?: Record<string, any> | null
   enable_pipeline?: boolean
   pipeline_config?: Record<string, any> | null
   generate_tests?: boolean

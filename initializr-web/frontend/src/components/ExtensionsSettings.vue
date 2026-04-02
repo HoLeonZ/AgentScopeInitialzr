@@ -380,7 +380,15 @@ const localForm = reactive({
   formatter: form.value.formatter || null,
   enable_hooks: form.value.enable_hooks ?? false,
   hooks: form.value.hooks || [],
+  enable_rag: form.value.enable_rag ?? false,
   enable_pipeline: form.value.enable_pipeline ?? false,
+})
+
+const ragConfig = reactive({
+  store_type: form.value.rag_config?.store_type || 'qdrant',
+  embedding_model: form.value.rag_config?.embedding_model || 'openai',
+  chunk_size: form.value.rag_config?.chunk_size || 500,
+  chunk_overlap: form.value.rag_config?.chunk_overlap || 50,
 })
 
 const pipelineConfig = reactive({
