@@ -3,329 +3,178 @@
     <!-- 统一头部卡片 -->
     <div class="unified-header-card">
       <div class="header-background">
-        <el-icon :size="32" color="#FFFFFF" class="header-icon"><DocumentChecked /></el-icon>
+        <el-icon :size="28" color="#FFFFFF" class="header-icon"><DocumentChecked /></el-icon>
         <div class="header-content">
           <h2 class="header-title">测试与评估配置</h2>
-          <p class="header-description">配置测试框架、评估模块和基准测试，确保智能体质量</p>
+          <p class="header-description">配置测试框架、评估模块和基准测试</p>
         </div>
         <el-tag type="danger" size="large" effect="dark">质量保证</el-tag>
       </div>
     </div>
 
-    <!-- 配置提示 -->
-    <el-alert
-      type="info"
-      :closable="false"
-      show-icon
-      class="config-hint"
-    >
-      <template #default>
-        <div class="hint-content">
-          <div class="hint-title">💡 配置说明</div>
-          <ul class="hint-list">
-            <li><strong>测试生成：</strong>使用pytest框架生成综合测试套件</li>
-            <li><strong>评估模块：</strong>评估智能体性能和质量指标</li>
-            <li><strong>OpenJudge：</strong>自动评分系统，用于评估智能体响应</li>
-            <li><strong>基准测试：</strong>生成初始基准任务以进行性能测试</li>
-          </ul>
-        </div>
-      </template>
-    </el-alert>
-
-    <!-- Test Generation -->
-    <el-card class="testing-card test-gen-card" shadow="hover">
-      <template #header>
-        <div class="card-header">
-          <div class="header-left">
-            <el-icon class="header-icon" color="#409EFF"><DocumentChecked /></el-icon>
-            <span class="header-title">Test Generation</span>
-            <el-tag size="small" type="success">Recommended</el-tag>
+    <!-- 配置表单 -->
+    <div class="config-form">
+      <el-form :model="form" label-width="120px" size="large" class="aligned-form">
+        <!-- Test Generation -->
+        <div class="form-section">
+          <div class="section-title">
+            <el-icon :size="18" color="#409EFF"><DocumentChecked /></el-icon>
+            <span>测试生成</span>
+            <el-switch
+              v-model="localForm.generate_tests"
+              size="small"
+              style="margin-left: auto"
+              @change="updateField('generate_tests', $event)"
+            />
           </div>
-          <el-switch
-            v-model="localForm.generate_tests"
-            size="large"
-            @change="updateField('generate_tests', $event)"
-          />
-        </div>
-        <div class="card-description">
-          Generate comprehensive test suite with pytest framework
-        </div>
-      </template>
 
-      <template v-if="localForm.generate_tests">
-        <el-alert
-          type="success"
-          :closable="false"
-          show-icon
-          style="margin-bottom: 20px"
-        >
-          Generated test module will include unit tests, integration tests, and pytest configuration.
-        </el-alert>
-
-        <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item label="Test Framework">
-              <el-select v-model="testFramework" disabled size="large">
+          <template v-if="localForm.generate_tests">
+            <el-form-item label="测试框架">
+              <el-select v-model="testFramework" disabled style="width: 200px">
                 <el-option label="pytest" value="pytest" />
               </el-select>
+              <div class="inline-hint">使用pytest框架生成综合测试套件</div>
             </el-form-item>
-          </el-col>
 
-          <el-col :span="12">
-            <el-form-item label="Include Coverage">
-              <el-switch v-model="includeCoverage" size="large" />
-              <span class="hint">Generate pytest-cov configuration</span>
+            <el-form-item label="代码覆盖率">
+              <el-switch v-model="includeCoverage" />
+              <div class="inline-hint">生成pytest-cov配置文件</div>
             </el-form-item>
-          </el-col>
-        </el-row>
 
-        <el-divider content-position="left">
-          <el-icon><Document /></el-icon>
-          What will be generated
-        </el-divider>
-
-        <div class="generated-files-preview">
-          <div class="file-item">
-            <el-icon><Document /></el-icon>
-            <span>tests/test_&lt;project&gt;.py</span>
-            <el-tag size="small" type="info">Unit Tests</el-tag>
-          </div>
-          <div class="file-item">
-            <el-icon><Document /></el-icon>
-            <span>tests/conftest.py</span>
-            <el-tag size="small" type="info">Test Fixtures</el-tag>
-          </div>
-          <div class="file-item">
-            <el-icon><Document /></el-icon>
-            <span>pytest.ini</span>
-            <el-tag size="small" type="info">Configuration</el-tag>
-          </div>
-        </div>
-      </template>
-    </el-card>
-
-    <!-- Evaluation Configuration -->
-    <el-card class="testing-card eval-card" shadow="hover">
-      <template #header>
-        <div class="card-header">
-          <div class="header-left">
-            <el-icon class="header-icon" color="#67C23A"><DataAnalysis /></el-icon>
-            <span class="header-title">Evaluation Module</span>
-            <el-tag size="small" type="success">Recommended</el-tag>
-          </div>
-          <el-switch
-            v-model="localForm.generate_evaluation"
-            size="large"
-            @change="updateField('generate_evaluation', $event)"
-          />
-        </div>
-        <div class="card-description">
-          Generate evaluation framework for agent performance testing
-        </div>
-      </template>
-
-      <template v-if="localForm.generate_evaluation">
-        <el-alert
-          type="info"
-          :closable="false"
-          show-icon
-          style="margin-bottom: 20px"
-        >
-          Evaluation module helps measure agent performance and quality metrics.
-        </el-alert>
-
-        <el-form-item label="Evaluator Type">
-          <el-select
-            v-model="localForm.evaluator_type"
-            placeholder="Select evaluator type"
-            size="large"
-            @change="updateField('evaluator_type', $event)"
-          >
-            <el-option
-              v-for="evaluator in extensions.evaluators"
-              :key="evaluator"
-              :label="formatLabel(evaluator)"
-              :value="evaluator"
-            >
-              <div class="option-item">
-                <div class="option-label">{{ formatLabel(evaluator) }}</div>
-                <div class="option-desc">{{ getEvaluatorDescription(evaluator) }}</div>
+            <div class="generated-files">
+              <div class="file-item">
+                <el-icon><Document /></el-icon>
+                <span>tests/test_&lt;project&gt;.py</span>
+                <el-tag size="small" type="info">单元测试</el-tag>
               </div>
-            </el-option>
-          </el-select>
-        </el-form-item>
-
-        <el-alert
-          v-if="localForm.evaluator_type === 'ray'"
-          type="warning"
-          :closable="false"
-          show-icon
-        >
-          Ray evaluator requires cluster configuration. Ensure you have Ray installed.
-        </el-alert>
-      </template>
-    </el-card>
-
-    <!-- OpenJudge Integration -->
-    <el-card class="testing-card openjudge-card" shadow="hover">
-      <template #header>
-        <div class="card-header">
-          <div class="header-left">
-            <el-icon class="header-icon" color="#E6A23C"><Trophy /></el-icon>
-            <span class="header-title">OpenJudge Integration</span>
-            <el-tag size="small" type="warning">Advanced</el-tag>
-          </div>
-          <el-switch
-            v-model="localForm.enable_openjudge"
-            size="large"
-            @change="updateField('enable_openjudge', $event)"
-          />
-        </div>
-        <div class="card-description">
-          Automated grading system for agent response evaluation
-        </div>
-      </template>
-
-      <template v-if="localForm.enable_openjudge">
-        <el-alert
-          type="info"
-          :closable="false"
-          show-icon
-          style="margin-bottom: 20px"
-        >
-          OpenJudge provides automated graders to evaluate agent responses on multiple criteria.
-        </el-alert>
-
-        <el-form-item label="Available Graders">
-          <el-checkbox-group
-            v-model="localForm.openjudge_graders"
-            @change="updateField('openjudge_graders', $event)"
-          >
-            <div class="graders-grid">
-              <div
-                v-for="grader in extensions.openjudge_graders"
-                :key="grader"
-                class="grader-item"
-                :class="{ 'is-checked': localForm.openjudge_graders.includes(grader) }"
-              >
-                <el-checkbox :label="grader" class="grader-checkbox">
-                  <div class="grader-content">
-                    <div class="grader-header">
-                      <el-icon class="grader-icon"><Medal /></el-icon>
-                      <span class="grader-name">{{ formatGraderName(grader) }}</span>
-                    </div>
-                    <span class="grader-desc">{{ getGraderDescription(grader) }}</span>
-                  </div>
-                </el-checkbox>
+              <div class="file-item">
+                <el-icon><Document /></el-icon>
+                <span>tests/conftest.py</span>
+                <el-tag size="small" type="info">测试夹具</el-tag>
               </div>
             </div>
-          </el-checkbox-group>
-        </el-form-item>
-
-        <el-alert
-          type="warning"
-          :closable="false"
-          show-icon
-        >
-          OpenJudge integration requires additional dependencies and API configuration.
-        </el-alert>
-      </template>
-    </el-card>
-
-    <!-- Benchmark Configuration -->
-    <el-card class="testing-card benchmark-card" shadow="hover">
-      <template #header>
-        <div class="card-header">
-          <div class="header-left">
-            <el-icon class="header-icon" color="#F56C6C"><Timer /></el-icon>
-            <span class="header-title">Benchmark Tasks</span>
-          </div>
-          <el-switch
-            v-model="enableBenchmarks"
-            size="large"
-            @change="handleBenchmarkToggle"
-          />
+          </template>
         </div>
-        <div class="card-description">
-          Generate initial benchmark tasks for performance testing
-        </div>
-      </template>
 
-      <template v-if="enableBenchmarks">
-        <el-alert
-          type="info"
-          :closable="false"
-          show-icon
-          style="margin-bottom: 20px"
-        >
-          Benchmark tasks will be generated based on your agent type and configuration.
-        </el-alert>
-
-        <el-form-item label="Number of Tasks">
-          <el-input-number
-            v-model="localForm.initial_benchmark_tasks"
-            :min="0"
-            :max="100"
-            :step="5"
-            size="large"
-            @change="updateField('initial_benchmark_tasks', $event)"
-          />
-          <span class="hint">Number of benchmark tasks to generate (0 = skip)</span>
-        </el-form-item>
-
-        <template v-if="localForm.initial_benchmark_tasks > 0">
-          <el-form-item label="Benchmark Suite">
-            <el-select v-model="benchmarkSuite" placeholder="Select benchmark suite" size="large">
-              <el-option label="Custom Tasks" value="custom">
-                <div class="option-item">
-                  <div class="option-label">Custom Tasks</div>
-                  <div class="option-desc">Generate custom benchmark tasks</div>
-                </div>
-              </el-option>
-              <el-option label="MMLU Sample" value="mmlu">
-                <div class="option-item">
-                  <div class="option-label">MMLU Sample</div>
-                  <div class="option-desc">Massive Multitask Language Understanding</div>
-                </div>
-              </el-option>
-              <el-option label="GSM8K Sample" value="gsm8k">
-                <div class="option-item">
-                  <div class="option-label">GSM8K Sample</div>
-                  <div class="option-desc">Grade school math problems</div>
-                </div>
-              </el-option>
-              <el-option label="Custom Dataset" value="custom_dataset">
-                <div class="option-item">
-                  <div class="option-label">Custom Dataset</div>
-                  <div class="option-desc">Load from external URL</div>
-                </div>
-              </el-option>
-            </el-select>
-          </el-form-item>
-
-          <el-form-item v-if="benchmarkSuite === 'custom_dataset'" label="Dataset URL">
-            <el-input
-              v-model="datasetUrl"
-              placeholder="https://example.com/dataset.json"
-              size="large"
+        <!-- Evaluation Configuration -->
+        <div class="form-section">
+          <div class="section-title">
+            <el-icon :size="18" color="#67C23A"><DataAnalysis /></el-icon>
+            <span>评估模块</span>
+            <el-switch
+              v-model="localForm.generate_evaluation"
+              size="small"
+              style="margin-left: auto"
+              @change="updateField('generate_evaluation', $event)"
             />
+          </div>
+
+          <template v-if="localForm.generate_evaluation">
+            <el-form-item label="评估器类型">
+              <el-select
+                v-model="localForm.evaluator_type"
+                placeholder="选择评估器"
+                style="width: 320px"
+                @change="updateField('evaluator_type', $event)"
+              >
+                <el-option
+                  v-for="evaluator in extensions.evaluators"
+                  :key="evaluator"
+                  :label="formatLabel(evaluator)"
+                  :value="evaluator"
+                />
+              </el-select>
+              <div class="inline-hint">评估智能体性能和质量指标</div>
+            </el-form-item>
+          </template>
+        </div>
+
+        <!-- OpenJudge Integration -->
+        <div class="form-section">
+          <div class="section-title">
+            <el-icon :size="18" color="#E6A23C"><Trophy /></el-icon>
+            <span>OpenJudge集成</span>
+            <el-tag size="small" type="warning" style="margin-left: auto">高级功能</el-tag>
+          </div>
+
+          <el-form-item label="启用OpenJudge">
+            <el-switch
+              v-model="localForm.enable_openjudge"
+              @change="updateField('enable_openjudge', $event)"
+            />
+            <div class="inline-hint">自动评分系统，评估智能体响应</div>
           </el-form-item>
 
-          <el-divider content-position="left">
-            <el-icon><Document /></el-icon>
-            What will be generated
-          </el-divider>
+          <template v-if="localForm.enable_openjudge">
+            <el-form-item label="评分器">
+              <el-checkbox-group
+                v-model="localForm.openjudge_graders"
+                @change="updateField('openjudge_graders', $event)"
+              >
+                <div class="graders-grid">
+                  <div
+                    v-for="grader in extensions.openjudge_graders"
+                    :key="grader"
+                    class="grader-item"
+                    :class="{ 'is-checked': localForm.openjudge_graders.includes(grader) }"
+                  >
+                    <el-checkbox :label="grader" class="grader-checkbox">
+                      <div class="grader-content">
+                        <div class="grader-name">{{ formatGraderName(grader) }}</div>
+                        <div class="grader-desc">{{ getGraderDescription(grader) }}</div>
+                      </div>
+                    </el-checkbox>
+                  </div>
+                </div>
+              </el-checkbox-group>
+            </el-form-item>
+          </template>
+        </div>
 
-          <div class="generated-files-preview">
-            <div class="file-item">
-              <el-icon><Document /></el-icon>
-              <span>tests/test_benchmarks.py</span>
-              <el-tag size="small" type="success">{{ localForm.initial_benchmark_tasks }} Tasks</el-tag>
-            </div>
+        <!-- Benchmark Tasks -->
+        <div class="form-section">
+          <div class="section-title">
+            <el-icon :size="18" color="#F56C6C"><Timer /></el-icon>
+            <span>基准测试</span>
+            <el-switch
+              v-model="enableBenchmarks"
+              size="small"
+              style="margin-left: auto"
+              @change="handleBenchmarkToggle"
+            />
           </div>
-        </template>
-      </template>
-    </el-card>
+
+          <template v-if="enableBenchmarks">
+            <el-form-item label="任务数量">
+              <el-input-number
+                v-model="localForm.initial_benchmark_tasks"
+                :min="0"
+                :max="100"
+                :step="5"
+                controls-position="right"
+                style="width: 140px"
+                @change="updateField('initial_benchmark_tasks', $event)"
+              />
+              <div class="inline-hint">生成初始基准任务数量</div>
+            </el-form-item>
+
+            <template v-if="localForm.initial_benchmark_tasks > 0">
+              <el-form-item label="测试套件">
+                <el-select
+                  v-model="benchmarkSuite"
+                  placeholder="选择测试套件"
+                  style="width: 240px"
+                >
+                  <el-option label="自定义任务" value="custom" />
+                  <el-option label="MMLU示例" value="mmlu" />
+                  <el-option label="GSM8K示例" value="gsm8k" />
+                </el-select>
+              </el-form-item>
+            </template>
+          </template>
+        </div>
+      </el-form>
+    </div>
   </div>
 </template>
 
@@ -339,16 +188,12 @@ import {
   DataAnalysis,
   Trophy,
   Timer,
-  Setting,
-  Document,
-  Medal,
-  Select
+  Document
 } from '@element-plus/icons-vue'
 
 const configStore = useConfigStore()
 const form = computed(() => configStore.form)
 
-// Local form state
 const localForm = reactive({
   generate_tests: form.value.generate_tests ?? false,
   generate_evaluation: form.value.generate_evaluation ?? false,
@@ -358,14 +203,11 @@ const localForm = reactive({
   initial_benchmark_tasks: form.value.initial_benchmark_tasks || 0,
 })
 
-// Additional options
 const testFramework = ref('pytest')
 const includeCoverage = ref(true)
 const benchmarkSuite = ref('custom')
-const datasetUrl = ref('')
 const enableBenchmarks = ref(localForm.initial_benchmark_tasks > 0)
 
-// Extensions data from API
 const extensions = ref<ExtensionsResponse>({
   memory: {
     short_term: [],
@@ -377,7 +219,6 @@ const extensions = ref<ExtensionsResponse>({
   openjudge_graders: [],
 })
 
-// Fetch extensions from API
 const fetchExtensions = async () => {
   try {
     const response = await api.getExtensions()
@@ -387,12 +228,10 @@ const fetchExtensions = async () => {
   }
 }
 
-// Update field in store
 const updateField = (field: string, value: any) => {
   configStore.setField(field as any, value)
 }
 
-// Handle benchmark toggle
 const handleBenchmarkToggle = (value: boolean) => {
   if (!value) {
     updateField('initial_benchmark_tasks', 0)
@@ -401,40 +240,27 @@ const handleBenchmarkToggle = (value: boolean) => {
   }
 }
 
-// Format label for display
 const formatLabel = (label: string) => {
   return label.split('_').map(word =>
     word.charAt(0).toUpperCase() + word.slice(1)
   ).join(' ')
 }
 
-// Format grader name
 const formatGraderName = (name: string) => {
   return name.replace(/([A-Z])/g, ' $1').trim()
 }
 
-// Get evaluator description
-const getEvaluatorDescription = (evaluator: string) => {
-  const descriptions: Record<string, string> = {
-    'general': 'General-purpose evaluator for common tasks',
-    'ray': 'Distributed evaluation using Ray framework',
-  }
-  return descriptions[evaluator] || ''
-}
-
-// Get grader description
 const getGraderDescription = (grader: string) => {
   const descriptions: Record<string, string> = {
-    'RelevanceGrader': 'Evaluates response relevance to query',
-    'CorrectnessGrader': 'Checks factual correctness of responses',
-    'HallucinationGrader': 'Detects hallucinations in generated content',
-    'SafetyGrader': 'Evaluates safety and policy compliance',
-    'CodeQualityGrader': 'Assesses code quality and best practices',
+    'RelevanceGrader': '评估响应相关性',
+    'CorrectnessGrader': '检查事实正确性',
+    'HallucinationGrader': '检测生成内容中的幻觉',
+    'SafetyGrader': '评估安全性和合规性',
+    'CodeQualityGrader': '评估代码质量'
   }
   return descriptions[grader] || ''
 }
 
-// Initialize
 onMounted(() => {
   fetchExtensions()
 })
@@ -442,26 +268,23 @@ onMounted(() => {
 
 <style scoped>
 .testing-settings {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
   padding: 0;
 }
 
 /* 统一头部卡片 */
 .unified-header-card {
-  margin-bottom: 20px;
-  border-radius: 8px;
+  margin-bottom: 24px;
+  border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .header-background {
   background: linear-gradient(135deg, #F56C6C 0%, #ff8a8a 100%);
-  padding: 24px;
+  padding: 20px 24px;
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
   color: #FFFFFF;
 }
 
@@ -474,127 +297,88 @@ onMounted(() => {
 }
 
 .header-title {
-  margin: 0 0 8px 0;
-  font-size: 20px;
+  margin: 0 0 4px 0;
+  font-size: 18px;
   font-weight: 600;
   color: #FFFFFF;
-  line-height: 1.2;
+  line-height: 1.3;
 }
 
 .header-description {
   margin: 0;
-  font-size: 14px;
+  font-size: 13px;
   color: rgba(255, 255, 255, 0.9);
-  line-height: 1.5;
+  line-height: 1.4;
 }
 
-/* 配置提示 */
-.config-hint {
-  margin-bottom: 24px;
-  border-radius: 6px;
-}
-
-.hint-content {
-  line-height: 1.6;
-}
-
-.hint-title {
-  font-weight: 600;
-  color: #F56C6C;
-  margin-bottom: 8px;
-}
-
-.hint-list {
-  margin: 8px 0 0 0;
-  padding-left: 20px;
-  color: #606266;
-}
-
-.hint-list li {
-  margin: 6px 0;
-  line-height: 1.5;
-}
-
-.hint-list strong {
-  color: #303133;
-  font-weight: 600;
-}
-
-/* Testing Card Styles */
-.testing-card {
+/* 配置表单 */
+.config-form {
+  background: #ffffff;
   border-radius: 12px;
-  transition: all 0.3s ease;
-  border: 2px solid transparent;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  padding: 24px;
 }
 
-.testing-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1) !important;
+.aligned-form {
+  margin: 0;
 }
 
-.testing-card.test-gen-card {
-  border-left: 4px solid #409EFF;
+/* 表单区块 */
+.form-section {
+  margin-bottom: 32px;
 }
 
-.testing-card.eval-card {
-  border-left: 4px solid #67C23A;
+.form-section:last-child {
+  margin-bottom: 0;
 }
 
-.testing-card.openjudge-card {
-  border-left: 4px solid #E6A23C;
-}
-
-.testing-card.benchmark-card {
-  border-left: 4px solid #F56C6C;
-}
-
-.testing-card.advanced-card {
-  border-left: 4px solid #909399;
-}
-
-/* Card Header */
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.header-left {
+.section-title {
   display: flex;
   align-items: center;
-  gap: 12px;
-}
-
-.header-icon {
-  font-size: 24px;
-}
-
-.header-title {
-  font-size: 18px;
+  gap: 8px;
+  padding-bottom: 12px;
+  margin-bottom: 20px;
+  border-bottom: 2px solid #f0f2f5;
+  font-size: 15px;
   font-weight: 600;
   color: #303133;
 }
 
-.card-description {
-  margin-top: 8px;
-  font-size: 14px;
+/* Generated Files */
+.generated-files {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 16px;
+  background: #f5f7fa;
+  border-radius: 8px;
+}
+
+.file-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
   color: #606266;
-  line-height: 1.5;
+}
+
+.file-item .el-icon {
+  color: #409EFF;
 }
 
 /* Graders Grid */
 .graders-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 12px;
-  margin-top: 12px;
 }
 
 .grader-item {
-  border: 2px solid #dcdfe6;
+  border: 2px solid #e4e7ed;
   border-radius: 8px;
   padding: 12px;
-  transition: all 0.3s ease;
+  transition: all 0.2s;
   background: #ffffff;
 }
 
@@ -620,127 +404,66 @@ onMounted(() => {
 .grader-content {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-}
-
-.grader-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.grader-icon {
-  color: #E6A23C;
-  font-size: 18px;
+  gap: 4px;
 }
 
 .grader-name {
   font-weight: 600;
-  font-size: 15px;
+  font-size: 14px;
   color: #303133;
 }
 
 .grader-desc {
-  font-size: 13px;
-  color: #606266;
+  font-size: 12px;
+  color: #909399;
   line-height: 1.4;
 }
 
-/* Option Items */
-.option-item {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.option-label {
-  font-weight: 600;
-  color: #303133;
-}
-
-.option-desc {
+/* 内联提示 */
+.inline-hint {
   font-size: 12px;
   color: #909399;
+  margin-top: 6px;
+  line-height: 1.4;
 }
 
-/* Generated Files Preview */
-.generated-files-preview {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 12px;
-}
-
-.file-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  background: #f5f7fa;
-  border-radius: 6px;
-  font-size: 13px;
-}
-
-.file-item .el-icon {
-  color: #409EFF;
-}
-
-/* Divider */
-:deep(.el-divider__text) {
-  font-size: 1em;
-  font-weight: 600;
-  color: #606266;
-}
-
-:deep(.el-divider__text .el-icon) {
-  margin-right: 4px;
-}
-
-/* Form Items */
+/* 表单项样式统一 */
 :deep(.el-form-item) {
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
 :deep(.el-form-item__label) {
   font-weight: 500;
-  color: #303133;
+  color: #606266;
+  font-size: 14px;
 }
 
-/* Hint */
-.hint {
-  display: block;
-  margin-top: 4px;
-  font-size: 12px;
-  color: #909399;
+:deep(.el-input__wrapper) {
+  border-radius: 6px;
 }
 
-/* Alerts */
-:deep(.el-alert) {
-  border-radius: 8px;
+:deep(.el-select .el-input__wrapper) {
+  border-radius: 6px;
 }
 
-:deep(.el-alert__content) {
-  line-height: 1.6;
-}
-
-/* 响应式设计 */
+/* 响应式 */
 @media (max-width: 768px) {
   .header-background {
     flex-direction: column;
     text-align: center;
-    padding: 20px;
-  }
-
-  .header-icon {
-    align-self: center;
+    padding: 16px;
   }
 
   .header-title {
-    font-size: 18px;
+    font-size: 16px;
   }
 
   .header-description {
-    font-size: 13px;
+    font-size: 12px;
+  }
+
+  .config-form {
+    padding: 16px;
   }
 
   .graders-grid {
