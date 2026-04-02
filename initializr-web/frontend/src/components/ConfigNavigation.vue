@@ -141,7 +141,7 @@ const isSectionComplete = (sectionId: string): boolean => {
     case 'skills':
       return form.enable_skills !== undefined
     case 'extensions':
-      return form.enable_tools !== undefined || form.enable_formatter !== undefined
+      return form.enable_formatter !== undefined || form.enable_hooks !== undefined || form.enable_pipeline !== undefined
     case 'testing':
       return form.generate_tests !== undefined
     default:

@@ -153,10 +153,6 @@
                   <el-icon color="#67C23A" :size="18"><CircleCheck /></el-icon>
                 </div>
                 <div class="module-content">
-                  <div v-if="form.enable_tools !== undefined" class="module-detail">
-                    <span class="detail-label">工具:</span>
-                    <span class="detail-value">{{ form.enable_tools ? `已启用 (${form.tools?.length || 0}个)` : '未启用' }}</span>
-                  </div>
                   <div v-if="form.enable_formatter !== undefined" class="module-detail">
                     <span class="detail-label">格式化:</span>
                     <span class="detail-value">{{ form.enable_formatter ? '已启用' : '未启用' }}</span>
@@ -281,7 +277,7 @@ const isSectionComplete = (sectionId: string): boolean => {
     case 'skills':
       return form.value.enable_skills !== undefined
     case 'extensions':
-      return form.value.enable_tools !== undefined || form.value.enable_formatter !== undefined
+      return form.value.enable_formatter !== undefined || form.value.enable_hooks !== undefined || form.value.enable_pipeline !== undefined
     case 'testing':
       return form.value.generate_tests !== undefined
     default:

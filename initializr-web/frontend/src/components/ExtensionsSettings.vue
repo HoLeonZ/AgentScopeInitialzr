@@ -6,7 +6,7 @@
         <el-icon :size="28" color="#FFFFFF" class="header-icon"><Tools /></el-icon>
         <div class="header-content">
           <h2 class="header-title">扩展功能配置</h2>
-          <p class="header-description">配置工具、格式化器、钩子和管道等高级扩展</p>
+          <p class="header-description">配置格式化器、钩子和管道等高级扩展</p>
         </div>
         <el-tag type="primary" size="large" effect="dark">高级配置</el-tag>
       </div>
@@ -15,52 +15,6 @@
     <!-- 配置表单 -->
     <div class="config-form">
       <el-form :model="form" label-width="120px" size="large" class="aligned-form">
-        <!-- Tools Extension -->
-        <div class="form-section">
-          <div class="section-title">
-            <el-icon :size="18" color="#409EFF"><Tools /></el-icon>
-            <span>工具扩展</span>
-            <el-switch
-              v-model="localForm.enable_tools"
-              size="small"
-              style="margin-left: auto"
-              @change="updateField('enable_tools', $event)"
-            />
-          </div>
-
-          <template v-if="localForm.enable_tools">
-            <el-form-item label="可用工具">
-              <el-checkbox-group v-model="localForm.tools" @change="updateField('tools', $event)">
-                <div class="tools-grid">
-                  <div
-                    v-for="(desc, tool) in extensions.tools"
-                    :key="tool"
-                    class="tool-item"
-                    :class="{ 'is-checked': localForm.tools.includes(tool) }"
-                  >
-                    <el-checkbox :label="tool" class="tool-checkbox">
-                      <div class="tool-content">
-                        <div class="tool-name">{{ formatToolName(tool) }}</div>
-                        <div class="tool-desc">{{ desc }}</div>
-                      </div>
-                    </el-checkbox>
-                  </div>
-                </div>
-              </el-checkbox-group>
-            </el-form-item>
-
-            <el-alert
-              v-if="localForm.tools.length > 0"
-              type="info"
-              :closable="false"
-              show-icon
-              style="margin-top: 12px"
-            >
-              已选择 {{ localForm.tools.length }} 个工具
-            </el-alert>
-          </template>
-        </div>
-
         <!-- Formatter Extension -->
         <div class="form-section">
           <div class="section-title">
@@ -194,8 +148,6 @@ const configStore = useConfigStore()
 const form = computed(() => configStore.form)
 
 const localForm = reactive({
-  enable_tools: form.value.enable_tools ?? false,
-  tools: form.value.tools || [],
   enable_formatter: form.value.enable_formatter ?? false,
   formatter: form.value.formatter || null,
   enable_hooks: form.value.enable_hooks ?? false,
@@ -258,12 +210,6 @@ const updateField = (field: string, value: any) => {
 
 const updatePipelineConfig = () => {
   configStore.setField('pipeline_config', { ...pipelineConfig })
-}
-
-const formatToolName = (name: string) => {
-  return name.split('_').map(word =>
-    word.charAt(0).toUpperCase() + word.slice(1)
-  ).join(' ')
 }
 
 onMounted(() => {
@@ -347,58 +293,6 @@ onMounted(() => {
   font-size: 15px;
   font-weight: 600;
   color: #303133;
-}
-
-/* Tools Grid */
-.tools-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 12px;
-}
-
-.tool-item {
-  border: 2px solid #e4e7ed;
-  border-radius: 8px;
-  padding: 12px;
-  transition: all 0.2s;
-  background: #ffffff;
-}
-
-.tool-item:hover {
-  border-color: #409EFF;
-  background: #ecf5ff;
-}
-
-.tool-item.is-checked {
-  border-color: #409EFF;
-  background: #ecf5ff;
-}
-
-.tool-checkbox {
-  width: 100%;
-}
-
-.tool-checkbox :deep(.el-checkbox__label) {
-  width: 100%;
-  padding-left: 8px;
-}
-
-.tool-content {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.tool-name {
-  font-weight: 600;
-  font-size: 14px;
-  color: #303133;
-}
-
-.tool-desc {
-  font-size: 12px;
-  color: #909399;
-  line-height: 1.4;
 }
 
 /* Hooks Grid */
@@ -506,7 +400,6 @@ onMounted(() => {
     padding: 16px;
   }
 
-  .tools-grid,
   .hooks-grid {
     grid-template-columns: 1fr;
   }
