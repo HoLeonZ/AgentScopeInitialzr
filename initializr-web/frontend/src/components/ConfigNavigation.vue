@@ -41,7 +41,7 @@
 
       <el-button
         type="primary"
-        :disabled="!isAllComplete"
+        :disabled="!canGenerate"
         @click="handleGenerate"
         size="large"
         style="width: 100%; margin-top: 12px"
@@ -157,6 +157,13 @@ const completedSections = computed(() => {
 // 是否全部完成
 const isAllComplete = computed(() => {
   return completedSections.value === sections.length
+})
+
+// 是否可以生成项目（只需要项目名称和模型配置）
+const canGenerate = computed(() => {
+  const form = configStore.form
+  // 只需要项目名称和模型提供商即可生成
+  return !!(form.name && form.model_provider)
 })
 
 // 生成项目
