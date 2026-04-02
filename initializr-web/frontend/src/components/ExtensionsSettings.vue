@@ -351,46 +351,6 @@
         </el-collapse>
       </template>
     </el-card>
-
-    <!-- Summary Card -->
-    <el-card class="summary-card" shadow="never">
-      <template #header>
-        <div class="card-header">
-          <el-icon class="header-icon"><InfoFilled /></el-icon>
-          <span class="header-title">Extensions Summary</span>
-        </div>
-      </template>
-
-      <el-descriptions :column="2" border>
-        <el-descriptions-item label="Tools">
-          <el-tag v-if="localForm.enable_tools" type="success">
-            {{ localForm.tools.length }} Enabled
-          </el-tag>
-          <el-tag v-else type="info">Disabled</el-tag>
-        </el-descriptions-item>
-
-        <el-descriptions-item label="Formatter">
-          <el-tag v-if="localForm.enable_formatter" type="success">
-            {{ localForm.formatter || 'Default' }}
-          </el-tag>
-          <el-tag v-else type="info">Disabled</el-tag>
-        </el-descriptions-item>
-
-        <el-descriptions-item label="Hooks">
-          <el-tag v-if="localForm.enable_hooks" type="success">
-            {{ localForm.hooks.length }} Hooks
-          </el-tag>
-          <el-tag v-else type="info">Disabled</el-tag>
-        </el-descriptions-item>
-
-        <el-descriptions-item v-if="form.agent_type === 'multi-agent'" label="Pipeline">
-          <el-tag v-if="localForm.enable_pipeline" type="warning">
-            {{ pipelineConfig.type || 'Not Configured' }}
-          </el-tag>
-          <el-tag v-else type="info">Disabled</el-tag>
-        </el-descriptions-item>
-      </el-descriptions>
-    </el-card>
   </div>
 </template>
 
@@ -405,7 +365,6 @@ import {
   Link,
   Operation,
   Setting,
-  InfoFilled,
   Connection,
   View
 } from '@element-plus/icons-vue'
@@ -950,30 +909,6 @@ onMounted(() => {
 
 .code-preview code {
   color: inherit;
-}
-
-/* Summary Card */
-.summary-card {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border: none;
-}
-
-.summary-card :deep(.el-card__header) {
-  background: rgba(255, 255, 255, 0.1);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.summary-card .header-title {
-  color: white;
-}
-
-.summary-card .header-icon {
-  color: white;
-}
-
-.summary-card :deep(.el-card__body) {
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 8px;
 }
 
 /* Divider */

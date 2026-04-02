@@ -326,45 +326,6 @@
         </template>
       </template>
     </el-card>
-
-    <!-- Summary Card -->
-    <el-card class="summary-card" shadow="never">
-      <template #header>
-        <div class="card-header">
-          <el-icon class="header-icon"><InfoFilled /></el-icon>
-          <span class="header-title">Testing & Evaluation Summary</span>
-        </div>
-      </template>
-
-      <el-descriptions :column="3" border>
-        <el-descriptions-item label="Test Generation">
-          <el-tag :type="localForm.generate_tests ? 'success' : 'info'" size="large">
-            <el-icon v-if="localForm.generate_tests"><Select /></el-icon>
-            {{ localForm.generate_tests ? 'Enabled' : 'Disabled' }}
-          </el-tag>
-        </el-descriptions-item>
-
-        <el-descriptions-item label="Evaluation">
-          <el-tag :type="localForm.generate_evaluation ? 'success' : 'info'" size="large">
-            <el-icon v-if="localForm.generate_evaluation"><Select /></el-icon>
-            {{ localForm.generate_evaluation ? localForm.evaluator_type : 'Disabled' }}
-          </el-tag>
-        </el-descriptions-item>
-
-        <el-descriptions-item label="OpenJudge">
-          <el-tag :type="localForm.enable_openjudge ? 'warning' : 'info'" size="large">
-            <el-icon v-if="localForm.enable_openjudge"><Select /></el-icon>
-            {{ localForm.enable_openjudge ? `${localForm.openjudge_graders.length} Graders` : 'Disabled' }}
-          </el-tag>
-        </el-descriptions-item>
-
-        <el-descriptions-item label="Benchmark Tasks" :span="3">
-          <el-tag :type="localForm.initial_benchmark_tasks > 0 ? 'success' : 'info'" size="large">
-            {{ localForm.initial_benchmark_tasks }} Tasks
-          </el-tag>
-        </el-descriptions-item>
-      </el-descriptions>
-    </el-card>
   </div>
 </template>
 
@@ -379,7 +340,6 @@ import {
   Trophy,
   Timer,
   Setting,
-  InfoFilled,
   Document,
   Medal,
   Select
@@ -723,30 +683,6 @@ onMounted(() => {
 
 .file-item .el-icon {
   color: #409EFF;
-}
-
-/* Summary Card */
-.summary-card {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border: none;
-}
-
-.summary-card :deep(.el-card__header) {
-  background: rgba(255, 255, 255, 0.1);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.summary-card .header-title {
-  color: white;
-}
-
-.summary-card .header-icon {
-  color: white;
-}
-
-.summary-card :deep(.el-card__body) {
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 8px;
 }
 
 /* Divider */
