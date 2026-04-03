@@ -187,10 +187,6 @@ class ProjectGenerator:
         agent_factory_content = self._generate_agent_factory(metadata)
         (pkg_dir / "agent_factory.py").write_text(agent_factory_content)
 
-        # Generate example usage file (instead of CLI)
-        example_content = self._generate_example_usage(metadata)
-        (pkg_dir / "example_usage.py").write_text(example_content)
-
         # Generate examples
         self._generate_examples(project_path, metadata)
 
@@ -730,146 +726,6 @@ def create_agent(
 '''
 
 
-    def _generate_example_usage(self, metadata: AgentScopeMetadata) -> str:
-        """Generate example_usage.py - demonstrates various agent usage patterns."""
-        template = '''"""
-Example Usage for {name}
-
-This module demonstrates various ways to use your agent.
-"""
-
-import asyncio
-import logging
-from {package_name}.agent_factory import create_agent
-from {package_name}.config.lifecycle import ApplicationLifecycle
-
-logger = logging.getLogger(__name__)
-
-
-async def example_basic_conversation():
-    """Example 1: Basic conversation with the agent."""
-    print("\\n" + "="*50)
-    print("Example 1: Basic Conversation")
-    print("="*50)
-
-    # Initialize lifecycle
-    ApplicationLifecycle.initialize()
-
-    # Create agent
-    agent = create_agent(
-        name="{name}",
-        sys_prompt="You are a helpful assistant."
-    )
-
-    # Simple conversation
-    responses = []
-    questions = [
-        "Hello! Can you help me?",
-        "What's the capital of France?",
-        "Thank you for your help!"
-    ]
-
-    for question in questions:
-        print("\\n👤 User:", question)
-        response = await agent(question)
-        print("🤖 Agent:", response)
-        responses.append(response)
-
-    # Cleanup
-    ApplicationLifecycle.shutdown()
-
-    return responses
-
-
-async def example_with_context():
-    """Example 2: Multi-turn conversation with context."""
-    print("\\n" + "="*50)
-    print("Example 2: Multi-turn Conversation")
-    print("="*50)
-
-    ApplicationLifecycle.initialize()
-
-    agent = create_agent(
-        name="{name}",
-        sys_prompt="You are a research assistant specializing in technology."
-    )
-
-    # Conversation with context
-    conversation = [
-        "I'm interested in learning about artificial intelligence.",
-        "Can you explain machine learning in simple terms?",
-        "What's the difference between supervised and unsupervised learning?",
-        "Can you give me a practical example of each?"
-    ]
-
-    for message in conversation:
-        print("\\n👤 User:", message)
-        response = await agent(message)
-        print("🤖 Agent:", response)
-
-    ApplicationLifecycle.shutdown()
-
-
-async def example_programmatic_usage():
-    """Example 3: Using the agent programmatically in your code."""
-    print("\\n" + "="*50)
-    print("Example 3: Programmatic Usage")
-    print("="*50)
-
-    ApplicationLifecycle.initialize()
-
-    agent = create_agent(name="{name}")
-
-    # Use agent to process data
-    data = {{
-        "topic": "renewable energy",
-        "aspects": ["solar", "wind", "hydroelectric"]
-    }}
-
-    prompt = "Provide a brief overview of " + data["topic"] + ", covering: " + ", ".join(data["aspects"])
-
-    print("\\n📊 Processing data...")
-    result = await agent(prompt)
-    print("🤖 Result:\\n", result)
-
-    ApplicationLifecycle.shutdown()
-
-    return result
-
-
-async def main():
-    """Run all examples."""
-    examples = [
-        ("Basic Conversation", example_basic_conversation),
-        ("Multi-turn Conversation", example_with_context),
-        ("Programmatic Usage", example_programmatic_usage),
-    ]
-
-    print("\\n🚀 {name} - Usage Examples")
-    print("="*50)
-
-    for name, example_func in examples:
-        try:
-            await example_func()
-            print("\\n✅", name, "completed successfully")
-        except Exception as e:
-            print("\\n❌", name, "failed:", str(e))
-            logger.error("Example failed: " + str(e), exc_info=True)
-
-    print("\\n" + "="*50)
-    print("All examples completed!")
-    print("="*50)
-
-
-if __name__ == "__main__":
-    asyncio.run(main())
-'''
-        return template.format(
-            name=metadata.name,
-            package_name=metadata.package_name
-        )
-
-
     def _generate_main(self, metadata: AgentScopeMetadata) -> str:
         """Generate main.py entry point - simplified following Single Responsibility Principle."""
         template = '''"""
@@ -879,8 +735,6 @@ This module follows Single Responsibility Principle:
 - Loads logging configuration
 - Creates the agent
 - Provides basic agent interaction example
-
-For more usage examples, see example_usage.py
 """
 
 import asyncio
@@ -933,8 +787,7 @@ async def main():
         logger.info("Agent created successfully")
 
         # Step 5: Example usage
-        print("🤖 Agent '{name}' is ready!")
-        print("   See example_usage.py for more examples\\n")
+        print("🤖 Agent '{name}' is ready!\\n")
 
         # Simple example
         response = await agent("Hello! Please introduce yourself.")
