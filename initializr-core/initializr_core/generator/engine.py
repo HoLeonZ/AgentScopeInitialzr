@@ -643,7 +643,11 @@ Following Single Responsibility Principle, it handles all agent creation logic.
 from typing import Optional
 from agentscope.agent import ReActAgent
 from {metadata.package_name}.config import settings
-from {metadata.package_name}.config.lifecycle import ApplicationLifecycle
+from {metadata.package_name}.config.middleware import middleware_manager
+from {metadata.package_name}.config.model import get_model
+from {metadata.package_name}.config.formatter import get_formatter
+from {metadata.package_name}.config.memory import get_memory
+from {metadata.package_name}.config.tools import get_toolkit
 import logging
 
 logger = logging.getLogger(__name__)
@@ -671,17 +675,33 @@ class AgentFactory:
             RuntimeError: If agent creation fails
         """
         try:
-            # Get agent parameters with auto-injected middlewares
-            agent_params = ApplicationLifecycle.get_agent_params()
-
             # Use provided prompt or default from settings
             prompt = sys_prompt or settings.SYSTEM_PROMPT
 
-            # Create agent with all middlewares auto-injected
+            # Get core middlewares
+            model = get_model()
+            formatter = get_formatter()
+
+            # Get optional middlewares
+            memory = get_memory() if middleware_manager.has('memory') else None
+            toolkit = get_toolkit() if middleware_manager.has('toolkit') else None
+
+            # Get configuration parameters
+            enable_meta_tool = middleware_manager.get_config('enable_meta_tool', False)
+            parallel_tool_calls = middleware_manager.get_config('parallel_tool_calls', False)
+            max_iters = middleware_manager.get_config('max_iters', 10)
+
+            # Create agent with explicit middlewares
             agent = ReActAgent(
                 name=name,
                 sys_prompt=prompt,
-                **agent_params  # Auto-includes: model, formatter, toolkit, memory, etc.
+                model=model,
+                formatter=formatter,
+                memory=memory,
+                toolkit=toolkit,
+                enable_meta_tool=enable_meta_tool,
+                parallel_tool_calls=parallel_tool_calls,
+                max_iters=max_iters,
             )
 
             logger.info(f"Agent '{{name}}' created successfully")
@@ -980,7 +1000,7 @@ Base ReAct agent implementation.
 """
 
 from agentscope.agent import ReActAgent
-from {metadata.package_name}.config import get_model, get_memory, get_toolkit
+from {metadata.package_name}.config import get_model, get_memory, get_toolkit, get_formatter
 
 
 def create_react_agent(name: str = "{metadata.name}") -> ReActAgent:
@@ -994,6 +1014,7 @@ def create_react_agent(name: str = "{metadata.name}") -> ReActAgent:
         Configured ReActAgent instance
     """
     model = get_model()
+    formatter = get_formatter()
     memory = get_memory()
     toolkit = get_toolkit()
 
@@ -1001,6 +1022,7 @@ def create_react_agent(name: str = "{metadata.name}") -> ReActAgent:
         name=name,
         sys_prompt="You are a helpful assistant with access to various tools.",
         model=model,
+        formatter=formatter,
         toolkit=toolkit,
         memory=memory,
     )
@@ -1867,7 +1889,7 @@ This example demonstrates multi-agent collaboration.
 
 import asyncio
 from agentscope.agent import ReActAgent
-from {package_name}.config import get_model, get_memory, get_toolkit
+from {package_name}.config import get_model, get_memory, get_toolkit, get_formatter
 
 
 async def main():
@@ -1877,6 +1899,7 @@ async def main():
         name="Researcher",
         sys_prompt="You are a research specialist. Find and analyze information.",
         model=get_model(),
+        formatter=get_formatter(),
         memory=get_memory(),
         toolkit=get_toolkit(),
     )
@@ -1885,6 +1908,7 @@ async def main():
         name="Analyst",
         sys_prompt="You are an analyst. Synthesize information and provide insights.",
         model=get_model(),
+        formatter=get_formatter(),
         memory=get_memory(),
         toolkit=get_toolkit(),
     )
