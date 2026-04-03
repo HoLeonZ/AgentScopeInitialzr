@@ -151,10 +151,6 @@ class ProjectGenerator:
         requirements = self._generate_requirements(metadata)
         (project_path / "requirements.txt").write_text(requirements)
 
-        # Generate requirements-dev.txt for development dependencies
-        requirements_dev = self._generate_requirements_dev()
-        (project_path / "requirements-dev.txt").write_text(requirements_dev)
-
     def _generate_source_code(
         self,
         metadata: AgentScopeMetadata,
@@ -273,8 +269,7 @@ python -m {metadata.package_name}.main
 ├── examples/                    # Usage examples
 ├── scripts/                     # Utility scripts
 ├── docs/                        # Documentation
-├── requirements.txt             # Runtime dependencies
-├── requirements-dev.txt         # Development dependencies
+├── requirements.txt             # Dependencies
 └── .env.example                 # Environment template
 ```
 
@@ -624,27 +619,6 @@ Thumbs.db
             deps.append("qdrant-client>=1.7.0")
 
         return "\n".join(deps)
-
-    def _generate_requirements_dev(self) -> str:
-        """Generate requirements-dev.txt for development dependencies."""
-        return """# Development dependencies
-# Install with: pip install -r requirements-dev.txt
-
-# Testing
-pytest>=7.0.0
-pytest-asyncio>=0.21.0
-pytest-cov>=4.0.0
-
-# Code formatting
-black>=23.0.0
-isort>=5.12.0
-
-# Type checking
-mypy>=1.0.0
-
-# Linting
-ruff>=0.1.0
-"""
 
     def _generate_package_init(self, metadata: AgentScopeMetadata) -> str:
         """Generate package __init__.py."""
@@ -2107,8 +2081,7 @@ python -m {metadata.package_name}.main "$@"
 ├── examples/                    # Usage examples
 ├── scripts/                     # Utility scripts
 ├── docs/                        # Documentation
-├── requirements.txt             # Runtime dependencies
-├── requirements-dev.txt         # Development dependencies
+├── requirements.txt             # Dependencies
 └── .env.example                 # Environment template
 ```
 
