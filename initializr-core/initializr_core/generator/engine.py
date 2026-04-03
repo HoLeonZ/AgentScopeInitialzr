@@ -782,16 +782,16 @@ def create_agent(
 
     def _generate_example_usage(self, metadata: AgentScopeMetadata) -> str:
         """Generate example_usage.py - demonstrates various agent usage patterns."""
-        return f'''"""
-Example Usage for {metadata.name}
+        template = '''"""
+Example Usage for {name}
 
 This module demonstrates various ways to use your agent.
 """
 
 import asyncio
 import logging
-from {metadata.package_name}.agent_factory import create_agent
-from {metadata.package_name}.config.lifecycle import ApplicationLifecycle
+from {package_name}.agent_factory import create_agent
+from {package_name}.config.lifecycle import ApplicationLifecycle
 
 logger = logging.getLogger(__name__)
 
@@ -807,7 +807,7 @@ async def example_basic_conversation():
 
     # Create agent
     agent = create_agent(
-        name="{metadata.name}",
+        name="{name}",
         sys_prompt="You are a helpful assistant."
     )
 
@@ -840,7 +840,7 @@ async def example_with_context():
     ApplicationLifecycle.initialize()
 
     agent = create_agent(
-        name="{metadata.name}",
+        name="{name}",
         sys_prompt="You are a research assistant specializing in technology."
     )
 
@@ -868,13 +868,13 @@ async def example_programmatic_usage():
 
     ApplicationLifecycle.initialize()
 
-    agent = create_agent(name="{metadata.name}")
+    agent = create_agent(name="{name}")
 
     # Use agent to process data
-    data = {
+    data = {{
         "topic": "renewable energy",
         "aspects": ["solar", "wind", "hydroelectric"]
-    }
+    }}
 
     prompt = "Provide a brief overview of " + data["topic"] + ", covering: " + ", ".join(data["aspects"])
 
@@ -895,7 +895,7 @@ async def main():
         ("Programmatic Usage", example_programmatic_usage),
     ]
 
-    print("\\n🚀 {metadata.name} - Usage Examples")
+    print("\\n🚀 {name} - Usage Examples")
     print("="*50)
 
     for name, example_func in examples:
@@ -914,12 +914,16 @@ async def main():
 if __name__ == "__main__":
     asyncio.run(main())
 '''
+        return template.format(
+            name=metadata.name,
+            package_name=metadata.package_name
+        )
 
 
     def _generate_main(self, metadata: AgentScopeMetadata) -> str:
         """Generate main.py entry point - simplified following Single Responsibility Principle."""
-        return f'''"""
-Main entry point for {metadata.name}.
+        template = '''"""
+Main entry point for {name}.
 
 This module follows Single Responsibility Principle:
 - Loads logging configuration
@@ -935,9 +939,9 @@ import sys
 import os
 from dotenv import load_dotenv
 
-from {metadata.package_name}.config import settings
-from {metadata.package_name}.config.lifecycle import ApplicationLifecycle
-from {metadata.package_name}.agent_factory import create_agent
+from {package_name}.config import settings
+from {package_name}.config.lifecycle import ApplicationLifecycle
+from {package_name}.agent_factory import create_agent
 
 # Load environment variables
 load_dotenv()
@@ -958,7 +962,7 @@ async def main():
     """Main entry point - demonstrates basic agent usage."""
     try:
         # Step 1: Initialize logging
-        logger.info("Starting {metadata.name}...")
+        logger.info("Starting {name}...")
         logger.info("Log Level: " + os.getenv("LOG_LEVEL", "INFO"))
 
         # Step 2: Clean up old logs
@@ -973,13 +977,13 @@ async def main():
 
         # Step 4: Create agent (delegated to agent_factory)
         agent = create_agent(
-            name="{metadata.name}",
+            name="{name}",
             sys_prompt=settings.SYSTEM_PROMPT
         )
         logger.info("Agent created successfully")
 
         # Step 5: Example usage
-        print("🤖 Agent '{metadata.name}' is ready!")
+        print("🤖 Agent '{name}' is ready!")
         print("   See example_usage.py for more examples\\n")
 
         # Simple example
@@ -1010,6 +1014,10 @@ if __name__ == "__main__":
         logger.error("Unexpected error: " + str(e), exc_info=True)
         sys.exit(1)
 '''
+        return template.format(
+            name=metadata.name,
+            package_name=metadata.package_name
+        )
 
     def _generate_init_files(
         self,
@@ -1884,14 +1892,14 @@ def get_browser_agent_prompt() -> str:
 
     def _generate_examples(self, project_path: Path, metadata: AgentScopeMetadata):
         """Generate example usage files."""
-        basic_example = f'''"""
-Basic usage example for {metadata.name}.
+        basic_template = '''"""
+Basic usage example for {name}.
 
 This example demonstrates how to use the agent to answer questions.
 """
 
 import asyncio
-from {metadata.package_name}.agents.react_agent import create_react_agent
+from {package_name}.agents.react_agent import create_react_agent
 
 
 async def main():
@@ -1915,17 +1923,21 @@ async def main():
 if __name__ == "__main__":
     asyncio.run(main())
 '''
+        basic_example = basic_template.format(
+            name=metadata.name,
+            package_name=metadata.package_name
+        )
         (project_path / "examples" / "basic_usage.py").write_text(basic_example)
 
-        advanced_example = f'''"""
-Advanced multi-agent example for {metadata.name}.
+        advanced_template = '''"""
+Advanced multi-agent example for {name}.
 
 This example demonstrates multi-agent collaboration.
 """
 
 import asyncio
 from agentscope.agent import ReActAgent
-from {metadata.package_name}.config import get_model, get_memory, get_toolkit
+from {package_name}.config import get_model, get_memory, get_toolkit
 
 
 async def main():
@@ -1963,6 +1975,10 @@ async def main():
 if __name__ == "__main__":
     asyncio.run(main())
 '''
+        advanced_example = advanced_template.format(
+            name=metadata.name,
+            package_name=metadata.package_name
+        )
         (project_path / "examples" / "advanced_multiagent.py").write_text(advanced_example)
 
     def _generate_scripts(self, project_path: Path, metadata: AgentScopeMetadata):
