@@ -2,22 +2,21 @@
   <el-card class="pipeline-card" shadow="hover">
     <template #header>
       <div class="card-header">
-        <el-icon :size="20" color="#909399"><Operation /></el-icon>
-        <span class="card-title">管道配置</span>
-        <el-tag size="small" type="info">工作流</el-tag>
+        <div class="header-left">
+          <el-icon :size="20" color="#909399"><Operation /></el-icon>
+          <span class="card-title">管道配置</span>
+          <el-tag size="small" type="info">工作流</el-tag>
+        </div>
+        <el-switch
+          v-model="localForm.enable_pipeline"
+          size="large"
+          @change="updateField('enable_pipeline', $event)"
+        />
       </div>
     </template>
 
-    <el-form :model="form" label-width="140px" size="large">
-      <el-form-item label="启用管道">
-        <el-switch
-          v-model="localForm.enable_pipeline"
-          @change="updateField('enable_pipeline', $event)"
-        />
-        <span class="hint">启用多智能体管道协作</span>
-      </el-form-item>
-
-      <template v-if="localForm.enable_pipeline">
+    <template v-if="localForm.enable_pipeline">
+      <el-form :model="form" label-width="140px" size="large">
         <el-form-item label="管道类型">
           <el-select
             v-model="pipelineConfig.type"
@@ -51,8 +50,8 @@
         >
           当前配置：{{ pipelineConfig.type }} 模式，{{ pipelineConfig.num_stages }} 个阶段
         </el-alert>
-      </template>
-    </el-form>
+      </el-form>
+    </template>
   </el-card>
 </template>
 
@@ -172,13 +171,18 @@ const updatePipelineConfig = () => {
 .card-header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
   gap: 12px;
 }
 
 .card-title {
   font-size: 16px;
   font-weight: 600;
-  flex: 1;
 }
 
 .hint {

@@ -37,22 +37,21 @@
       <el-card class="memory-card" shadow="hover">
         <template #header>
           <div class="card-header">
-            <el-icon :size="20" color="#409EFF"><Memo /></el-icon>
-            <span class="card-title">短期记忆</span>
-            <el-tag size="small" type="primary">基于会话</el-tag>
+            <div class="header-left">
+              <el-icon :size="20" color="#409EFF"><Memo /></el-icon>
+              <span class="card-title">短期记忆</span>
+              <el-tag size="small" type="primary">基于会话</el-tag>
+            </div>
+            <el-switch
+              v-model="form.enable_memory"
+              size="large"
+              @change="updateField('enable_memory', $event)"
+            />
           </div>
         </template>
 
-        <el-form :model="form" label-width="140px" size="large">
-          <el-form-item label="启用">
-            <el-switch
-              v-model="form.enable_memory"
-              @change="updateField('enable_memory', $event)"
-            />
-            <span class="hint">在会话期间将对话历史存储在内存中</span>
-          </el-form-item>
-
-          <template v-if="form.enable_memory">
+        <template v-if="form.enable_memory">
+          <el-form :model="form" label-width="140px" size="large">
             <el-form-item label="记忆类型">
               <el-select
                 v-model="form.short_term_memory"
@@ -158,22 +157,21 @@
       <el-card class="memory-card" shadow="hover">
         <template #header>
           <div class="card-header">
-            <el-icon :size="20" color="#67C23A"><FolderOpened /></el-icon>
-            <span class="card-title">长期记忆</span>
-            <el-tag size="small" type="success">持久化</el-tag>
+            <div class="header-left">
+              <el-icon :size="20" color="#67C23A"><FolderOpened /></el-icon>
+              <span class="card-title">长期记忆</span>
+              <el-tag size="small" type="success">持久化</el-tag>
+            </div>
+            <el-switch
+              v-model="enableLongTerm"
+              size="large"
+              @change="handleLongTermToggle"
+            />
           </div>
         </template>
 
-        <el-form :model="form" label-width="140px" size="large">
-          <el-form-item label="启用">
-            <el-switch
-              v-model="enableLongTerm"
-              @change="handleLongTermToggle"
-            />
-            <span class="hint">跨多个会话持久化记忆</span>
-          </el-form-item>
-
-          <template v-if="enableLongTerm">
+        <template v-if="enableLongTerm">
+          <el-form :model="form" label-width="140px" size="large">
             <el-form-item label="记忆类型">
               <el-select
                 v-model="form.long_term_memory"
@@ -396,13 +394,18 @@ onMounted(async () => {
 .card-header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
   gap: 12px;
 }
 
 .card-title {
   font-size: 16px;
   font-weight: 600;
-  flex: 1;
 }
 
 .hint {

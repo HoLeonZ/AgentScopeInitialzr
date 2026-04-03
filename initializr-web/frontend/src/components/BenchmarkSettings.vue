@@ -2,23 +2,21 @@
   <el-card class="benchmark-card" shadow="hover">
     <template #header>
       <div class="card-header">
-        <el-icon :size="20" color="#F56C6C"><Timer /></el-icon>
-        <span class="card-title">基准测试</span>
-        <el-tag size="small" type="danger">可选</el-tag>
+        <div class="header-left">
+          <el-icon :size="20" color="#F56C6C"><Timer /></el-icon>
+          <span class="card-title">基准测试</span>
+          <el-tag size="small" type="danger">可选</el-tag>
+        </div>
+        <el-switch
+          v-model="enableBenchmarks"
+          size="large"
+          @change="handleBenchmarkToggle"
+        />
       </div>
     </template>
 
-    <el-form :model="form" label-width="140px" size="large">
-      <el-form-item label="启用基准测试">
-        <el-switch
-          v-model="enableBenchmarks"
-          size="small"
-          @change="handleBenchmarkToggle"
-        />
-        <span class="hint">生成初始基准任务（用于评估对比）</span>
-      </el-form-item>
-
-      <template v-if="enableBenchmarks">
+    <template v-if="enableBenchmarks">
+      <el-form :model="form" label-width="140px" size="large">
         <el-form-item label="任务数量">
           <el-input-number
             v-model="localForm.initial_benchmark_tasks"
@@ -45,8 +43,8 @@
             <span class="hint">目前仅用于 UI 展示</span>
           </el-form-item>
         </template>
-      </template>
-    </el-form>
+      </el-form>
+    </template>
   </el-card>
 </template>
 
@@ -93,13 +91,18 @@ const handleBenchmarkToggle = (value: boolean) => {
 .card-header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
   gap: 12px;
 }
 
 .card-title {
   font-size: 16px;
   font-weight: 600;
-  flex: 1;
 }
 
 .hint {

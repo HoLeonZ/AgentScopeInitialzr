@@ -2,22 +2,21 @@
   <el-card class="hooks-card" shadow="hover">
     <template #header>
       <div class="card-header">
-        <el-icon :size="20" color="#E6A23C"><Link /></el-icon>
-        <span class="card-title">生命周期钩子</span>
-        <el-tag size="small" type="warning">拦截点</el-tag>
+        <div class="header-left">
+          <el-icon :size="20" color="#E6A23C"><Link /></el-icon>
+          <span class="card-title">生命周期钩子</span>
+          <el-tag size="small" type="warning">拦截点</el-tag>
+        </div>
+        <el-switch
+          v-model="localForm.enable_hooks"
+          size="large"
+          @change="updateField('enable_hooks', $event)"
+        />
       </div>
     </template>
 
-    <el-form :model="form" label-width="140px" size="large">
-      <el-form-item label="启用钩子">
-        <el-switch
-          v-model="localForm.enable_hooks"
-          @change="updateField('enable_hooks', $event)"
-        />
-        <span class="hint">启用生命周期钩子功能</span>
-      </el-form-item>
-
-      <template v-if="localForm.enable_hooks">
+    <template v-if="localForm.enable_hooks">
+      <el-form :model="form" label-width="140px" size="large">
         <el-form-item label="可用钩子">
           <el-checkbox-group v-model="localForm.hooks" @change="updateField('hooks', $event)">
             <div class="hooks-grid">
@@ -51,8 +50,8 @@
         >
           已选择 {{ localForm.hooks.length }} 个钩子
         </el-alert>
-      </template>
-    </el-form>
+      </el-form>
+    </template>
   </el-card>
 </template>
 
@@ -193,13 +192,18 @@ const updateField = (field: string, value: any) => {
 .card-header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
   gap: 12px;
 }
 
 .card-title {
   font-size: 16px;
   font-weight: 600;
-  flex: 1;
 }
 
 .hint {

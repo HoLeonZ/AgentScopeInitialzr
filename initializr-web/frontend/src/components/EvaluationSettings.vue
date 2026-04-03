@@ -2,22 +2,21 @@
   <el-card class="evaluation-card" shadow="hover">
     <template #header>
       <div class="card-header">
-        <el-icon :size="20" color="#67C23A"><DataAnalysis /></el-icon>
-        <span class="card-title">评估配置</span>
-        <el-tag size="small" type="success">Metrics</el-tag>
+        <div class="header-left">
+          <el-icon :size="20" color="#67C23A"><DataAnalysis /></el-icon>
+          <span class="card-title">评估配置</span>
+          <el-tag size="small" type="success">Metrics</el-tag>
+        </div>
+        <el-switch
+          v-model="localForm.generate_evaluation"
+          size="large"
+          @change="updateField('generate_evaluation', $event)"
+        />
       </div>
     </template>
 
-    <el-form :model="form" label-width="140px" size="large">
-      <el-form-item label="启用评估">
-        <el-switch
-          v-model="localForm.generate_evaluation"
-          @change="updateField('generate_evaluation', $event)"
-        />
-        <span class="hint">生成评估模块</span>
-      </el-form-item>
-
-      <template v-if="localForm.generate_evaluation">
+    <template v-if="localForm.generate_evaluation">
+      <el-form :model="form" label-width="140px" size="large">
         <el-form-item label="评估器类型">
           <el-select
             v-model="localForm.evaluator_type"
@@ -34,8 +33,8 @@
           </el-select>
           <span class="hint">选择评估器类型</span>
         </el-form-item>
-      </template>
-    </el-form>
+      </el-form>
+    </template>
   </el-card>
 </template>
 
@@ -96,8 +95,9 @@ onMounted(async () => {
 .hint-list strong { color: #303133; font-weight: 600 }
 .evaluation-sections { display: flex; flex-direction: column; gap: 24px; margin-bottom: 24px }
 .evaluation-card { border-radius: 8px }
-.card-header { display: flex; align-items: center; gap: 12px }
-.card-title { font-size: 16px; font-weight: 600; flex: 1 }
+.card-header { display: flex; align-items: center; justify-content: space-between }
+.header-left { display: flex; align-items: center; gap: 12px }
+.card-title { font-size: 16px; font-weight: 600 }
 .hint { font-size: 0.85em; color: #909399; display: block; margin-top: 4px; line-height: 1.4 }
 :deep(.el-card__header) { padding: 16px 20px; background: #f5f7fa; border-bottom: 1px solid #ebeef5 }
 :deep(.el-card__body) { padding: 20px }

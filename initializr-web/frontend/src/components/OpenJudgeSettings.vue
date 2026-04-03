@@ -2,22 +2,21 @@
   <el-card class="openjudge-card" shadow="hover">
     <template #header>
       <div class="card-header">
-        <el-icon :size="20" color="#E6A23C"><Trophy /></el-icon>
-        <span class="card-title">OpenJudge集成</span>
-        <el-tag size="small" type="warning">高级功能</el-tag>
+        <div class="header-left">
+          <el-icon :size="20" color="#E6A23C"><Trophy /></el-icon>
+          <span class="card-title">OpenJudge集成</span>
+          <el-tag size="small" type="warning">高级功能</el-tag>
+        </div>
+        <el-switch
+          v-model="localForm.enable_openjudge"
+          size="large"
+          @change="updateField('enable_openjudge', $event)"
+        />
       </div>
     </template>
 
-    <el-form :model="form" label-width="140px" size="large">
-      <el-form-item label="启用OpenJudge">
-        <el-switch
-          v-model="localForm.enable_openjudge"
-          @change="updateField('enable_openjudge', $event)"
-        />
-        <span class="hint">自动评分系统，评估智能体响应</span>
-      </el-form-item>
-
-      <template v-if="localForm.enable_openjudge">
+    <template v-if="localForm.enable_openjudge">
+      <el-form :model="form" label-width="140px" size="large">
         <el-form-item label="评分器">
           <el-checkbox-group
             v-model="localForm.openjudge_graders"
@@ -40,8 +39,8 @@
             </div>
           </el-checkbox-group>
         </el-form-item>
-      </template>
-    </el-form>
+      </el-form>
+    </template>
   </el-card>
 </template>
 
@@ -105,13 +104,18 @@ onMounted(async () => {
 .card-header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
   gap: 12px;
 }
 
 .card-title {
   font-size: 16px;
   font-weight: 600;
-  flex: 1;
 }
 
 .hint {

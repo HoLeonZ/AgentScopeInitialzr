@@ -2,22 +2,21 @@
   <el-card class="test-card" shadow="hover">
     <template #header>
       <div class="card-header">
-        <el-icon :size="20" color="#409EFF"><DocumentChecked /></el-icon>
-        <span class="card-title">测试套件生成</span>
-        <el-tag size="small" type="primary">pytest</el-tag>
+        <div class="header-left">
+          <el-icon :size="20" color="#409EFF"><DocumentChecked /></el-icon>
+          <span class="card-title">测试套件生成</span>
+          <el-tag size="small" type="primary">pytest</el-tag>
+        </div>
+        <el-switch
+          v-model="localForm.generate_tests"
+          size="large"
+          @change="updateField('generate_tests', $event)"
+        />
       </div>
     </template>
 
-    <el-form :model="form" label-width="140px" size="large">
-      <el-form-item label="生成测试">
-        <el-switch
-          v-model="localForm.generate_tests"
-          @change="updateField('generate_tests', $event)"
-        />
-        <span class="hint">生成pytest测试套件</span>
-      </el-form-item>
-
-      <template v-if="localForm.generate_tests">
+    <template v-if="localForm.generate_tests">
+      <el-form :model="form" label-width="140px" size="large">
         <el-form-item label="测试框架">
           <el-select v-model="testFramework" disabled style="width: 100%">
             <el-option label="pytest" value="pytest" />
@@ -49,8 +48,8 @@
             <el-tag size="small" type="info">配置文件</el-tag>
           </div>
         </div>
-      </template>
-    </el-form>
+      </el-form>
+    </template>
   </el-card>
 </template>
 
@@ -163,13 +162,18 @@ const updateField = (field: string, value: any) => {
 .card-header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
   gap: 12px;
 }
 
 .card-title {
   font-size: 16px;
   font-weight: 600;
-  flex: 1;
 }
 
 .hint {
