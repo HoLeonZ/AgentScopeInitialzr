@@ -183,10 +183,6 @@ class ProjectGenerator:
         # Generate utils files
         self._generate_utils(pkg_dir, metadata)
 
-        # Generate agent factory
-        agent_factory_content = self._generate_agent_factory(metadata)
-        (pkg_dir / "agent_factory.py").write_text(agent_factory_content)
-
         # Generate examples
         self._generate_examples(project_path, metadata)
 
@@ -627,105 +623,6 @@ Thumbs.db
 __version__ = "{metadata.version}"
 '''
 
-    def _generate_agent_factory(self, metadata: AgentScopeMetadata) -> str:
-        """Generate agent_factory.py - responsible for creating and configuring agents."""
-        return f'''"""
-Agent Factory Module
-
-This module is responsible for creating and configuring agents.
-Following Single Responsibility Principle, it handles all agent creation logic.
-"""
-
-from typing import Optional
-from agentscope.agent import ReActAgent
-from {metadata.package_name}.config import settings
-from {metadata.package_name}.config.middleware import middleware_manager
-from {metadata.package_name}.config.model import get_model
-from {metadata.package_name}.config.formatter import get_formatter
-from {metadata.package_name}.config.memory import get_memory
-from {metadata.package_name}.config.tools import get_toolkit
-import logging
-
-logger = logging.getLogger(__name__)
-
-
-class AgentFactory:
-    """Factory class for creating agents with proper configuration."""
-
-    @staticmethod
-    def create_agent(
-        name: str,
-        sys_prompt: Optional[str] = None,
-    ) -> ReActAgent:
-        """
-        Create and configure an agent.
-
-        Args:
-            name: Agent name
-            sys_prompt: System prompt (uses default if not provided)
-
-        Returns:
-            Configured ReActAgent instance
-
-        Raises:
-            RuntimeError: If agent creation fails
-        """
-        try:
-            # Use provided prompt or default from settings
-            prompt = sys_prompt or settings.SYSTEM_PROMPT
-
-            # Get core middlewares
-            model = get_model()
-            formatter = get_formatter()
-
-            # Get optional middlewares
-            memory = get_memory() if middleware_manager.has('memory') else None
-            toolkit = get_toolkit() if middleware_manager.has('toolkit') else None
-
-            # Get configuration parameters
-            enable_meta_tool = middleware_manager.get_config('enable_meta_tool', False)
-            parallel_tool_calls = middleware_manager.get_config('parallel_tool_calls', False)
-            max_iters = middleware_manager.get_config('max_iters', 10)
-
-            # Create agent with explicit middlewares
-            agent = ReActAgent(
-                name=name,
-                sys_prompt=prompt,
-                model=model,
-                formatter=formatter,
-                memory=memory,
-                toolkit=toolkit,
-                enable_meta_tool=enable_meta_tool,
-                parallel_tool_calls=parallel_tool_calls,
-                max_iters=max_iters,
-            )
-
-            logger.info(f"Agent '{{name}}' created successfully")
-            return agent
-
-        except Exception as e:
-            logger.error(f"Failed to create agent '{{name}}': {{str(e)}}", exc_info=True)
-            raise RuntimeError(f"Agent creation failed: {{str(e)}}") from e
-
-
-def create_agent(
-    name: str,
-    sys_prompt: Optional[str] = None,
-) -> ReActAgent:
-    """
-    Convenience function to create an agent.
-
-    Args:
-        name: Agent name
-        sys_prompt: Optional system prompt
-
-    Returns:
-        Configured ReActAgent instance
-    """
-    return AgentFactory.create_agent(name, sys_prompt)
-'''
-
-
     def _generate_main(self, metadata: AgentScopeMetadata) -> str:
         """Generate main.py entry point - simplified following Single Responsibility Principle."""
         template = '''"""
@@ -745,7 +642,7 @@ from dotenv import load_dotenv
 
 from {package_name}.config import settings
 from {package_name}.config.lifecycle import ApplicationLifecycle
-from {package_name}.agent_factory import create_agent
+from {package_name}.agents.react_agent import create_react_agent
 
 # Load environment variables
 load_dotenv()
@@ -779,8 +676,8 @@ async def main():
         ApplicationLifecycle.initialize()
         logger.info("Application lifecycle initialized")
 
-        # Step 4: Create agent (delegated to agent_factory)
-        agent = create_agent(
+        # Step 4: Create agent
+        agent = create_react_agent(
             name="{name}",
             sys_prompt=settings.SYSTEM_PROMPT
         )
@@ -852,32 +749,52 @@ __all__ = ["helpers", "log"]
 Base ReAct agent implementation.
 """
 
+from typing import Optional
 from agentscope.agent import ReActAgent
 from {metadata.package_name}.config import get_model, get_memory, get_toolkit, get_formatter
+from {metadata.package_name}.config.middleware import middleware_manager
 
 
-def create_react_agent(name: str = "{metadata.name}") -> ReActAgent:
+def create_react_agent(
+    name: str = "{metadata.name}",
+    sys_prompt: Optional[str] = None,
+) -> ReActAgent:
     """
     Create a ReAct agent instance.
 
     Args:
         name: Agent name
+        sys_prompt: System prompt (uses default if not provided)
 
     Returns:
         Configured ReActAgent instance
     """
+    # Get core middlewares
     model = get_model()
     formatter = get_formatter()
-    memory = get_memory()
-    toolkit = get_toolkit()
+
+    # Get optional middlewares
+    memory = get_memory() if middleware_manager.has('memory') else None
+    toolkit = get_toolkit() if middleware_manager.has('toolkit') else None
+
+    # Get configuration parameters
+    enable_meta_tool = middleware_manager.get_config('enable_meta_tool', False)
+    parallel_tool_calls = middleware_manager.get_config('parallel_tool_calls', False)
+    max_iters = middleware_manager.get_config('max_iters', 10)
+
+    # Use provided prompt or default
+    prompt = sys_prompt or "You are a helpful assistant with access to various tools."
 
     return ReActAgent(
         name=name,
-        sys_prompt="You are a helpful assistant with access to various tools.",
+        sys_prompt=prompt,
         model=model,
         formatter=formatter,
         toolkit=toolkit,
         memory=memory,
+        enable_meta_tool=enable_meta_tool,
+        parallel_tool_calls=parallel_tool_calls,
+        max_iters=max_iters,
     )
 '''
             (pkg_dir / "agents" / "react_agent.py").write_text(agent_content)
