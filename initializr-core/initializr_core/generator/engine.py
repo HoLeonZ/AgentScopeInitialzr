@@ -151,9 +151,9 @@ class ProjectGenerator:
         requirements = self._generate_requirements(metadata)
         (project_path / "requirements.txt").write_text(requirements)
 
-        # Generate pyproject.toml
-        pyproject = self._generate_pyproject(metadata)
-        (project_path / "pyproject.toml").write_text(pyproject)
+        # Generate requirements-dev.txt for development dependencies
+        requirements_dev = self._generate_requirements_dev()
+        (project_path / "requirements-dev.txt").write_text(requirements_dev)
 
     def _generate_source_code(
         self,
@@ -273,9 +273,9 @@ python -m {metadata.package_name}.main
 ├── examples/                    # Usage examples
 ├── scripts/                     # Utility scripts
 ├── docs/                        # Documentation
-├── pyproject.toml              # Project config
-├── requirements.txt             # Dependencies
-└── .env.example                # Environment template
+├── requirements.txt             # Runtime dependencies
+├── requirements-dev.txt         # Development dependencies
+└── .env.example                 # Environment template
 ```
 
 ## AgentScope Configuration
@@ -587,10 +587,13 @@ Thumbs.db
 """
 
     def _generate_requirements(self, metadata: AgentScopeMetadata) -> str:
-        """Generate requirements.txt content."""
+        """Generate requirements.txt content with all runtime dependencies."""
         deps = [
+            "# Core dependencies",
             "agentscope>=0.1.0",
             "python-dotenv>=1.0.0",
+            "",
+            "# Model provider dependencies",
         ]
 
         # Add model-specific dependencies
@@ -600,6 +603,11 @@ Thumbs.db
             deps.append("anthropic>=0.18.0")
         elif metadata.model_provider.value == "dashscope":
             deps.append("dashscope>=1.0.0")
+        elif metadata.model_provider.value == "gemini":
+            deps.append("google-generativeai>=0.3.0")
+
+        deps.append("")
+        deps.append("# Feature-specific dependencies")
 
         # Add memory-specific dependencies
         if metadata.memory_type.value == "long-term":
@@ -611,83 +619,31 @@ Thumbs.db
         elif metadata.agent_type.value == "browser":
             deps.append("playwright>=1.40.0")
 
+        # Add knowledge base dependencies
+        if metadata.enable_knowledge:
+            deps.append("qdrant-client>=1.7.0")
+
         return "\n".join(deps)
 
-    def _generate_pyproject(self, metadata: AgentScopeMetadata) -> str:
-        """Generate pyproject.toml content."""
-        return f"""[project]
-name = "{metadata.name}"
-version = "{metadata.version}"
-description = "{metadata.description}"
-authors = [
-    {{name = "{metadata.author}", email = "{metadata.email}"}},
-]
-readme = "README.md"
-requires-python = ">={metadata.python_version}"
-dependencies = [
-    "agentscope>=0.1.0",
-]
+    def _generate_requirements_dev(self) -> str:
+        """Generate requirements-dev.txt for development dependencies."""
+        return """# Development dependencies
+# Install with: pip install -r requirements-dev.txt
 
-[project.optional-dependencies]
-dev = [
-    "pytest>=7.0.0",
-    "pytest-asyncio>=0.21.0",
-    "black>=23.0.0",
-    "isort>=5.12.0",
-    "mypy>=1.0.0",
-]
+# Testing
+pytest>=7.0.0
+pytest-asyncio>=0.21.0
+pytest-cov>=4.0.0
 
-[project.scripts]
-{metadata.package_name} = "{metadata.package_name}.main:run_cli"
+# Code formatting
+black>=23.0.0
+isort>=5.12.0
 
-[build-system]
-requires = ["setuptools>=61.0", "wheel"]
-build-backend = "setuptools.build_meta"
+# Type checking
+mypy>=1.0.0
 
-[tool.setuptools.packages.find]
-where = ["src"]
-
-[tool.black]
-line-length = 100
-target-version = ['py310']
-include = '\\.pyi?$'
-extend-exclude = '''
-/(
-  # directories
-  \\.eggs
-  | \\.git
-  | \\.hg
-  | \\.mypy_cache
-  | \\.tox
-  | \\.venv
-  | build
-  | dist
-)/
-'''
-
-[tool.isort]
-profile = "black"
-line_length = 100
-skip_gitignore = true
-
-[tool.mypy]
-python_version = "{metadata.python_version}"
-warn_return_any = true
-warn_unused_configs = true
-disallow_untyped_defs = false
-disallow_incomplete_defs = false
-
-[tool.pytest.ini_options]
-minversion = "7.0"
-testpaths = ["tests"]
-python_files = ["test_*.py"]
-python_classes = ["Test*"]
-python_functions = ["test_*"]
-addopts = "-v --tb=short --strict-markers"
-markers = [
-    "slow: marks tests as slow",
-    "integration: marks tests as integration tests",
-]
+# Linting
+ruff>=0.1.0
 """
 
     def _generate_package_init(self, metadata: AgentScopeMetadata) -> str:
@@ -2151,9 +2107,9 @@ python -m {metadata.package_name}.main "$@"
 ├── examples/                    # Usage examples
 ├── scripts/                     # Utility scripts
 ├── docs/                        # Documentation
-├── pyproject.toml              # Project config
-├── requirements.txt             # Dependencies
-└── .env.example                # Environment template
+├── requirements.txt             # Runtime dependencies
+├── requirements-dev.txt         # Development dependencies
+└── .env.example                 # Environment template
 ```
 
 ## Architecture Overview
