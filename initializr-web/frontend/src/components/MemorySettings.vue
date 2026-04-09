@@ -149,8 +149,8 @@
                 <span class="hint">用于存储对话历史的表名</span>
               </el-form-item>
             </template>
-          </template>
-        </el-form>
+          </el-form>
+        </template>
       </el-card>
 
       <!-- 长期记忆区块 -->
@@ -232,8 +232,8 @@
                 <span class="hint">用于存储智能体记忆的表名</span>
               </el-form-item>
             </template>
-          </template>
-        </el-form>
+          </el-form>
+        </template>
       </el-card>
     </div>
   </div>
