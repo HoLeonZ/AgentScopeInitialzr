@@ -1,7 +1,7 @@
 # Multi-stage build for AgentScope Initializr Web Service
-# Target: Linux ARM64
+# Target: Linux ARM64 (Optimized)
 # All sources are configured for China mirrors
-# Optimized for caching to avoid re-downloading dependencies
+# Explicitly ensures ARM64 compatibility for all dependencies
 
 # Stage 1: Builder - compile frontend and install dependencies
 FROM --platform=linux/arm64 python:3.11-slim AS builder
@@ -13,13 +13,23 @@ RUN sed -i 's/deb.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list.d/debia
     sed -i 's/security.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list.d/debian.sources
 
 # Install system dependencies for building (cached layer)
+# ARM64 specific: Ensure compatible versions
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     g++ \
     curl \
-    nodejs \
-    npm \
     && rm -rf /var/lib/apt/lists/*
+
+# Install Node.js from NodeSource repository for ARM64
+# This ensures we get a recent, ARM64-compatible version
+RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
+    apt-get install -y nodejs && \
+    rm -rf /var/lib/apt/lists/*
+
+# Verify Node.js architecture
+RUN echo "Node.js version: $(node --version)" && \
+    echo "Node.js architecture: $(node -p 'process.arch')" && \
+    echo "NPM version: $(npm --version)"
 
 # Configure pip to use Aliyun mirror (China)
 RUN pip config set global.index-url https://mirrors.aliyun.com/pypi/simple/ && \
@@ -33,6 +43,7 @@ COPY pyproject.toml ./
 COPY initializr-web/pyproject.toml ./initializr-web/
 
 # Install Python dependencies (cached if pyproject.toml unchanged)
+# Note: Using ARM64-optimized dependencies from pyproject.toml (uvicorn without uvloop)
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -e ".[web]"
 
@@ -100,5 +111,5 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
-# Run the web service
+# Run the web service (using standard asyncio, optimized for ARM64)
 CMD ["uvicorn", "initializr_web.api:app", "--host", "0.0.0.0", "--port", "8000"]
