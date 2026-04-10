@@ -4,7 +4,7 @@
 # Optimized for caching to avoid re-downloading dependencies
 
 # Stage 1: Builder - compile frontend and install dependencies
-FROM python:3.11-slim AS builder
+FROM --platform=linux/arm64 python:3.11-slim AS builder
 
 WORKDIR /app
 
@@ -55,7 +55,7 @@ RUN npm run build
 RUN ls -la /app/initializr-web/initializr_web/static/
 
 # Stage 2: Runtime - minimal image with only runtime dependencies
-FROM python:3.11-slim AS runtime
+FROM --platform=linux/arm64 python:3.11-slim AS runtime
 
 WORKDIR /app
 
