@@ -19,11 +19,11 @@ BASE_URL="${HEALTH_CHECK_URL:-http://localhost:8000}"
 TIMEOUT=5
 MAX_RETRIES=3
 
-# 图标
-✓="✓"
-✗="✗"
-⚠="⚠"
-ℹ="ℹ"
+# 状态标识（使用ASCII字符以确保兼容性）
+SUCCESS="[OK]"
+ERROR="[ERROR]"
+WARNING="[WARNING]"
+INFO="[INFO]"
 
 # 函数：打印状态
 print_status() {
@@ -32,16 +32,16 @@ print_status() {
 
     case $status in
         "ok")
-            echo -e "${GREEN}${✓} $message${NC}"
+            echo -e "${GREEN}${SUCCESS} $message${NC}"
             ;;
         "error")
-            echo -e "${RED}${✗} $message${NC}"
+            echo -e "${RED}${ERROR} $message${NC}"
             ;;
         "warning")
-            echo -e "${YELLOW}${⚠} $message${NC}"
+            echo -e "${YELLOW}${WARNING} $message${NC}"
             ;;
         "info")
-            echo -e "${PURPLE}${ℹ} $message${NC}"
+            echo -e "${PURPLE}${INFO} $message${NC}"
             ;;
     esac
 }
@@ -199,10 +199,10 @@ generate_report() {
     echo -e "\n${BOLD}${GREEN}═══════════════════════════════════════════════════════════${NC}"
 
     if [ $health_ok -eq 1 ]; then
-        echo -e "${GREEN}${BOLD}总体状态: 健康 ✓${NC}"
+        echo -e "${GREEN}${BOLD}总体状态: 健康 [OK]${NC}"
         return 0
     else
-        echo -e "${RED}${BOLD}总体状态: 异常 ✗${NC}"
+        echo -e "${RED}${BOLD}总体状态: 异常 [ERROR]${NC}"
         return 1
     fi
 }

@@ -17,12 +17,12 @@ CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 BOLD='\033[1m'
 
-# 图标
-✓="✓"
-✗="✗"
-⚠="⚠"
-→="→"
-⟳="⟳"
+# 状态标识（使用ASCII字符以确保兼容性）
+SUCCESS="[OK]"
+ERROR="[ERROR]"
+WARNING="[WARNING]"
+INFO="[INFO]"
+PROCESSING="[PROCESSING]"
 
 # 配置
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -43,23 +43,23 @@ print_step() {
 }
 
 print_info() {
-    echo -e "${PURPLE}ℹ  $1${NC}"
+    echo -e "${PURPLE}${INFO} $1${NC}"
 }
 
 print_success() {
-    echo -e "${GREEN}${✓} $1${NC}"
+    echo -e "${GREEN}${SUCCESS} $1${NC}"
 }
 
 print_error() {
-    echo -e "${RED}${✗} 错误: $1${NC}"
+    echo -e "${RED}${ERROR} $1${NC}"
 }
 
 print_warning() {
-    echo -e "${YELLOW}${⚠} 警告: $1${NC}"
+    echo -e "${YELLOW}${WARNING} $1${NC}"
 }
 
 print_progress() {
-    echo -ne "${CYAN}${⟳} $1...${NC}\r"
+    echo -ne "${CYAN}${PROCESSING} $1...${NC}\r"
 }
 
 # 函数：检查命令是否存在
@@ -279,7 +279,7 @@ show_service_info() {
         ip_address="your-server-ip"
     fi
 
-    echo -e "${GREEN}${BOLD}✓ AgentScope Initializr 已成功部署!${NC}\n"
+    echo -e "${GREEN}${BOLD}[SUCCESS] AgentScope Initializr 已成功部署!${NC}\n"
 
     echo -e "${BOLD}服务信息:${NC}"
     echo -e "  状态: ${BLUE}$(docker-compose -f "$COMPOSE_FILE" ps | grep agentscope | awk '{print $NF}')${NC}"
