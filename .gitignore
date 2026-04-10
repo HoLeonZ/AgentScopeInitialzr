@@ -163,3 +163,5 @@ output/
 
 # Claude Code settings
 .claude/settings.local.json
+*.tar.gz
+*.tar.gz

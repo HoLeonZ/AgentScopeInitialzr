@@ -69,7 +69,8 @@
       "Bash(curl -s http://localhost:8000/api/v1/templates)",
       "Bash(curl -s http://localhost:8000/api/v1/health)",
       "Bash(jq)",
-      "Bash(curl -s http://localhost:8000/api/v1/models)"
+      "Bash(curl -s http://localhost:8000/api/v1/models)",
+      "Bash(chmod +x:*)"
     ]
   },
   "spinnerTipsEnabled": true
