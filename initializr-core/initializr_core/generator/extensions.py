@@ -5,6 +5,7 @@ Generates code for AgentScope extension points including
 Model, Memory, Tool, Hooks, Formatter, Skills, RAG, and Pipeline configurations.
 """
 
+from pathlib import Path
 from typing import Dict, Any, List
 from initializr_core.metadata.models import (
     AgentScopeMetadata,
@@ -200,16 +201,20 @@ LONG_TERM_MEMORY_TYPE = "{metadata.long_term_memory}"
 """)
 
             if metadata.long_term_memory == "mem0":
-                lines.append(f'''
+                mem0_code = '''
 def get_long_term_memory():
     """Get long-term memory instance with Mem0."""
     from agentscope.memory import Mem0Memory
 
     return Mem0Memory(
-        api_key=os.getenv("MEM0_API_KEY"){''',
-        api_url=os.getenv("MEM0_API_URL")''' if metadata.rag_config and metadata.rag_config.get('api_url') else ''},
+        api_key=os.getenv("MEM0_API_KEY")'''
+                if metadata.rag_config and metadata.rag_config.get('api_url'):
+                    mem0_code += ''',
+        api_url=os.getenv("MEM0_API_URL")'''
+                mem0_code += '''
     )
-''')
+'''
+                lines.append(mem0_code)
             elif metadata.long_term_memory == "zep":
                 lines.append(f'''
 def get_long_term_memory():
@@ -1363,7 +1368,8 @@ def map_to_agent_params() -> Dict[str, Any]:
 
     def generate_lifecycle_manager_file(self, metadata: AgentScopeMetadata) -> str:
         """Generate application lifecycle manager."""
-        return f'''"""
+        lines = []
+        lines.append(f'''"""
 Application lifecycle manager for {metadata.name}.
 
 This module provides framework-level initialization and shutdown
@@ -1376,13 +1382,17 @@ from {metadata.package_name}.config.middleware import (
     middleware_manager,
     register_core_middlewares,
     map_to_agent_params,
-)
-{f'''
-from {metadata.package_name}.config.rag import get_rag_retriever
-''' if metadata.enable_rag else ''}
-{f'''
-from {metadata.package_name}.config.pipeline import get_pipeline
-''' if metadata.enable_pipeline else ''}
+)''')
+
+        if metadata.enable_rag:
+            lines.append(f'''
+from {metadata.package_name}.config.rag import get_rag_retriever''')
+
+        if metadata.enable_pipeline:
+            lines.append(f'''
+from {metadata.package_name}.config.pipeline import get_pipeline''')
+
+        lines.append('''
 
 
 class ApplicationLifecycle:
@@ -1400,34 +1410,42 @@ class ApplicationLifecycle:
         if cls._initialized:
             return
 
-        # 1. Initialize AgentScope
+        # 1. Initialize AgentScope''')
+
+        lines.append(f'''
         agentscope.init(
             project="{metadata.name}",
             name="{metadata.name}_instance",
             logging_path="logs",
             logging_level=os.getenv("LOG_LEVEL", "INFO"),
-        )
+        )''')
+
+        lines.append('''
 
         # 2. Register core middlewares
         register_core_middlewares()
 
-        # 3. Register optional middlewares
-{f'''
+        # 3. Register optional middlewares''')
+
+        if metadata.enable_rag:
+            lines.append('''
         # Register RAG as knowledge middleware
         middleware_manager.register(
             'knowledge',
             lambda: get_rag_retriever(),
-            {{}}
-        )
-''' if metadata.enable_rag else ''}
-{f'''
+            {}
+        )''')
+
+        if metadata.enable_pipeline:
+            lines.append('''
         # Register pipeline as plan notebook middleware
         middleware_manager.register(
             'plan_notebook',
             lambda: get_pipeline(),
-            {{}}
-        )
-''' if metadata.enable_pipeline else ''}
+            {}
+        )''')
+
+        lines.append('''
 
         # 4. Initialize all middlewares
         middleware_manager.initialize_all()
@@ -1463,4 +1481,5 @@ class ApplicationLifecycle:
             )
 
         return map_to_agent_params()
-'''
+''')
+        return '\n'.join(lines)

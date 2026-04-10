@@ -1,29 +1,72 @@
-# __pycache__
-*.pyc
-*.pyo
-*.pyd
-.Python
+# Python
+__pycache__
+*.py[cod]
+*$py.class
 *.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
 *.egg
-*.egg-info
-dist
-build
-.git
-.gitignore
+
+# Virtual environments
 .venv
 venv/
 ENV/
 env/
+
+# IDE
 .vscode
 .idea
+*.swp
+*.swo
+*~
+
+# Git
+.git
+.gitignore
+
+# Documentation
 *.md
 docs/
+
+# Tests
 tests/
 .pytest_cache
 .coverage
 htmlcov/
+.tox/
+.nox/
+
+# Frontend build artifacts (will be built in Docker)
 initializr-web/frontend/node_modules
 initializr-web/frontend/dist
-initializr-web/.turbo
+
+# Output directory
 output/
-*.zip
+
+# Docker
+Dockerfile
+docker-compose.yml
+docker-build.sh
+docker-run.sh
+docker-verify.sh
+*.tar.gz
+
+# Misc
+.DS_Store
+*.log
+logs
+.env
+.env.*
