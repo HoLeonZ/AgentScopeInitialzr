@@ -70,7 +70,24 @@
       "Bash(curl -s http://localhost:8000/api/v1/health)",
       "Bash(jq)",
       "Bash(curl -s http://localhost:8000/api/v1/models)",
-      "Bash(chmod +x:*)"
+      "Bash(chmod +x:*)",
+      "Bash(mkdir -p /tmp/agentscope-initializr-arm64)",
+      "Bash(cp deploy-arm64.sh quick-start-arm64.sh health-check.sh agentscope.service agentscope-initializr-arm64.tar.gz ARM64-DEPLOYMENT.md README-ARM64.md 部署说明书.md /tmp/agentscope-initializr-arm64/)",
+      "Read(//private/tmp/**)",
+      "Bash(zip -r agentscope-initializr-arm64.zip agentscope-initializr-arm64/)",
+      "Bash(grep:*)",
+      "Bash(tar -czf agentscope-initializr-arm64-updated.tar.gz agentscope-initializr-arm64/)",
+      "Bash(zip -r agentscope-initializr-arm64-updated.zip agentscope-initializr-arm64/)",
+      "Bash(cp:*)",
+      "Bash(cp /tmp/agentscope-initializr-arm64-updated.* /Users/zhl/Documents/claude_project/agent_initializr/agentscope-initializr/)",
+      "Bash(tar -tzf agentscope-initializr-arm64-updated.tar.gz)",
+      "Bash(docker build:*)",
+      "Bash(docker save:*)",
+      "Bash(gzip)",
+      "Bash(tar -czf agentscope-initializr-arm64-FIXED.tar.gz agentscope-final-deploy/)",
+      "Bash(zip -r agentscope-initializr-arm64-FIXED.zip agentscope-final-deploy/)",
+      "Bash(cp /tmp/agentscope-initializr-arm64-FIXED.* /Users/zhl/Documents/claude_project/agent_initializr/agentscope-initializr/)",
+      "Bash(tar -tzf agentscope-initializr-arm64-FIXED.tar.gz)"
     ]
   },
   "spinnerTipsEnabled": true
