@@ -6,10 +6,22 @@
 
 | 文件 | 说明 |
 |------|------|
-| `agentscope-initializr-arm64.tar.gz` | Docker 镜像文件（117MB） |
-| `docker-build.sh` | 构建镜像脚本（开发用） |
+| `agentscope-initializr-arm64.tar.gz` | Docker 镜像文件（112MB） |
+| `build_docker.py` | 构建镜像脚本（Python） |
 | `docker-run.sh` | 运行容器脚本（部署用） |
 | `docker-verify.sh` | 验证镜像脚本（可选） |
+
+## 构建新镜像（开发用）
+
+修改代码后，重新构建镜像：
+
+```bash
+python3 build_docker.py
+```
+
+可选参数：
+- `--no-cache`: 不使用 Docker 缓存，强制重新构建
+- `--check-only`: 仅检查 Docker 是否运行
 
 ## 部署步骤
 
@@ -55,13 +67,3 @@ docker restart agentscope-initializr
 # 删除容器
 docker rm -f agentscope-initializr
 ```
-
-## 构建新镜像（仅开发用）
-
-如果您修改了代码，需要重新构建镜像：
-
-```bash
-./docker-build.sh
-```
-
-这将生成新的 `agentscope-initializr-arm64.tar.gz` 文件。
