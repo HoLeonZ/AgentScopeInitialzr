@@ -2,21 +2,30 @@
 """
 Docker Build Script for AgentScope Initializr
 
-Builds an ARM64 Docker image and exports it as a tar.gz file.
-Optimized for caching - only re-downloads dependencies when necessary.
+Builds a Docker image and exports it as a tar.gz file.
+Supports multiple architectures (linux/amd64, linux/arm64).
 """
 
 import argparse
 import subprocess
 import sys
 import os
+import platform
 from pathlib import Path
 
 
 IMAGE_NAME = "agentscope-initializr"
 IMAGE_TAG = "latest"
-OUTPUT_FILE = f"{IMAGE_NAME}-arm64.tar.gz"
-PLATFORM = "linux/arm64"
+
+
+def get_current_architecture() -> str:
+    """Detect current machine architecture."""
+    arch = platform.machine().lower()
+    if arch in ['arm64', 'aarch64']:
+        return 'arm64'
+    elif arch in ['x86_64', 'amd64']:
+        return 'amd64'
+    return 'amd64'
 
 
 def run_command(cmd: list[str], check: bool = True) -> subprocess.CompletedProcess:
@@ -40,26 +49,41 @@ def check_docker() -> bool:
         return False
 
 
-def build_image(no_cache: bool = False) -> bool:
-    """Build the Docker image."""
+def setup_buildx() -> bool:
+    """Setup buildx to use default driver."""
     print("\n" + "=" * 40)
-    print("Step 1: Building Docker image")
+    print("Step 0: Setting up buildx")
     print("=" * 40)
 
-    if no_cache:
-        print("Warning: Building without cache (fresh build)")
-        print("This will take longer as all layers will be rebuilt.")
-    else:
-        print("Note: Docker will use cached layers when possible.")
+    try:
+        run_command(["docker", "context", "use", "default"], check=False)
+        run_command(["docker", "buildx", "use", "default"], check=False)
+        result = run_command(["docker", "buildx", "inspect", "--bootstrap"], check=False)
+        if result.returncode != 0:
+            print("Warning: buildx bootstrap failed, continuing anyway...")
+        return True
+    except Exception as e:
+        print(f"Warning: setup_buildx error: {e}")
+        return True
 
-    cmd = ["docker", "build"]
+
+def build_image(platform: str, no_cache: bool = False) -> bool:
+    """Build the Docker image using buildx."""
+    print("\n" + "=" * 40)
+    print(f"Step 1: Building Docker image ({platform})")
+    print("=" * 40)
+
+    cmd = [
+        "docker", "buildx", "build",
+        "--platform", platform,
+        "-t", f"{IMAGE_NAME}:{IMAGE_TAG}",
+        "--load"
+    ]
+
     if no_cache:
         cmd.append("--no-cache")
-    cmd.extend([
-        "--platform", PLATFORM,
-        "-t", f"{IMAGE_NAME}:{IMAGE_TAG}",
-        "."
-    ])
+
+    cmd.append(".")
 
     try:
         env = os.environ.copy()
@@ -67,7 +91,7 @@ def build_image(no_cache: bool = False) -> bool:
         result = subprocess.run(cmd, env=env, text=True)
         if result.returncode != 0:
             print(f"Error: Build failed")
-            print(result.stderr)
+            print(result.stderr[-2000:] if len(result.stderr) > 2000 else result.stderr)
             return False
         print("Build completed successfully!")
         return True
@@ -76,15 +100,16 @@ def build_image(no_cache: bool = False) -> bool:
         return False
 
 
-def export_image() -> bool:
+def export_image(arch: str) -> bool:
     """Export the Docker image to tar.gz."""
+    output_file = f"{IMAGE_NAME}-{arch}.tar.gz"
     print("\n" + "=" * 40)
     print("Step 2: Exporting image to tar.gz")
     print("=" * 40)
 
     try:
         cmd = ["docker", "save", f"{IMAGE_NAME}:{IMAGE_TAG}"]
-        with open(OUTPUT_FILE, "wb") as f:
+        with open(output_file, "wb") as f:
             gzip_proc = subprocess.Popen(
                 ["gzip"],
                 stdin=subprocess.PIPE,
@@ -102,10 +127,10 @@ def export_image() -> bool:
             print(f"Error: Export failed")
             return False
 
-        file_size = Path(OUTPUT_FILE).stat().st_size
+        file_size = Path(output_file).stat().st_size
         file_size_mb = file_size / (1024 * 1024)
         print(f"Export completed successfully!")
-        print(f"Output: {OUTPUT_FILE} ({file_size_mb:.1f} MB)")
+        print(f"Output: {output_file} ({file_size_mb:.1f} MB)")
         return True
     except Exception as e:
         print(f"Error: Export failed: {e}")
@@ -139,6 +164,13 @@ def main():
         description="Build and export AgentScope Initializr Docker image"
     )
     parser.add_argument(
+        "--arch",
+        "-a",
+        choices=["amd64", "arm64", "auto"],
+        default="auto",
+        help="Target architecture (default: auto-detect)"
+    )
+    parser.add_argument(
         "--no-cache",
         action="store_true",
         help="Build without using Docker cache"
@@ -150,12 +182,21 @@ def main():
     )
     args = parser.parse_args()
 
+    if args.arch == "auto":
+        arch = get_current_architecture()
+    else:
+        arch = args.arch
+
+    platform_str = f"linux/{arch}"
+
+    output_file = f"{IMAGE_NAME}-{arch}.tar.gz"
+
     print("=" * 40)
     print("AgentScope Initializr Docker Build")
     print("=" * 40)
-    print(f"Platform: {PLATFORM}")
+    print(f"Platform: {platform_str}")
     print(f"Image: {IMAGE_NAME}:{IMAGE_TAG}")
-    print(f"Output: {OUTPUT_FILE}")
+    print(f"Output: {output_file}")
 
     if args.check_only:
         if check_docker():
@@ -169,10 +210,13 @@ def main():
         print("Error: Docker is not running. Please start Docker first.")
         return 1
 
-    if not build_image(no_cache=args.no_cache):
+    setup_buildx()
+
+    success = build_image(platform_str, no_cache=args.no_cache)
+    if not success:
         return 1
 
-    if not export_image():
+    if not export_image(arch):
         return 1
 
     info = get_image_info()
@@ -183,13 +227,7 @@ def main():
     if info:
         print(f"Architecture: {info.get('os', 'unknown')}/{info.get('architecture', 'unknown')}")
         print(f"Size: {info.get('size', 0) / (1024*1024):.1f} MB")
-    print(f"Output file: {OUTPUT_FILE}")
-    print("\nTo verify the image, run:")
-    print("  python build_docker.py")
-    print("\nTo deploy on target machine:")
-    print(f"  1. Copy {OUTPUT_FILE} to the target machine")
-    print("  2. Run: docker load < {OUTPUT_FILE}")
-    print(f"  3. Run: docker-run.sh")
+    print(f"Output file: {output_file}")
     print()
 
     return 0
