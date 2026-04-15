@@ -20,13 +20,13 @@
         <div class="flow-container">
           <div class="flow-step">
             <div class="step-box input">
-              <span>User Input</span>
+              <span>用户输入</span>
             </div>
           </div>
           <div class="flow-arrow">→</div>
           <div class="flow-step">
             <div class="step-box hook pre">
-              <span>pre_observe</span>
+              <span>观察前</span>
               <div class="hook-dot"></div>
             </div>
           </div>
@@ -40,21 +40,21 @@
           <div class="flow-arrow">→</div>
           <div class="flow-step">
             <div class="step-box hook post">
-              <span>post_observe</span>
+              <span>观察后</span>
               <div class="hook-dot"></div>
             </div>
           </div>
           <div class="flow-arrow">→</div>
           <div class="flow-step">
             <div class="step-box hook pre">
-              <span>pre_reply</span>
+              <span>回复前</span>
               <div class="hook-dot"></div>
             </div>
           </div>
           <div class="flow-arrow">→</div>
           <div class="flow-step">
             <div class="step-box output">
-              <span>Response</span>
+              <span>回复</span>
             </div>
           </div>
         </div>

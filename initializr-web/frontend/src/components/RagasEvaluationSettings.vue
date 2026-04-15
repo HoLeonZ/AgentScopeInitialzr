@@ -61,6 +61,14 @@
             <span>evaluation/README.md</span>
             <el-tag size="small" type="info">使用说明</el-tag>
           </div>
+          <div class="file-item">
+            <el-icon><Download /></el-icon>
+            <span>evaluation/{{ localForm.evaluation_csv_filename }}</span>
+            <el-tag size="small" type="warning">示例数据</el-tag>
+            <el-button type="primary" size="small" @click="downloadSampleCsv">
+              <el-icon><Download /></el-icon> 下载示例 CSV
+            </el-button>
+          </div>
         </div>
       </el-form>
     </template>
@@ -70,7 +78,7 @@
 <script setup lang="ts">
 import { reactive, computed } from 'vue'
 import { useConfigStore } from '@/stores/config'
-import { DataAnalysis, Document } from '@element-plus/icons-vue'
+import { DataAnalysis, Document, Download } from '@element-plus/icons-vue'
 
 const configStore = useConfigStore()
 const form = computed(() => configStore.form)
@@ -97,6 +105,32 @@ const handleMetricsChange = (value: string[]) => {
   } else {
     updateField('evaluation_metrics', value)
   }
+}
+
+const downloadSampleCsv = () => {
+  const headers = ['question', 'answer', 'context', 'reference']
+  const rows = []
+  for (let i = 1; i <= 100; i++) {
+    rows.push([
+      `示例问题 ${i}：这个问题的答案是什么？`,
+      `这是问题 ${i} 的回答内容，包含详细的解释和说明。`,
+      `【上下文 ${i}】这是一个相关的上下文文档，包含了回答问题所需的背景知识...`,
+      `标准参考答案 ${i}：正确的回答应该包含...`
+    ])
+  }
+
+  const csvContent = [
+    headers.join(','),
+    ...rows.map(row => row.map(cell => `"${cell.replace(/"/g, '""')}"`).join(','))
+  ].join('\n')
+
+  const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = localForm.evaluation_csv_filename
+  link.click()
+  URL.revokeObjectURL(url)
 }
 </script>
 
