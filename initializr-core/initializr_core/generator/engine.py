@@ -507,6 +507,16 @@ MIT
             lines.append("BENCHMARK_SUITE=custom")
             lines.append("")
 
+        # RAGAS Evaluation Configuration
+        if metadata.enable_ragas_evaluation:
+            lines.append("# ==============================================")
+            lines.append("# RAGAS Evaluation Configuration")
+            lines.append("# ==============================================")
+            lines.append("ENABLE_RAGAS_EVALUATION=true")
+            lines.append(f"EVALUATION_CSV_FILENAME={metadata.evaluation_csv_filename}")
+            lines.append(f"EVALUATION_METRICS={','.join(metadata.evaluation_metrics)}")
+            lines.append("")
+
         # Logging Configuration
         lines.append("# ==============================================")
         lines.append("# Logging Configuration")
@@ -2014,6 +2024,10 @@ addopts = "-v --tb=short"
         if metadata.initial_benchmark_tasks > 0:
             self._generate_benchmark_tests(tests_dir, metadata)
 
+        # Generate RAGAS evaluation module
+        if metadata.enable_ragas_evaluation:
+            self._generate_ragas_evaluation(project_path, metadata)
+
     def _generate_benchmark_tests(
         self,
         tests_dir: Path,
@@ -2055,3 +2069,30 @@ class TestBenchmarks:
         assert response is not None
 '''
         (tests_dir / "test_benchmarks.py").write_text(benchmark_content)
+
+    def _generate_ragas_evaluation(
+        self,
+        project_path: Path,
+        metadata: AgentScopeMetadata
+    ):
+        """Generate RAGAS evaluation module."""
+        eval_dir = project_path / "evaluation"
+        eval_dir.mkdir(exist_ok=True)
+
+        # Generate __init__.py
+        init_content = '''"""RAGAS Evaluation Module."""
+__all__ = ["ragas_evaluator"]
+'''
+        (eval_dir / "__init__.py").write_text(init_content)
+
+        # Generate evaluator script
+        eval_code = self.extension_generator.generate_ragas_evaluation_code(metadata)
+        (eval_dir / "ragas_evaluator.py").write_text(eval_code)
+
+        # Generate requirements.txt
+        requirements_content = self.extension_generator.generate_ragas_requirements(metadata)
+        (eval_dir / "requirements.txt").write_text(requirements_content)
+
+        # Generate README
+        readme_content = self.extension_generator.generate_ragas_readme(metadata)
+        (eval_dir / "README.md").write_text(readme_content)

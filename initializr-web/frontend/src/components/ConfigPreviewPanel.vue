@@ -409,18 +409,14 @@ const envPreview = computed(() => {
     lines.push('')
   }
   
-  // Testing Configuration
-  if (form.value.generate_tests || form.value.generate_evaluation) {
+  // RAGAS Evaluation Configuration
+  if (form.value.enable_ragas_evaluation) {
     lines.push('# ==============================================')
-    lines.push('# Testing & Evaluation Configuration')
+    lines.push('# RAGAS Evaluation Configuration')
     lines.push('# ==============================================')
-    if (form.value.generate_tests) {
-      lines.push(`GENERATE_TESTS=true`)
-    }
-    if (form.value.generate_evaluation) {
-      lines.push(`GENERATE_EVALUATION=true`)
-      lines.push(`EVALUATOR_TYPE=${form.value.evaluator_type || 'general'}`)
-    }
+    lines.push(`ENABLE_RAGAS_EVALUATION=true`)
+    lines.push(`EVALUATION_CSV_FILENAME=${form.value.evaluation_csv_filename || 'evaluation_data.csv'}`)
+    lines.push(`EVALUATION_METRICS=${(form.value.evaluation_metrics || ['faithfulness', 'answer_relevancy', 'context_precision', 'context_recall']).join(',')}`)
     lines.push('')
   }
   
