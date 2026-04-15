@@ -6,7 +6,8 @@ Model, Memory, Tool, Hooks, Formatter, Skills, RAG, and Pipeline configurations.
 """
 
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
+import threading
 from initializr_core.metadata.models import (
     AgentScopeMetadata,
     ModelProvider,
@@ -187,7 +188,14 @@ def get_model():
 
     def _generate_memory_config(self, metadata: AgentScopeMetadata) -> str:
         """Generate memory configuration code with enhanced options."""
-        lines = []
+        lines = [
+            '"""Memory configuration with thread-safe singleton patterns."""',
+            '',
+            'import os',
+            'import threading',
+            'from typing import Optional',
+            '',
+        ]
 
         # Check if we have specific memory configurations
         has_short_term = metadata.short_term_memory and metadata.short_term_memory != 'in-memory'
@@ -240,16 +248,40 @@ def get_long_term_memory():
 ''')
             elif metadata.long_term_memory == "redis":
                 lines.append(f'''
-def get_long_term_memory():
-    """Get long-term memory instance with Redis."""
-    from agentscope.memory import RedisMemory
+# Redis connection pool singleton
+_redis_long_term_pool: Optional["redis.ConnectionPool"] = None
+_redis_long_term_lock = threading.Lock()
 
-    return RedisMemory(
-        host=os.getenv("REDIS_HOST", "localhost"),
-        port=int(os.getenv("REDIS_PORT", "6379")),
-        db=int(os.getenv("REDIS_DB", "0")),
-        password=os.getenv("REDIS_PASSWORD", None),
-    )
+def _get_redis_long_term_pool() -> "redis.ConnectionPool":
+    """Get or create Redis connection pool for long-term memory (thread-safe singleton)."""
+    global _redis_long_term_pool
+    if _redis_long_term_pool is None:
+        with _redis_long_term_lock:
+            if _redis_long_term_pool is None:
+                _redis_long_term_pool = redis.ConnectionPool(
+                    host=os.getenv("REDIS_HOST", "localhost"),
+                    port=int(os.getenv("REDIS_PORT", "6379")),
+                    db=int(os.getenv("REDIS_DB", "0")),
+                    password=os.getenv("REDIS_PASSWORD"),
+                    max_connections=int(os.getenv("REDIS_MAX_CONNECTIONS", "50")),
+                    decode_responses=True,
+                )
+    return _redis_long_term_pool
+
+_long_term_memory_instance: Optional["RedisMemory"] = None
+_long_term_lock = threading.Lock()
+
+def get_long_term_memory():
+    """Get long-term memory instance with Redis (thread-safe singleton)."""
+    global _long_term_memory_instance
+    if _long_term_memory_instance is None:
+        with _long_term_lock:
+            if _long_term_memory_instance is None:
+                from agentscope.memory import RedisMemory
+                _long_term_memory_instance = RedisMemory(
+                    connection_pool=_get_redis_long_term_pool(),
+                )
+    return _long_term_memory_instance
 ''')
             else:
                 # Default fallback
@@ -267,31 +299,76 @@ SHORT_TERM_MEMORY_TYPE = "{metadata.short_term_memory}"
 """)
 
             if metadata.short_term_memory == "redis":
-                # Check if using URL or manual configuration
                 use_redis_url = metadata.rag_config and metadata.rag_config.get('redis_url')
 
                 if use_redis_url:
                     lines.append(f'''
-def get_short_term_memory():
-    """Get short-term memory instance with Redis (URL mode)."""
-    from agentscope.memory import RedisMemory
+_redis_short_term_pool: Optional["redis.ConnectionPool"] = None
+_redis_short_term_lock = threading.Lock()
 
-    return RedisMemory(
-        url=os.getenv("REDIS_URL", "redis://localhost:6379/0"),
-    )
+def _get_redis_short_term_pool() -> "redis.ConnectionPool":
+    """Get or create Redis connection pool for short-term memory (thread-safe singleton)."""
+    global _redis_short_term_pool
+    if _redis_short_term_pool is None:
+        with _redis_short_term_lock:
+            if _redis_short_term_pool is None:
+                _redis_short_term_pool = redis.ConnectionPool.from_url(
+                    os.getenv("REDIS_URL", "redis://localhost:6379/0"),
+                    max_connections=int(os.getenv("REDIS_MAX_CONNECTIONS", "50")),
+                    decode_responses=True,
+                )
+    return _redis_short_term_pool
+
+_short_term_memory_instance: Optional["RedisMemory"] = None
+_short_term_lock = threading.Lock()
+
+def get_short_term_memory():
+    """Get short-term memory instance with Redis (thread-safe singleton)."""
+    global _short_term_memory_instance
+    if _short_term_memory_instance is None:
+        with _short_term_lock:
+            if _short_term_memory_instance is None:
+                from agentscope.memory import RedisMemory
+                _short_term_memory_instance = RedisMemory(
+                    connection_pool=_get_redis_short_term_pool(),
+                )
+    return _short_term_memory_instance
 ''')
                 else:
                     lines.append(f'''
-def get_short_term_memory():
-    """Get short-term memory instance with Redis (manual mode)."""
-    from agentscope.memory import RedisMemory
+_redis_short_term_pool: Optional["redis.ConnectionPool"] = None
+_redis_short_term_lock = threading.Lock()
 
-    return RedisMemory(
-        host=os.getenv("REDIS_HOST", "localhost"),
-        port=int(os.getenv("REDIS_PORT", "6379")),
-        db=int(os.getenv("REDIS_DB", "0")),
-        password=os.getenv("REDIS_PASSWORD", None),
-    )
+def _get_redis_short_term_pool() -> "redis.ConnectionPool":
+    """Get or create Redis connection pool for short-term memory (thread-safe singleton)."""
+    global _redis_short_term_pool
+    if _redis_short_term_pool is None:
+        with _redis_short_term_lock:
+            if _redis_short_term_pool is None:
+                _redis_short_term_pool = redis.ConnectionPool(
+                    host=os.getenv("REDIS_HOST", "localhost"),
+                    port=int(os.getenv("REDIS_PORT", "6379")),
+                    db=int(os.getenv("REDIS_DB", "0")),
+                    password=os.getenv("REDIS_PASSWORD"),
+                    max_connections=int(os.getenv("REDIS_MAX_CONNECTIONS", "50")),
+                    decode_responses=True,
+                )
+    return _redis_short_term_pool
+
+_short_term_memory_instance: Optional["RedisMemory"] = None
+_short_term_lock = threading.Lock()
+
+def get_short_term_memory():
+    """Get short-term memory instance with Redis (thread-safe singleton)."""
+    global _short_term_memory_instance
+    if _short_term_memory_instance is None:
+        with _short_term_lock:
+            if _short_term_memory_instance is None:
+                from agentscope.memory import RedisMemory
+                _short_term_memory_instance = RedisMemory(
+                    connection_pool=_get_redis_short_term_pool(),
+                )
+    return _short_term_memory_instance
 ''')
             elif metadata.short_term_memory == "oceanbase":
                 lines.append(f'''
@@ -496,6 +573,12 @@ def get_skills():
         chunk_overlap = config.get("chunk_overlap", 50)
 
         lines = [
+            '"""RAG configuration with thread-safe singleton patterns."""',
+            '',
+            'import os',
+            'import threading',
+            'from typing import Optional',
+            '',
             f'''# RAG Configuration
 RAG_STORE_TYPE = "{store_type}"
 RAG_EMBEDDING_MODEL = "{embedding_model}"
@@ -507,31 +590,56 @@ RAG_CHUNK_OVERLAP = {chunk_overlap}
         # Generate client instantiation code based on store type
         if store_type == "qdrant":
             lines.append(f'''
-def get_vector_store():
-    """Get configured Qdrant vector store instance."""
-    from agentscope.rag import QdrantVectorStore
-    from qdrant_client import QdrantClient
+_qdrant_client_instance: Optional["QdrantClient"] = None
+_qdrant_client_lock = threading.Lock()
 
-    client = QdrantClient(
-        url=os.getenv("QDRANT_URL", f"http://{{os.getenv('QDRANT_HOST', 'localhost')}}:{{os.getenv('QDRANT_PORT', '6333')}}"),
-    )
+def _get_qdrant_client() -> "QdrantClient":
+    """Get or create Qdrant client (thread-safe singleton with connection pool)."""
+    global _qdrant_client_instance
+    if _qdrant_client_instance is None:
+        with _qdrant_client_lock:
+            if _qdrant_client_instance is None:
+                _qdrant_client_instance = QdrantClient(
+                    url=os.getenv("QDRANT_URL", f"http://{{os.getenv('QDRANT_HOST', 'localhost')}}:{{os.getenv('QDRANT_PORT', '6333')}}"),
+                    timeout=int(os.getenv("QDRANT_TIMEOUT", "30")),
+                    prefer_grpc=os.getenv("QDRANT_USE_GRPC", "false").lower() == "true",
+                )
+    return _qdrant_client_instance
 
-    return QdrantVectorStore(
-        client=client,
-        collection_name=os.getenv("QDRANT_COLLECTION", "agent_documents"),
-        embedding_model="{embedding_model}",
-    )
+_vector_store_instance: Optional["QdrantVectorStore"] = None
+_vector_store_lock = threading.Lock()
+
+def get_vector_store() -> "QdrantVectorStore":
+    """Get configured Qdrant vector store instance (thread-safe singleton)."""
+    global _vector_store_instance
+    if _vector_store_instance is None:
+        with _vector_store_lock:
+            if _vector_store_instance is None:
+                from agentscope.rag import QdrantVectorStore
+                _vector_store_instance = QdrantVectorStore(
+                    client=_get_qdrant_client(),
+                    collection_name=os.getenv("QDRANT_COLLECTION", "agent_documents"),
+                    embedding_model="{embedding_model}",
+                )
+    return _vector_store_instance
 ''')
         elif store_type == "kbase":
             lines.append(f'''
-def get_vector_store():
-    """Get configured KBase vector store instance."""
-    from agentscope.rag import KBaseVectorStore
+_kbase_client_instance: Optional["KBaseVectorStore"] = None
+_kbase_client_lock = threading.Lock()
 
-    return KBaseVectorStore(
-        retrieval_url=os.getenv("KBASE_RETRIEVAL_URL"),
-        embedding_model="{embedding_model}",
-    )
+def get_vector_store() -> "KBaseVectorStore":
+    """Get configured KBase vector store instance (thread-safe singleton)."""
+    global _kbase_client_instance
+    if _kbase_client_instance is None:
+        with _kbase_client_lock:
+            if _kbase_client_instance is None:
+                from agentscope.rag import KBaseVectorStore
+                _kbase_client_instance = KBaseVectorStore(
+                    retrieval_url=os.getenv("KBASE_RETRIEVAL_URL"),
+                    embedding_model="{embedding_model}",
+                )
+    return _kbase_client_instance
 ''')
         else:
             # Default fallback
