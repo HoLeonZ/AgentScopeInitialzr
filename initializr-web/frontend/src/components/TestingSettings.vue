@@ -4,7 +4,7 @@
       <div class="header-background">
         <el-icon :size="28" color="#FFFFFF" class="header-icon"><DataAnalysis /></el-icon>
         <div class="header-content">
-          <h2 class="header-title">RAGAS 评测配置</h2>
+          <h2 class="header-title">评测配置</h2>
           <p class="header-description">基于 RAGAS 框架的评测模块，生成量化评估报告</p>
         </div>
         <el-tag type="success" size="large" effect="dark">质量评估</el-tag>

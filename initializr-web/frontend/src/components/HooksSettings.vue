@@ -4,7 +4,7 @@
       <div class="card-header">
         <div class="header-left">
           <el-icon :size="20" color="#E6A23C"><Link /></el-icon>
-          <span class="card-title">生命周期钩子</span>
+          <span class="card-title">Hooks</span>
           <el-tag size="small" type="warning">拦截点</el-tag>
         </div>
         <el-switch
@@ -16,6 +16,56 @@
     </template>
 
     <template v-if="localForm.enable_hooks">
+      <div class="hooks-flow-diagram">
+        <div class="flow-container">
+          <div class="flow-step">
+            <div class="step-box input">
+              <span>User Input</span>
+            </div>
+          </div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step">
+            <div class="step-box hook pre">
+              <span>pre_observe</span>
+              <div class="hook-dot"></div>
+            </div>
+          </div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step">
+            <div class="step-box llm">
+              <span>LLM</span>
+              <div class="llm-icon">🤖</div>
+            </div>
+          </div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step">
+            <div class="step-box hook post">
+              <span>post_observe</span>
+              <div class="hook-dot"></div>
+            </div>
+          </div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step">
+            <div class="step-box hook pre">
+              <span>pre_reply</span>
+              <div class="hook-dot"></div>
+            </div>
+          </div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step">
+            <div class="step-box output">
+              <span>Response</span>
+            </div>
+          </div>
+        </div>
+        <div class="flow-legend">
+          <span class="legend-item"><span class="legend-dot hook"></span> Hook 拦截点</span>
+          <span class="legend-item"><span class="legend-dot llm"></span> LLM 调用</span>
+        </div>
+      </div>
+
+      <el-divider />
+
       <div class="hooks-toolbar">
         <el-button type="primary" size="small" @click="addHook">
           <el-icon><Plus /></el-icon> 新增钩子
@@ -139,6 +189,121 @@ onMounted(() => {
 .card-title {
   font-size: 16px;
   font-weight: 600;
+}
+
+.hooks-flow-diagram {
+  padding: 20px;
+  background: #f5f7fa;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.flow-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.flow-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.step-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  min-width: 80px;
+  position: relative;
+}
+
+.step-box.input {
+  background: #e6f7ff;
+  border: 2px solid #1890ff;
+  color: #1890ff;
+}
+
+.step-box.output {
+  background: #f6ffed;
+  border: 2px solid #52c41a;
+  color: #52c41a;
+}
+
+.step-box.llm {
+  background: #fff7e6;
+  border: 2px solid #fa8c16;
+  color: #fa8c16;
+  min-width: 100px;
+}
+
+.step-box.hook {
+  background: #fff1f0;
+  border: 2px solid #ff4d4f;
+  color: #ff4d4f;
+}
+
+.step-box.hook.post {
+  background: #f9f0ff;
+  border-color: #722ed1;
+  color: #722ed1;
+}
+
+.hook-dot {
+  width: 8px;
+  height: 8px;
+  background: currentColor;
+  border-radius: 50%;
+  margin-top: 4px;
+}
+
+.llm-icon {
+  font-size: 16px;
+  margin-top: 4px;
+}
+
+.flow-arrow {
+  color: #909399;
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.flow-legend {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  margin-top: 12px;
+  font-size: 12px;
+  color: #606266;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legend-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 4px;
+}
+
+.legend-dot.hook {
+  background: #fff1f0;
+  border: 2px solid #ff4d4f;
+}
+
+.legend-dot.llm {
+  background: #fff7e6;
+  border: 2px solid #fa8c16;
 }
 
 .hooks-toolbar {

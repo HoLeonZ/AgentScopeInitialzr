@@ -4,7 +4,7 @@
       <div class="card-header">
         <div class="header-left">
           <el-icon :size="20" color="#67C23A"><DataAnalysis /></el-icon>
-          <span class="card-title">RAGAS 评测配置</span>
+          <span class="card-title">评测配置</span>
           <el-tag size="small" type="success">可选</el-tag>
         </div>
         <el-switch
