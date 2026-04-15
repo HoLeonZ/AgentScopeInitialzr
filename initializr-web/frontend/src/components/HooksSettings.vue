@@ -1,19 +1,17 @@
 <template>
-  <el-card class="hooks-card" shadow="hover">
-    <template #header>
-      <div class="card-header">
-        <div class="header-left">
-          <el-icon :size="20" color="#E6A23C"><Link /></el-icon>
-          <span class="card-title">Hooks</span>
-          <el-tag size="small" type="warning">拦截点</el-tag>
-        </div>
-        <el-switch
-          v-model="localForm.enable_hooks"
-          size="large"
-          @change="updateField('enable_hooks', $event)"
-        />
+  <div class="hooks-card">
+    <div class="header-background">
+      <el-icon :size="28" color="#FFFFFF" class="header-icon"><Link /></el-icon>
+      <div class="header-content">
+        <h2 class="header-title">Hooks</h2>
+        <p class="header-description">生命周期拦截点，在 LLM 调用前后执行自定义逻辑</p>
       </div>
-    </template>
+      <el-switch
+        v-model="localForm.enable_hooks"
+        size="large"
+        @change="updateField('enable_hooks', $event)"
+      />
+    </div>
 
     <template v-if="localForm.enable_hooks">
       <div class="hooks-flow-diagram">
@@ -34,7 +32,6 @@
           <div class="flow-step">
             <div class="step-box llm">
               <span>LLM</span>
-              <div class="llm-icon">🤖</div>
             </div>
           </div>
           <div class="flow-arrow">→</div>
@@ -48,6 +45,13 @@
           <div class="flow-step">
             <div class="step-box hook pre">
               <span>回复前</span>
+              <div class="hook-dot"></div>
+            </div>
+          </div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step">
+            <div class="step-box hook post">
+              <span>回复后</span>
               <div class="hook-dot"></div>
             </div>
           </div>
@@ -118,7 +122,7 @@
         </el-table-column>
       </el-table>
     </template>
-  </el-card>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -172,30 +176,44 @@ onMounted(() => {
 <style scoped>
 .hooks-card {
   border-radius: 8px;
+  overflow: hidden;
+  background: #fff;
 }
 
-.card-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.header-left {
+.header-background {
+  background: linear-gradient(135deg, #E6A23C 0%, #f5a623 100%);
+  padding: 20px 24px;
   display: flex;
   align-items: center;
   gap: 12px;
+  color: #FFFFFF;
 }
 
-.card-title {
-  font-size: 16px;
+.header-icon {
+  flex-shrink: 0;
+}
+
+.header-content {
+  flex: 1;
+}
+
+.header-title {
+  margin: 0 0 4px 0;
+  font-size: 18px;
   font-weight: 600;
+  color: #FFFFFF;
+  line-height: 1.3;
+}
+
+.header-description {
+  margin: 0;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.85);
 }
 
 .hooks-flow-diagram {
   padding: 20px;
   background: #f5f7fa;
-  border-radius: 8px;
-  margin-bottom: 16px;
 }
 
 .flow-container {
