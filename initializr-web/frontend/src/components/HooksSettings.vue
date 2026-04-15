@@ -16,175 +16,110 @@
     </template>
 
     <template v-if="localForm.enable_hooks">
-      <el-form :model="form" label-width="140px" size="large">
-        <el-form-item label="可用钩子">
-          <el-checkbox-group v-model="localForm.hooks" @change="updateField('hooks', $event)">
-            <div class="hooks-grid">
-              <div
-                v-for="hook in availableHooks"
-                :key="hook.value"
-                class="hook-item"
-                :class="{ 'is-checked': localForm.hooks.includes(hook.value) }"
-              >
-                <el-checkbox :label="hook.value" class="hook-checkbox">
-                  <div class="hook-content">
-                    <div class="hook-header">
-                      <el-icon class="hook-icon"><Connection /></el-icon>
-                      <span class="hook-name">{{ hook.label }}</span>
-                    </div>
-                    <div class="hook-desc">{{ hook.description }}</div>
-                    <el-tag size="small" type="info">{{ hook.timing }}</el-tag>
-                  </div>
-                </el-checkbox>
-              </div>
-            </div>
-          </el-checkbox-group>
-        </el-form-item>
+      <div class="hooks-toolbar">
+        <el-button type="primary" size="small" @click="addHook">
+          <el-icon><Plus /></el-icon> 新增钩子
+        </el-button>
+        <span class="hooks-count">共 {{ localForm.hooks.length }} 个钩子</span>
+      </div>
 
-        <el-alert
-          v-if="localForm.hooks.length > 0"
-          type="success"
-          :closable="false"
-          show-icon
-          style="margin-top: 16px"
-        >
-          已选择 {{ localForm.hooks.length }} 个钩子
-        </el-alert>
-      </el-form>
+      <el-table
+        :data="localForm.hooks"
+        style="width: 100%"
+        size="small"
+        class="hooks-table"
+        row-key="id"
+      >
+        <el-table-column width="50">
+          <template #default>
+            <el-icon class="drag-handle"><Rank /></el-icon>
+          </template>
+        </el-table-column>
+        <el-table-column label="钩子名称" min-width="200">
+          <template #default="{ row }">
+            <el-input
+              v-model="row.name"
+              placeholder="请输入钩子名称"
+              @change="updateHooks"
+            />
+          </template>
+        </el-table-column>
+        <el-table-column label="执行时机" width="160">
+          <template #default="{ row }">
+            <el-select v-model="row.hook_type" style="width: 140px" @change="updateHooks">
+              <el-option label="回复前" value="pre_reply" />
+              <el-option label="回复后" value="post_reply" />
+              <el-option label="观察前" value="pre_observe" />
+              <el-option label="观察后" value="post_observe" />
+            </el-select>
+          </template>
+        </el-table-column>
+        <el-table-column label="启用" width="80">
+          <template #default="{ row }">
+            <el-switch v-model="row.enabled" size="small" @change="updateHooks" />
+          </template>
+        </el-table-column>
+        <el-table-column width="60">
+          <template #default="{ row }">
+            <el-button type="danger" size="small" text @click="removeHook(row)">
+              <el-icon><Delete /></el-icon>
+            </el-button>
+          </template>
+        </el-table-column>
+      </el-table>
     </template>
   </el-card>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useConfigStore } from '@/stores/config'
-import { Link, Connection } from '@element-plus/icons-vue'
+import { Link, Plus, Rank, Delete } from '@element-plus/icons-vue'
+import type { HookItem } from '@/types'
 
 const configStore = useConfigStore()
-const form = computed(() => configStore.form)
+
+let hookIdCounter = 0
 
 const localForm = reactive({
-  enable_hooks: form.value.enable_hooks ?? false,
-  hooks: form.value.hooks || [],
+  enable_hooks: configStore.form.enable_hooks ?? false,
+  hooks: (configStore.form.hooks || []) as HookItem[],
 })
 
-const availableHooks = [
-  {
-    value: 'pre_reply',
-    label: '回复前',
-    description: '在智能体生成响应前执行',
-    timing: '执行时机: 回复前'
-  },
-  {
-    value: 'post_reply',
-    label: '回复后',
-    description: '在智能体生成响应后执行',
-    timing: '执行时机: 回复后'
-  },
-  {
-    value: 'pre_observe',
-    label: '观察前',
-    description: '在智能体观察数据前拦截',
-    timing: '执行时机: 观察前'
-  },
-  {
-    value: 'post_observe',
-    label: '观察后',
-    description: '在智能体观察数据后处理',
-    timing: '执行时机: 观察后'
-  },
-]
+const addHook = () => {
+  const newHook: HookItem & { id?: number } = {
+    id: ++hookIdCounter,
+    name: '',
+    hook_type: 'pre_reply',
+    enabled: true,
+  }
+  localForm.hooks.push(newHook)
+  updateHooks()
+}
+
+const removeHook = (hook: HookItem & { id?: number }) => {
+  const index = localForm.hooks.indexOf(hook)
+  if (index > -1) {
+    localForm.hooks.splice(index, 1)
+  }
+  updateHooks()
+}
+
+const updateHooks = () => {
+  updateField('hooks', [...localForm.hooks])
+}
 
 const updateField = (field: string, value: any) => {
   configStore.setField(field as any, value)
 }
+
+onMounted(() => {
+  localForm.enable_hooks = configStore.form.enable_hooks ?? false
+  localForm.hooks = (configStore.form.hooks || []) as HookItem[]
+})
 </script>
 
 <style scoped>
-.hooks-settings {
-  padding: 0;
-}
-
-/* 统一头部卡片 */
-.unified-header-card {
-  margin-bottom: 20px;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
-}
-
-.header-background {
-  background: linear-gradient(135deg, #E6A23C 0%, #f0c78a 100%);
-  padding: 24px;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  color: #FFFFFF;
-}
-
-.header-icon {
-  flex-shrink: 0;
-}
-
-.header-content {
-  flex: 1;
-}
-
-.header-title {
-  margin: 0 0 8px 0;
-  font-size: 20px;
-  font-weight: 600;
-  color: #FFFFFF;
-  line-height: 1.2;
-}
-
-.header-description {
-  margin: 0;
-  font-size: 14px;
-  color: rgba(255, 255, 255, 0.9);
-  line-height: 1.5;
-}
-
-/* 配置提示 */
-.config-hint {
-  margin-bottom: 24px;
-  border-radius: 6px;
-}
-
-.hint-content {
-  line-height: 1.6;
-}
-
-.hint-title {
-  font-weight: 600;
-  color: #E6A23C;
-  margin-bottom: 8px;
-}
-
-.hint-list {
-  margin: 8px 0 0 0;
-  padding-left: 20px;
-  color: #606266;
-}
-
-.hint-list li {
-  margin: 6px 0;
-  line-height: 1.5;
-}
-
-.hint-list strong {
-  color: #303133;
-  font-weight: 600;
-}
-
-/* 配置区块 */
-.hooks-sections {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-  margin-bottom: 24px;
-}
-
 .hooks-card {
   border-radius: 8px;
 }
@@ -206,76 +141,30 @@ const updateField = (field: string, value: any) => {
   font-weight: 600;
 }
 
-.hint {
-  font-size: 0.85em;
+.hooks-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.hooks-count {
   color: #909399;
-  display: block;
-  margin-top: 4px;
-  line-height: 1.4;
+  font-size: 14px;
 }
 
-/* Hooks Grid */
-.hooks-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 12px;
-  margin-top: 12px;
-}
-
-.hook-item {
-  border: 2px solid #dcdfe6;
+.hooks-table {
   border-radius: 8px;
-  padding: 12px;
-  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+.hooks-table :deep(.el-table__row) {
   background: #ffffff;
 }
 
-.hook-item:hover {
-  border-color: #E6A23C;
-  background: #fdf6ec;
-}
-
-.hook-item.is-checked {
-  border-color: #E6A23C;
-  background: #fdf6ec;
-}
-
-.hook-checkbox {
-  width: 100%;
-}
-
-.hook-checkbox :deep(.el-checkbox__label) {
-  width: 100%;
-  padding-left: 8px;
-}
-
-.hook-content {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.hook-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.hook-icon {
-  color: #E6A23C;
-  font-size: 18px;
-}
-
-.hook-name {
-  font-weight: 600;
-  font-size: 15px;
-  color: #303133;
-}
-
-.hook-desc {
-  font-size: 13px;
-  color: #606266;
-  line-height: 1.4;
+.drag-handle {
+  color: #c0c4cc;
+  cursor: move;
 }
 
 :deep(.el-card__header) {
@@ -286,42 +175,5 @@ const updateField = (field: string, value: any) => {
 
 :deep(.el-card__body) {
   padding: 20px;
-}
-
-/* 响应式设计 */
-@media (max-width: 768px) {
-  .hooks-sections {
-    gap: 16px;
-  }
-
-  .hooks-card {
-    margin: 0;
-  }
-
-  .card-header {
-    flex-wrap: wrap;
-  }
-
-  .hooks-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .header-background {
-    flex-direction: column;
-    text-align: center;
-    padding: 20px;
-  }
-
-  .header-icon {
-    align-self: center;
-  }
-
-  .header-title {
-    font-size: 18px;
-  }
-
-  .header-description {
-    font-size: 13px;
-  }
 }
 </style>

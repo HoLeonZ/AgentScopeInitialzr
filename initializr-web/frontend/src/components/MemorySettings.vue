@@ -95,7 +95,8 @@
                     :min="1"
                     :max="65535"
                     placeholder="6379"
-                    style="width: 100%"
+                    controls-position="right"
+                    style="width: 200px"
                   />
                 </el-form-item>
 
@@ -105,7 +106,8 @@
                     :min="0"
                     :max="15"
                     placeholder="0"
-                    style="width: 100%"
+                    controls-position="right"
+                    style="width: 200px"
                   />
                 </el-form-item>
 

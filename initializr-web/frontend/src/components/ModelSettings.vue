@@ -283,6 +283,7 @@ onMounted(async () => {
 .inline-hint {
   font-size: 12px;
   color: #909399;
+  display: block;
   margin-top: 6px;
   line-height: 1.4;
 }

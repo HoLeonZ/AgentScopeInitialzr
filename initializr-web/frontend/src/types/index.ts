@@ -1,5 +1,11 @@
 // initializr-web/frontend/src/types/index.ts
 
+export interface HookItem {
+  name: string
+  hook_type: string
+  enabled: boolean
+}
+
 export interface ProjectRequest {
   name: string
   description?: string
@@ -18,7 +24,7 @@ export interface ProjectRequest {
   enable_skills?: boolean
   skills?: string[]
   enable_hooks?: boolean
-  hooks?: string[]
+  hooks?: HookItem[]
   enable_formatter?: boolean
   formatter?: string | null
   enable_rag?: boolean

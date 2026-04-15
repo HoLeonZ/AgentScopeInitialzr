@@ -131,14 +131,17 @@
 
               <el-col :span="12">
                 <el-form-item label="端口">
-                  <el-input-number
-                    v-model="knowledgeConfig.qdrant_port"
-                    :min="1"
-                    :max="65535"
-                    placeholder="6333"
-                    @change="updateKnowledgeConfig"
-                  />
-                  <span class="hint">Qdrant服务器端口</span>
+                  <div style="display: block">
+                    <el-input-number
+                      v-model="knowledgeConfig.qdrant_port"
+                      :min="1"
+                      :max="65535"
+                      placeholder="6333"
+                      style="width: 100%"
+                      @change="updateKnowledgeConfig"
+                    />
+                    <span class="hint">Qdrant服务器端口</span>
+                  </div>
                 </el-form-item>
               </el-col>
             </el-row>
@@ -169,12 +172,13 @@
 
             <el-row :gutter="20">
               <el-col :span="8">
-                <el-form-item label="向量维度">
+                <el-form-item label="向量维度" label-width="120px">
                   <el-input-number
                     v-model="knowledgeConfig.dimension"
                     :min="128"
                     :max="3072"
                     :step="128"
+                    style="width: 100%"
                     @change="updateKnowledgeConfig"
                   />
                   <span class="hint">向量维度</span>
@@ -189,33 +193,33 @@
             检索设置
           </el-divider>
 
-          <el-row :gutter="20">
-            <el-col :span="8">
-              <el-form-item label="返回数量">
-                <el-input-number
-                  v-model="knowledgeConfig.top_k"
-                  :min="1"
-                  :max="20"
-                  @change="updateKnowledgeConfig"
-                />
-                <span class="hint">返回最相关的 K 个结果</span>
-              </el-form-item>
-            </el-col>
+          <el-form-item label="返回数量" label-width="120px">
+            <div style="display: block">
+              <el-input-number
+                v-model="knowledgeConfig.top_k"
+                :min="1"
+                :max="20"
+                style="width: 200px"
+                @change="updateKnowledgeConfig"
+              />
+              <span class="hint">返回最相关的 K 个结果</span>
+            </div>
+          </el-form-item>
 
-            <el-col :span="8">
-              <el-form-item label="相似度阈值">
-                <el-slider
-                  v-model="knowledgeConfig.similarity_threshold"
-                  :min="0"
-                  :max="1"
-                  :step="0.1"
-                  show-input
-                  @change="updateKnowledgeConfig"
-                />
-                <span class="hint">相似度阈值</span>
-              </el-form-item>
-            </el-col>
-          </el-row>
+          <el-form-item label="相似度阈值" label-width="120px">
+            <div style="display: block">
+              <el-input-number
+                v-model="knowledgeConfig.similarity_threshold"
+                :min="0"
+                :max="1"
+                :step="0.1"
+                :precision="1"
+                style="width: 200px"
+                @change="updateKnowledgeConfig"
+              />
+              <span class="hint">相似度阈值</span>
+            </div>
+          </el-form-item>
         </template>
       </el-card>
     </div>

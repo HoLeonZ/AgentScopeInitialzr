@@ -727,43 +727,44 @@ from .settings import settings
 ''']
 
         for hook in metadata.hooks:
+            func_name = hook.name.replace(" ", "_").lower() if hook.name else f"{hook.hook_type}_hook"
             if hook.hook_type == "pre_reply":
-                hooks_code.append('''
+                hooks_code.append(f'''
 @agent.hook("pre_reply")
-async def pre_reply_hook(msg):
-    """Hook called before agent reply."""
+async def {func_name}(msg):
+    """Hook: {hook.name} - called before agent reply."""
     import logging
-    logging.info(f"Pre-reply hook called: {msg}")
+    logging.info(f"Pre-reply hook '{hook.name}' called: {{msg}}")
     # Modify msg here if needed
     return msg
 ''')
             elif hook.hook_type == "post_reply":
-                hooks_code.append('''
+                hooks_code.append(f'''
 @agent.hook("post_reply")
-async def post_reply_hook(response):
-    """Hook called after agent reply."""
+async def {func_name}(response):
+    """Hook: {hook.name} - called after agent reply."""
     import logging
-    logging.info(f"Post-reply hook called: {response}")
+    logging.info(f"Post-reply hook '{hook.name}' called: {{response}}")
     # Modify response here if needed
     return response
 ''')
             elif hook.hook_type == "pre_observe":
-                hooks_code.append('''
+                hooks_code.append(f'''
 @agent.hook("pre_observe")
-async def pre_observe_hook(observation):
-    """Hook called before agent observation."""
+async def {func_name}(observation):
+    """Hook: {hook.name} - called before agent observation."""
     import logging
-    logging.info(f"Pre-observe hook called: {observation}")
+    logging.info(f"Pre-observe hook '{hook.name}' called: {{observation}}")
     # Modify observation here if needed
     return observation
 ''')
             elif hook.hook_type == "post_observe":
-                hooks_code.append('''
+                hooks_code.append(f'''
 @agent.hook("post_observe")
-async def post_observe_hook(observation):
-    """Hook called after agent observation."""
+async def {func_name}(observation):
+    """Hook: {hook.name} - called after agent observation."""
     import logging
-    logging.info(f"Post-observe hook called: {observation}")
+    logging.info(f"Post-observe hook '{hook.name}' called: {{observation}}")
     # Process observation here if needed
     return observation
 ''')

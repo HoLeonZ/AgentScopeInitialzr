@@ -28,8 +28,12 @@ def project_request_to_metadata(request: ProjectRequest) -> AgentScopeMetadata:
 
     # Convert hooks list to HookConfig objects
     hook_configs = []
-    for hook_type in request.hooks:
-        hook_configs.append(HookConfig(hook_type=hook_type, enabled=True))
+    for hook in request.hooks:
+        hook_configs.append(HookConfig(
+            name=hook.get("name", "") if isinstance(hook, dict) else hook.name,
+            hook_type=hook.get("hook_type", "") if isinstance(hook, dict) else hook.hook_type,
+            enabled=hook.get("enabled", True) if isinstance(hook, dict) else hook.enabled,
+        ))
 
     # Determine memory type
     memory_type = MemoryType.IN_MEMORY

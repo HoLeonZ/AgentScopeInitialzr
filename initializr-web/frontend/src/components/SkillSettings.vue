@@ -40,7 +40,6 @@
             <div class="header-left">
               <el-icon :size="20" color="#67C23A"><Star /></el-icon>
               <span class="card-title">启用技能</span>
-              <el-tag size="small" type="success">扩展能力</el-tag>
             </div>
             <el-switch
               v-model="localForm.enable_skills"
@@ -350,6 +349,7 @@ onMounted(() => {
 .card-header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 16px;
 }
 

@@ -60,6 +60,7 @@ class ToolConfig:
 @dataclass
 class HookConfig:
     """Configuration for an agent hook."""
+    name: str  # User-defined name for the hook
     hook_type: str  # pre_reply, post_reply, pre_observe, post_observe
     enabled: bool = True
     implementation: Optional[str] = None
