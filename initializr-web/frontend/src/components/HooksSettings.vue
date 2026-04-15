@@ -1,17 +1,19 @@
 <template>
-  <div class="hooks-card">
-    <div class="header-background">
-      <el-icon :size="28" color="#FFFFFF" class="header-icon"><Link /></el-icon>
-      <div class="header-content">
-        <h2 class="header-title">Hooks</h2>
-        <p class="header-description">生命周期拦截点，在 LLM 调用前后执行自定义逻辑</p>
+  <el-card class="hooks-card" shadow="hover">
+    <template #header>
+      <div class="card-header">
+        <div class="header-left">
+          <el-icon :size="20" color="#E6A23C"><Link /></el-icon>
+          <span class="card-title">Hooks</span>
+          <el-tag size="small" type="warning">拦截点</el-tag>
+        </div>
+        <el-switch
+          v-model="localForm.enable_hooks"
+          size="large"
+          @change="updateField('enable_hooks', $event)"
+        />
       </div>
-      <el-switch
-        v-model="localForm.enable_hooks"
-        size="large"
-        @change="updateField('enable_hooks', $event)"
-      />
-    </div>
+    </template>
 
     <template v-if="localForm.enable_hooks">
       <div class="hooks-flow-diagram">
@@ -22,37 +24,39 @@
             </div>
           </div>
           <div class="flow-arrow">→</div>
-          <div class="flow-step">
-            <div class="step-box hook pre">
-              <span>观察前</span>
-              <div class="hook-dot"></div>
+          <div class="hook-group">
+            <div class="flow-step">
+              <div class="step-box hook pre">
+                <span>观察前</span>
+                <div class="hook-dot"></div>
+              </div>
             </div>
-          </div>
-          <div class="flow-arrow">→</div>
-          <div class="flow-step">
-            <div class="step-box llm">
-              <span>LLM</span>
+            <div class="flow-arrow">→</div>
+            <div class="flow-step">
+              <div class="step-box llm">
+                <span>LLM</span>
+              </div>
             </div>
-          </div>
-          <div class="flow-arrow">→</div>
-          <div class="flow-step">
-            <div class="step-box hook post">
-              <span>观察后</span>
-              <div class="hook-dot"></div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-step">
+              <div class="step-box hook post">
+                <span>观察后</span>
+                <div class="hook-dot"></div>
+              </div>
             </div>
-          </div>
-          <div class="flow-arrow">→</div>
-          <div class="flow-step">
-            <div class="step-box hook pre">
-              <span>回复前</span>
-              <div class="hook-dot"></div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-step">
+              <div class="step-box hook pre">
+                <span>回复前</span>
+                <div class="hook-dot"></div>
+              </div>
             </div>
-          </div>
-          <div class="flow-arrow">→</div>
-          <div class="flow-step">
-            <div class="step-box hook post">
-              <span>回复后</span>
-              <div class="hook-dot"></div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-step">
+              <div class="step-box hook post">
+                <span>回复后</span>
+                <div class="hook-dot"></div>
+              </div>
             </div>
           </div>
           <div class="flow-arrow">→</div>
@@ -61,10 +65,6 @@
               <span>回复</span>
             </div>
           </div>
-        </div>
-        <div class="flow-legend">
-          <span class="legend-item"><span class="legend-dot hook"></span> Hook 拦截点</span>
-          <span class="legend-item"><span class="legend-dot llm"></span> LLM 调用</span>
         </div>
       </div>
 
@@ -122,7 +122,7 @@
         </el-table-column>
       </el-table>
     </template>
-  </div>
+  </el-card>
 </template>
 
 <script setup lang="ts">
@@ -176,44 +176,30 @@ onMounted(() => {
 <style scoped>
 .hooks-card {
   border-radius: 8px;
-  overflow: hidden;
-  background: #fff;
 }
 
-.header-background {
-  background: linear-gradient(135deg, #E6A23C 0%, #f5a623 100%);
-  padding: 20px 24px;
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.header-left {
   display: flex;
   align-items: center;
   gap: 12px;
-  color: #FFFFFF;
 }
 
-.header-icon {
-  flex-shrink: 0;
-}
-
-.header-content {
-  flex: 1;
-}
-
-.header-title {
-  margin: 0 0 4px 0;
-  font-size: 18px;
+.card-title {
+  font-size: 16px;
   font-weight: 600;
-  color: #FFFFFF;
-  line-height: 1.3;
-}
-
-.header-description {
-  margin: 0;
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.85);
 }
 
 .hooks-flow-diagram {
   padding: 20px;
   background: #f5f7fa;
+  border-radius: 8px;
+  margin-bottom: 16px;
 }
 
 .flow-container {
@@ -230,48 +216,62 @@ onMounted(() => {
   align-items: center;
 }
 
+.hook-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border: 2px dashed #303133;
+  border-radius: 12px;
+  position: relative;
+}
+
 .step-box {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 10px 16px;
+  padding: 10px 20px;
   border-radius: 8px;
   font-size: 12px;
   font-weight: 500;
-  min-width: 80px;
+  min-width: 90px;
+  min-height: 50px;
   position: relative;
+  background: #909399;
+  border: 2px solid #909399;
+  color: #fff;
+  box-sizing: border-box;
 }
 
 .step-box.input {
-  background: #e6f7ff;
-  border: 2px solid #1890ff;
-  color: #1890ff;
+  background: #909399;
+  border-color: #909399;
+  color: #fff;
 }
 
 .step-box.output {
-  background: #f6ffed;
-  border: 2px solid #52c41a;
-  color: #52c41a;
+  background: #909399;
+  border-color: #909399;
+  color: #fff;
 }
 
 .step-box.llm {
-  background: #fff7e6;
-  border: 2px solid #fa8c16;
-  color: #fa8c16;
-  min-width: 100px;
+  background: #ff4d4f;
+  border-color: #ff4d4f;
+  color: #fff;
 }
 
-.step-box.hook {
-  background: #fff1f0;
-  border: 2px solid #ff4d4f;
-  color: #ff4d4f;
+.step-box.hook.pre {
+  background: #909399;
+  border-color: #909399;
+  color: #fff;
 }
 
 .step-box.hook.post {
-  background: #f9f0ff;
-  border-color: #722ed1;
-  color: #722ed1;
+  background: #909399;
+  border-color: #909399;
+  color: #fff;
 }
 
 .hook-dot {
@@ -291,37 +291,6 @@ onMounted(() => {
   color: #909399;
   font-size: 18px;
   font-weight: bold;
-}
-
-.flow-legend {
-  display: flex;
-  justify-content: center;
-  gap: 24px;
-  margin-top: 12px;
-  font-size: 12px;
-  color: #606266;
-}
-
-.legend-item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.legend-dot {
-  width: 12px;
-  height: 12px;
-  border-radius: 4px;
-}
-
-.legend-dot.hook {
-  background: #fff1f0;
-  border: 2px solid #ff4d4f;
-}
-
-.legend-dot.llm {
-  background: #fff7e6;
-  border: 2px solid #fa8c16;
 }
 
 .hooks-toolbar {
