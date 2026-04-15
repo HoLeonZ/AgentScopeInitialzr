@@ -128,4 +128,11 @@ def project_request_to_metadata(request: ProjectRequest) -> AgentScopeMetadata:
         enable_openjudge=request.enable_openjudge,
         openjudge_graders=request.openjudge_graders or [],
         initial_benchmark_tasks=request.initial_benchmark_tasks,
+
+        # RAGAS Evaluation
+        enable_ragas_evaluation=request.enable_ragas_evaluation,
+        evaluation_csv_filename=request.evaluation_csv_filename or "evaluation_data.csv",
+        evaluation_metrics=request.evaluation_metrics or [
+            "faithfulness", "answer_relevancy", "context_precision", "context_recall"
+        ],
     )

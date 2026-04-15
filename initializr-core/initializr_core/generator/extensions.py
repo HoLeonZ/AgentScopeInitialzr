@@ -903,6 +903,268 @@ class TestBenchmarks:
 
         return code
 
+    def generate_ragas_evaluation_code(self, metadata: AgentScopeMetadata) -> str:
+        """Generate RAGAS evaluation module code."""
+        if not metadata.enable_ragas_evaluation:
+            return ""
+
+        config = metadata
+        metrics_imports = []
+        metrics_instances = []
+
+        if "faithfulness" in config.evaluation_metrics:
+            metrics_imports.append("faithfulness")
+            metrics_instances.append("faithfulness")
+        if "answer_relevancy" in config.evaluation_metrics:
+            metrics_imports.append("answer_relevancy")
+            metrics_instances.append("answer_relevancy")
+        if "context_precision" in config.evaluation_metrics:
+            metrics_imports.append("context_precision")
+            metrics_instances.append("context_precision")
+        if "context_recall" in config.evaluation_metrics:
+            metrics_imports.append("context_recall")
+            metrics_instances.append("context_recall")
+
+        metrics_import_str = ", ".join(metrics_imports)
+        metrics_list_str = ", ".join(f"    {m}" for m in metrics_instances)
+
+        code = f'''"""
+RAGAS Evaluation Module for {metadata.name}.
+
+This module provides RAGAS-based evaluation for RAG systems.
+Place your evaluation data CSV file in this directory.
+"""
+import os
+import pandas as pd
+from datetime import datetime
+from ragas import evaluate
+from ragas.metrics import {metrics_import_str}
+from datasets import Dataset
+
+
+def load_evaluation_data(csv_filename: str = "{config.evaluation_csv_filename}") -> Dataset:
+    """
+    Load evaluation data from CSV file.
+
+    Args:
+        csv_filename: Name of the CSV file in the evaluation directory
+
+    Returns:
+        Dataset ready for evaluation
+    """
+    eval_dir = os.path.dirname(__file__)
+    csv_path = os.path.join(eval_dir, csv_filename)
+
+    if not os.path.exists(csv_path):
+        raise FileNotFoundError(
+            f"Evaluation data file not found: {{csv_path}}\\n"
+            f"Please place your CSV file with columns: question, answer, context, reference"
+        )
+
+    df = pd.read_csv(csv_path)
+    required_columns = ['question', 'answer', 'context', 'reference']
+    missing = set(required_columns) - set(df.columns)
+    if missing:
+        raise ValueError(f"Missing required columns: {{missing}}")
+
+    return Dataset.from_pandas(df)
+
+
+def run_evaluation(csv_filename: str = "{config.evaluation_csv_filename}") -> dict:
+    """
+    Run RAGAS evaluation on the dataset.
+
+    Args:
+        csv_filename: Name of the CSV file
+
+    Returns:
+        Evaluation result object
+    """
+    print(f"Loading evaluation data from: {{csv_filename}}")
+    dataset = load_evaluation_data(csv_filename)
+
+    metrics = [
+{metrics_list_str},
+    ]
+
+    print(f"Running evaluation with metrics: {{[m.name for m in metrics]}}")
+    result = evaluate(dataset, metrics=metrics)
+
+    return result
+
+
+def generate_html_report(result, output_path: str = "evaluation_report.html"):
+    """
+    Generate HTML report from evaluation results.
+
+    Args:
+        result: RAGAS evaluation result
+        output_path: Path to save the HTML report
+    """
+    scores = result.scores
+    result_df = result.to_pandas()
+
+    metrics_html = ""
+    if isinstance(scores, dict):
+        for metric_name, score_value in scores.items():
+            metrics_html += f"""
+        <div class="metric-card">
+            <div class="metric-value">{{score_value:.4f}}</div>
+            <div class="metric-name">{{metric_name}}</div>
+        </div>"""
+
+    html_content = f"""
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAGAS Evaluation Report - {metadata.name}</title>
+    <style>
+        * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+        body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+               background: #f5f7fa; padding: 40px; }}
+        .container {{ max-width: 1200px; margin: 0 auto; }}
+        h1 {{ color: #2c3e50; margin-bottom: 10px; }}
+        .subtitle {{ color: #7f8c8d; margin-bottom: 30px; }}
+        .card {{ background: white; border-radius: 12px; padding: 30px;
+                margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }}
+        .metrics-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                         gap: 20px; margin: 20px 0; }}
+        .metric-card {{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                        padding: 25px; border-radius: 10px; color: white; text-align: center; }}
+        .metric-value {{ font-size: 36px; font-weight: bold; margin-bottom: 8px; }}
+        .metric-name {{ font-size: 14px; opacity: 0.9; text-transform: uppercase; }}
+        table {{ width: 100%; border-collapse: collapse; margin-top: 20px; }}
+        th, td {{ border: 1px solid #ebeef5; padding: 12px; text-align: left; }}
+        th {{ background: #f5f7fa; font-weight: 600; color: #2c3e50; }}
+        tr:hover {{ background: #fafafa; }}
+        .footer {{ text-align: center; color: #95a5a6; margin-top: 30px; font-size: 14px; }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>RAGAS Evaluation Report</h1>
+        <p class="subtitle">Project: {metadata.name} | Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
+
+        <div class="card">
+            <h2>Overall Scores</h2>
+            <div class="metrics-grid">
+                {metrics_html or '<p>No metrics available</p>'}
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Detailed Results</h2>
+            {result_df.to_html(index=False, classes='detail-table', escape=False) if hasattr(result_df, 'to_html') else '<p>No detailed data available</p>'}
+        </div>
+
+        <div class="footer">
+            Generated by AgentScope Initializr - RAGAS Evaluation Module
+        </div>
+    </div>
+</body>
+</html>
+"""
+
+    with open(output_path, 'w', encoding='utf-8') as f:
+        f.write(html_content)
+
+    print(f"Report generated: {{output_path}}")
+
+
+if __name__ == "__main__":
+    print("=" * 60)
+    print("RAGAS Evaluation for {metadata.name}")
+    print("=" * 60)
+    print()
+    print(f"CSV File: {config.evaluation_csv_filename}")
+    print(f"Metrics: {', '.join(config.evaluation_metrics)}")
+    print()
+
+    result = run_evaluation()
+    generate_html_report(result)
+
+    print()
+    print("=" * 60)
+    print("Evaluation complete! Open evaluation_report.html to view results.")
+    print("=" * 60)
+'''
+
+        return code
+
+    def generate_ragas_requirements(self, metadata: AgentScopeMetadata) -> str:
+        """Generate requirements.txt for RAGAS evaluation."""
+        if not metadata.enable_ragas_evaluation:
+            return ""
+
+        return """# RAGAS Evaluation Dependencies
+ragas>=0.1.0
+langchain>=0.1.0
+langchain-openai>=0.0.5
+pandas>=2.0.0
+datasets>=2.14.0
+"""
+
+    def generate_ragas_readme(self, metadata: AgentScopeMetadata) -> str:
+        """Generate README for evaluation directory."""
+        if not metadata.enable_ragas_evaluation:
+            return ""
+
+        return f"""# RAGAS Evaluation Module
+
+This directory contains the RAGAS-based evaluation module for **{metadata.name}**.
+
+## Quick Start
+
+1. **Install dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+2. **Prepare your evaluation data:**
+   Create a CSV file named `{metadata.evaluation_csv_filename}` with the following columns:
+   - `question`: The question being asked
+   - `answer`: The generated answer from your RAG system
+   - `context`: The retrieved context used to generate the answer
+   - `reference`: The reference/ground truth answer
+
+   Example CSV:
+   ```csv
+   question,answer,context,reference
+   "What is AgentScope?","AgentScope is...","AgentScope is a...","AgentScope is a multi-agent platform..."
+   ```
+
+3. **Run evaluation:**
+   ```bash
+   python ragas_evaluator.py
+   ```
+
+4. **View results:**
+   Open `evaluation_report.html` in your browser.
+
+## Metrics
+
+The evaluation uses the following RAGAS metrics:
+- **Faithfulness**: Measures how faithful the answer is to the context
+- **Answer Relevancy**: Measures how relevant the answer is to the question
+- **Context Precision**: Measures how precise the retrieved context is
+- **Context Recall**: Measures how well the context captures the reference
+
+## Configuration
+
+You can customize the evaluation by modifying `ragas_evaluator.py`:
+- Change the CSV filename
+- Add or remove metrics
+- Customize the HTML report template
+
+## Output
+
+The evaluation generates:
+- `evaluation_report.html`: Interactive HTML report with visualizations
+- Console output with metric scores
+"""
+
     def generate_state_management_code(self, metadata: AgentScopeMetadata) -> str:
         """Generate state management code."""
         return '''

@@ -37,6 +37,9 @@ export interface ProjectRequest {
   enable_openjudge?: boolean
   openjudge_graders?: string[]
   initial_benchmark_tasks?: number
+  enable_ragas_evaluation?: boolean
+  evaluation_csv_filename?: string
+  evaluation_metrics?: string[]
 }
 
 export interface ProjectResponse {

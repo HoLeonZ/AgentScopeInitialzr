@@ -141,6 +141,13 @@ class AgentScopeMetadata:
     openjudge_graders: List[str] = field(default_factory=list)
     initial_benchmark_tasks: int = 0
 
+    # RAGAS Evaluation
+    enable_ragas_evaluation: bool = False
+    evaluation_csv_filename: str = "evaluation_data.csv"
+    evaluation_metrics: List[str] = field(default_factory=lambda: [
+        "faithfulness", "answer_relevancy", "context_precision", "context_recall"
+    ])
+
     def __post_init__(self):
         """Validate and normalize metadata after initialization."""
         if not self.package_name:
