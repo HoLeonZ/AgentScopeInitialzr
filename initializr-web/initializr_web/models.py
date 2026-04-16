@@ -6,6 +6,13 @@ from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, Field
 
 
+class HookConfig(BaseModel):
+    """Hook configuration model."""
+    name: str = Field(default="", description="Hook name")
+    hook_type: str = Field(default="pre_reply", description="Hook type")
+    enabled: bool = Field(default=True, description="Whether hook is enabled")
+
+
 class ProjectRequest(BaseModel):
     """Request model for project generation."""
 
@@ -44,7 +51,7 @@ class ProjectRequest(BaseModel):
     skills: List[str] = Field(default_factory=list, description="Enabled skills")
 
     enable_hooks: bool = Field(default=False, description="Enable hooks")
-    hooks: List[str] = Field(default_factory=list, description="Enabled hooks")
+    hooks: List[HookConfig] = Field(default_factory=list, description="Enabled hooks")
 
     enable_formatter: bool = Field(default=False, description="Enable formatter")
     formatter: Optional[str] = Field(default=None, description="Formatter type")
@@ -59,6 +66,12 @@ class ProjectRequest(BaseModel):
     generate_tests: bool = Field(default=False, description="Generate test module")
     generate_evaluation: bool = Field(default=False, description="Generate evaluation module")
     evaluator_type: str = Field(default="general", description="Evaluator type")
+    enable_ragas_evaluation: bool = Field(default=False, description="Enable RAGAS evaluation")
+    evaluation_csv_filename: str = Field(default="evaluation_data.csv", description="Evaluation CSV filename")
+    evaluation_metrics: List[str] = Field(
+        default_factory=lambda: ["faithfulness", "answer_relevancy", "context_precision", "context_recall"],
+        description="Evaluation metrics"
+    )
     enable_openjudge: bool = Field(default=False, description="Enable OpenJudge integration")
     openjudge_graders: List[str] = Field(default_factory=list, description="OpenJudge graders")
     initial_benchmark_tasks: int = Field(

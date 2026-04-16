@@ -159,11 +159,9 @@ const isAllComplete = computed(() => {
   return completedSections.value === sections.length
 })
 
-// 是否可以生成项目（只需要项目名称和模型配置）
+// 是否可以生成项目（只需要项目名称）
 const canGenerate = computed(() => {
-  const form = configStore.form
-  // 只需要项目名称和模型提供商即可生成
-  return !!(form.name && form.model_provider)
+  return !!configStore.form.name
 })
 
 // 生成项目

@@ -35,9 +35,6 @@ export const useConfigStore = defineStore('config', () => {
     enable_openjudge: false,
     openjudge_graders: [],
     initial_benchmark_tasks: 0,
-    enable_ragas_evaluation: false,
-    evaluation_csv_filename: 'evaluation_data.csv',
-    evaluation_metrics: ['faithfulness', 'answer_relevancy', 'context_precision', 'context_recall'],
   })
 
   // Loading state
@@ -88,9 +85,6 @@ export const useConfigStore = defineStore('config', () => {
       enable_openjudge: false,
       openjudge_graders: [],
       initial_benchmark_tasks: 0,
-      enable_ragas_evaluation: false,
-      evaluation_csv_filename: 'evaluation_data.csv',
-      evaluation_metrics: ['faithfulness', 'answer_relevancy', 'context_precision', 'context_recall'],
     }
     currentStep.value = 1
     error.value = null

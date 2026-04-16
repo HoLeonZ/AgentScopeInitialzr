@@ -5,6 +5,7 @@ Generates code for AgentScope extension points including
 Model, Memory, Tool, Hooks, Formatter, Skills, RAG, and Pipeline configurations.
 """
 
+from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 import threading
@@ -1101,12 +1102,13 @@ def run_evaluation(csv_filename: str = "{config.evaluation_csv_filename}") -> di
     return result
 
 
-def generate_html_report(result, output_path: str = "evaluation_report.html"):
+def generate_html_report(result, metadata, output_path: str = "evaluation_report.html"):
     """
     Generate HTML report from evaluation results.
 
     Args:
         result: RAGAS evaluation result
+        metadata: AgentScope metadata
         output_path: Path to save the HTML report
     """
     scores = result.scores
@@ -1117,8 +1119,8 @@ def generate_html_report(result, output_path: str = "evaluation_report.html"):
         for metric_name, score_value in scores.items():
             metrics_html += f"""
         <div class="metric-card">
-            <div class="metric-value">{{score_value:.4f}}</div>
-            <div class="metric-name">{{metric_name}}</div>
+            <div class="metric-value">{score_value:.4f}</div>
+            <div class="metric-name">{metric_name}</div>
         </div>"""
 
     html_content = f"""
@@ -1191,7 +1193,7 @@ if __name__ == "__main__":
     print()
 
     result = run_evaluation()
-    generate_html_report(result)
+    generate_html_report(result, metadata)
 
     print()
     print("=" * 60)
