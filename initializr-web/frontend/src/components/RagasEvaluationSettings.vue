@@ -16,15 +16,35 @@
     </template>
 
     <template v-if="localForm.enable_ragas_evaluation">
-      <el-form :model="localForm" label-width="140px" size="large">
-        <el-form-item label="数据集文件">
-          <el-input
-            v-model="localForm.evaluation_csv_filename"
-            placeholder="evaluation_data.csv"
-            style="width: 280px"
-            @change="updateField('evaluation_csv_filename', $event)"
-          />
-          <span class="hint">CSV 文件需包含: question, answer, context, reference 列</span>
+      <el-form :model="localForm" label-width="120px" size="large">
+        <el-form-item label="评测数据集">
+          <div class="dataset-section">
+            <div class="dataset-file-row">
+              <el-input
+                v-model="localForm.evaluation_csv_filename"
+                placeholder="evaluation_data.csv"
+                style="width: 240px"
+                @change="updateField('evaluation_csv_filename', $event)"
+              />
+              <el-button type="primary" @click="downloadSampleCsv">
+                <el-icon><Download /></el-icon> 下载示例 CSV
+              </el-button>
+              <el-upload
+                class="csv-uploader"
+                :auto-upload="false"
+                :show-file-list="false"
+                accept=".csv"
+                :on-change="handleFileChange"
+              >
+                <el-button type="warning" plain>
+                  <el-icon><Upload /></el-icon> 上传 CSV
+                </el-button>
+              </el-upload>
+            </div>
+            <div class="upload-row">
+              <span class="upload-hint">CSV 文件需包含列：question, answer, context, reference</span>
+            </div>
+          </div>
         </el-form-item>
 
         <el-form-item label="评测指标">
@@ -37,37 +57,29 @@
             <el-checkbox label="context_precision">Context Precision</el-checkbox>
             <el-checkbox label="context_recall">Context Recall</el-checkbox>
           </el-checkbox-group>
-          <span class="hint">选择要计算的评测指标</span>
         </el-form-item>
 
         <el-divider content-position="left">
-          <el-icon><Document /></el-icon>
-          生成的文件
+          <el-icon><InfoFilled /></el-icon>
+          指标说明
         </el-divider>
 
-        <div class="generated-files">
-          <div class="file-item">
-            <el-icon><Document /></el-icon>
-            <span>evaluation/ragas_evaluator.py</span>
-            <el-tag size="small" type="info">评测脚本</el-tag>
+        <div class="metrics-explanation">
+          <div class="metric-item">
+            <h4>Faithfulness（忠诚度）</h4>
+            <p>衡量生成答案与给定上下文的事实一致性。分数越高表示答案越忠于上下文内容。</p>
           </div>
-          <div class="file-item">
-            <el-icon><Document /></el-icon>
-            <span>evaluation/requirements.txt</span>
-            <el-tag size="small" type="info">依赖</el-tag>
+          <div class="metric-item">
+            <h4>Answer Relevancy（答案相关性）</h4>
+            <p>衡量生成答案与原始问题的相关程度。分数越高表示答案越切题。</p>
           </div>
-          <div class="file-item">
-            <el-icon><Document /></el-icon>
-            <span>evaluation/README.md</span>
-            <el-tag size="small" type="info">使用说明</el-tag>
+          <div class="metric-item">
+            <h4>Context Precision（上下文精确度）</h4>
+            <p>衡量上下文中文档按相关性排序的准确性。分数越高表示排序越合理。</p>
           </div>
-          <div class="file-item">
-            <el-icon><Download /></el-icon>
-            <span>evaluation/{{ localForm.evaluation_csv_filename }}</span>
-            <el-tag size="small" type="warning">示例数据</el-tag>
-            <el-button type="primary" size="small" @click="downloadSampleCsv">
-              <el-icon><Download /></el-icon> 下载示例 CSV
-            </el-button>
+          <div class="metric-item">
+            <h4>Context Recall（上下文召回率）</h4>
+            <p>衡量上下文是否包含回答问题所需的所有信息。分数越高表示召回越全面。</p>
           </div>
         </div>
       </el-form>
@@ -76,12 +88,15 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, computed } from 'vue'
+import { reactive, computed, ref } from 'vue'
 import { useConfigStore } from '@/stores/config'
-import { DataAnalysis, Document, Download } from '@element-plus/icons-vue'
+import { DataAnalysis, Download, Upload, InfoFilled } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
 
 const configStore = useConfigStore()
 const form = computed(() => configStore.form)
+
+const hasDownloaded = ref(false)
 
 const localForm = reactive({
   enable_ragas_evaluation: form.value.enable_ragas_evaluation ?? false,
@@ -131,6 +146,15 @@ const downloadSampleCsv = () => {
   link.download = localForm.evaluation_csv_filename
   link.click()
   URL.revokeObjectURL(url)
+  hasDownloaded.value = true
+  ElMessage.success('示例 CSV 已下载，请上传包含相同格式的评测数据')
+}
+
+const handleFileChange = (file: any) => {
+  const fileName = file.name
+  localForm.evaluation_csv_filename = fileName
+  updateField('evaluation_csv_filename', fileName)
+  ElMessage.success(`已选择文件: ${fileName}`)
 }
 </script>
 
@@ -156,33 +180,55 @@ const downloadSampleCsv = () => {
   font-weight: 600;
 }
 
-.hint {
-  font-size: 0.85em;
-  color: #909399;
-  display: block;
-  margin-top: 4px;
-  line-height: 1.4;
-}
-
-.generated-files {
+.dataset-section {
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
-.file-item {
+.dataset-file-row {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px;
-  background: #f5f7fa;
-  border-radius: 6px;
 }
 
-.file-item span {
-  flex: 1;
-  font-family: monospace;
+.upload-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.upload-hint {
+  font-size: 12px;
+  color: #909399;
+}
+
+.metrics-explanation {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 0 8px;
+}
+
+.metric-item {
+  background: #f5f7fa;
+  padding: 12px 16px;
+  border-radius: 6px;
+  border-left: 3px solid #67C23A;
+}
+
+.metric-item h4 {
+  margin: 0 0 6px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #303133;
+}
+
+.metric-item p {
+  margin: 0;
   font-size: 13px;
+  color: #606266;
+  line-height: 1.5;
 }
 
 ::deep(.el-card__header) {
@@ -193,5 +239,11 @@ const downloadSampleCsv = () => {
 
 ::deep(.el-card__body) {
   padding: 20px;
+}
+
+::deep(.el-divider__text) {
+  font-size: 14px;
+  font-weight: 600;
+  color: #606266;
 }
 </style>

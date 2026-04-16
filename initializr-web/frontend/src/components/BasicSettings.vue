@@ -6,7 +6,7 @@
         <el-icon :size="32" color="#FFFFFF" class="header-icon"><Document /></el-icon>
         <div class="header-content">
           <h2 class="header-title">项目基础信息</h2>
-          <p class="header-description">配置您的 AgentScope 项目的基础信息，包括项目名称、类型和描述</p>
+          <p class="header-description">配置您的项目的基础信息，包括项目名称、类型和描述</p>
         </div>
         <el-tag type="info" size="large" effect="dark">必填配置</el-tag>
       </div>
@@ -78,7 +78,7 @@
       <el-form-item label="Python 版本">
         <div class="version-display">
           <el-tag type="success" size="large">3.14.3</el-tag>
-          <span class="hint">兼容 AgentScope 的固定版本</span>
+          <span class="hint">项目使用的固定 Python 版本</span>
         </div>
       </el-form-item>
     </el-form>
