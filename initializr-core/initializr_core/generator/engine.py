@@ -151,6 +151,10 @@ class ProjectGenerator:
         requirements = self._generate_requirements(metadata)
         (project_path / "requirements.txt").write_text(requirements)
 
+        # Generate pip-sources.ini
+        pip_sources = self._generate_pip_sources()
+        (project_path / "pip-sources.ini").write_text(pip_sources)
+
     def _generate_source_code(
         self,
         metadata: AgentScopeMetadata,
@@ -230,6 +234,22 @@ source venv/bin/activate  # On Windows: venv\\Scripts\\activate
 pip install -r requirements.txt
 ```
 
+### Private PyPI Source Configuration
+
+If you use a private PyPI server, edit `pip-sources.ini` first, then run the setup script:
+
+```bash
+# 1. Edit pip-sources.ini - fill in your private PyPI URLs
+vim pip-sources.ini
+
+# 2. Generate pip.conf from pip-sources.ini
+./scripts/setup-pip-source.sh              # Global pip (~/.config/pip/pip.conf)
+./scripts/setup-pip-source.sh --venv       # venv pip (venv/pip.conf)
+
+# 3. Re-run install with private index
+pip install -r requirements.txt
+```
+
 ## Configuration
 
 Copy `.env.example` to `.env` and configure your API keys:
@@ -259,9 +279,10 @@ python -m {metadata.package_name}.main
 │       └── main.py              # Entry point
 ├── tests/                       # Tests
 ├── examples/                    # Usage examples
-├── scripts/                     # Utility scripts
+├── scripts/                     # Utility scripts (setup.sh, setup-pip-source.sh, etc.)
 ├── docs/                        # Documentation
 ├── requirements.txt             # Dependencies
+├── pip-sources.ini              # Private PyPI source configuration
 └── .env.example                 # Environment template
 ```
 
@@ -622,6 +643,33 @@ Thumbs.db
 
         return "\n".join(deps)
 
+    def _generate_pip_sources(self) -> str:
+        """Generate pip-sources.ini configuration file."""
+        return '''# =============================================================================
+# pip source (private package index) configuration
+# =============================================================================
+#
+# Edit this file to configure your private PyPI server(s).
+# Then run: ./scripts/setup-pip-source.sh
+#
+# This file is the source of truth - do NOT edit pip.conf directly,
+# as it will be overwritten by setup-pip-source.sh.
+#
+# =============================================================================
+
+[source]
+# Primary package index (your private PyPI server)
+index_url = http://203.3.234.97:8082/repository/pypi/simple
+
+[fallback]
+# Fallback / secondary index
+extra_index_url = http://mypypi.ai.test.com:4000/simple
+
+[trusted]
+# Comma-separated list of trusted hosts
+trusted_host = 203.3.234.97,mypypi.ai.test.com
+'''
+
     def _generate_package_init(self, metadata: AgentScopeMetadata) -> str:
         """Generate package __init__.py."""
         return f'''"""
@@ -755,18 +803,30 @@ __all__ = ["helpers", "log"]
     def _generate_agents(self, pkg_dir: Path, metadata: AgentScopeMetadata):
         """Generate agent implementation files."""
         if metadata.agent_type.value == "basic":
-            agent_content = f'''"""
+            # Build imports based on whether hooks are enabled
+            pkg_name = metadata.package_name
+            hook_import = ""
+            hook_attachment = ""
+            if metadata.hooks:
+                hook_import = f'''
+from {pkg_name}.config.lifecycle import ApplicationLifecycle'''
+                hook_attachment = '''
+    # Attach hooks to the agent
+    ApplicationLifecycle.attach_hooks_to_agent(agent)'''
+
+            # Create agent content
+            agent_content = '''"""
 Base ReAct agent implementation.
 """
 
 from typing import Optional
 from agentscope.agent import ReActAgent
-from {metadata.package_name}.config import get_model, get_memory, get_toolkit, get_formatter
-from {metadata.package_name}.config.middleware import middleware_manager
+from ''' + pkg_name + '''.config import get_model, get_memory, get_toolkit, get_formatter
+from ''' + pkg_name + '''.config.middleware import middleware_manager''' + hook_import + '''
 
 
 def create_react_agent(
-    name: str = "{metadata.name}",
+    name: str = "''' + pkg_name + '''",
     sys_prompt: Optional[str] = None,
 ) -> ReActAgent:
     """
@@ -795,7 +855,7 @@ def create_react_agent(
     # Use provided prompt or default
     prompt = sys_prompt or "You are a helpful assistant with access to various tools."
 
-    return ReActAgent(
+    agent = ReActAgent(
         name=name,
         sys_prompt=prompt,
         model=model,
@@ -806,6 +866,9 @@ def create_react_agent(
         parallel_tool_calls=parallel_tool_calls,
         max_iters=max_iters,
     )
+''' + hook_attachment + '''
+
+    return agent
 '''
             (pkg_dir / "agents" / "react_agent.py").write_text(agent_content)
 
@@ -1612,6 +1675,11 @@ def get_browser_agent_prompt() -> str:
         lifecycle_content = self.extension_generator.generate_lifecycle_manager_file(metadata)
         (pkg_dir / "config" / "lifecycle.py").write_text(lifecycle_content)
 
+        # Hooks configuration (if enabled)
+        if metadata.hooks:
+            hooks_content = self.extension_generator.generate_hooks_file(metadata)
+            (pkg_dir / "config" / "hooks.py").write_text(hooks_content)
+
         # RAG configuration (if enabled)
         if metadata.enable_rag:
             rag_content = self.extension_generator.generate_rag_config_file(metadata)
@@ -1752,6 +1820,14 @@ pip install -e .
 echo "📥 Installing development dependencies..."
 pip install -e ".[dev]" || echo "⚠️  Warning: Dev dependencies not installed"
 
+# Configure pip source (private package index) - optional
+echo ""
+echo "🔧 Pip source configuration (optional):"
+echo "   If you use a private PyPI server:"
+echo "   1. Edit pip-sources.ini to fill in your private PyPI URLs"
+echo "   2. Run: ./scripts/setup-pip-source.sh"
+echo "   3. Then re-run: pip install -r requirements.txt"
+
 # Create .env file from example
 if [ ! -f .env ]; then
     cp .env.example .env
@@ -1862,6 +1938,99 @@ python -m {metadata.package_name}.main "$@"
         run_path = project_path / "scripts" / "run.sh"
         run_path.chmod(run_path.stat().st_mode | stat.S_IEXEC)
 
+        # Generate pip source configuration script
+        pip_source_script = '''#!/bin/bash
+# Generate pip.conf from pip-sources.ini
+#
+# Usage:
+#   ./scripts/setup-pip-source.sh              # Configure global pip (default)
+#   ./scripts/setup-pip-source.sh --venv      # Configure venv pip (venv/pip.conf)
+#
+# The actual source of truth is pip-sources.ini - edit that file to change
+# your private PyPI settings, then re-run this script to regenerate pip.conf.
+
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+INI_FILE="$PROJECT_DIR/pip-sources.ini"
+
+# Resolve output pip.conf location
+MODE="global"
+for arg in "$@"; do
+    case $arg in
+        --venv) MODE="venv" ;;
+        --help|-h)
+            echo "Usage: $0 [--venv]"
+            echo "  (no flag)  Configure global pip (${HOME}/.config/pip/pip.conf)"
+            echo "  --venv     Configure venv pip (venv/pip.conf)"
+            exit 0
+            ;;
+    esac
+done
+
+if [ "$MODE" = "venv" ]; then
+    if [ ! -d "$PROJECT_DIR/venv" ]; then
+        echo "❌ Error: venv not found at $PROJECT_DIR/venv"
+        exit 1
+    fi
+    PIP_CONF="$PROJECT_DIR/venv/pip.conf"
+else
+    # Cross-platform global pip config dir
+    if [ -n "$XDG_CONFIG_HOME" ]; then
+        PIP_DIR="$XDG_CONFIG_HOME/pip"
+    elif [ "$(uname)" = "Darwin" ]; then
+        PIP_DIR="$HOME/Library/Application Support/pip"
+    else
+        PIP_DIR="$HOME/.config/pip"
+    fi
+    PIP_CONF="$PIP_DIR/pip.conf"
+fi
+
+# Parse pip-sources.ini
+INDEX_URL=$(sed -n 's/^index_url *= *//p' "$INI_FILE" | tr -d ' "'  )
+EXTRA_INDEX_URL=$(sed -n 's/^extra_index_url *= *//p' "$INI_FILE" | tr -d ' "')
+TRUSTED_HOST=$(sed -n 's/^trusted_host *= *//p' "$INI_FILE" | tr -d ' "')
+
+if [ -z "$INDEX_URL" ]; then
+    echo "⚠️  index_url is empty in pip-sources.ini - skipping pip configuration."
+    echo "   Edit pip-sources.ini and re-run this script to configure."
+    exit 0
+fi
+
+# Auto-detect trusted host from index_url if not set
+if [ -z "$TRUSTED_HOST" ]; then
+    HOST_WITH_AUTH=$(echo "$INDEX_URL" | sed -E 's|^https?://||' | cut -d'/' -f1)
+    TRUSTED_HOST=$(echo "$HOST_WITH_AUTH" | cut -d'@' -f2)
+fi
+
+# Ensure trusted hosts include any hosts from extra_index_url too
+if [ -n "$EXTRA_INDEX_URL" ]; then
+    EXTRA_HOST=$(echo "$EXTRA_INDEX_URL" | sed -E 's|^https?://||' | cut -d'/' -f1 | cut -d'@' -f2)
+    # Deduplicate
+    if [ -n "$EXTRA_HOST" ] && [ "$EXTRA_HOST" != "$TRUSTED_HOST" ]; then
+        TRUSTED_HOST="$TRUSTED_HOST,$EXTRA_HOST"
+    fi
+fi
+
+mkdir -p "$(dirname "$PIP_CONF")"
+
+{
+    echo "[global]"
+    echo "index-url = $INDEX_URL"
+    [ -n "$EXTRA_INDEX_URL" ] && echo "extra-index-url = $EXTRA_INDEX_URL"
+    echo "trusted-host = $TRUSTED_HOST"
+} > "$PIP_CONF"
+
+echo "✅ pip.conf written to: $PIP_CONF"
+cat "$PIP_CONF"
+'''
+        (project_path / "scripts" / "setup-pip-source.sh").write_text(pip_source_script)
+
+        import stat
+        pip_source_path = project_path / "scripts" / "setup-pip-source.sh"
+        pip_source_path.chmod(pip_source_path.stat().st_mode | stat.S_IEXEC)
+
     def _generate_docs(self, project_path: Path, metadata: AgentScopeMetadata):
         """Generate documentation files."""
         agent_type_display = self._get_display_agent_type(metadata.agent_type.value)
@@ -1883,7 +2052,7 @@ python -m {metadata.package_name}.main "$@"
 │       └── main.py              # Entry point
 ├── tests/                       # Tests
 ├── examples/                    # Usage examples
-├── scripts/                     # Utility scripts
+├── scripts/                     # Utility scripts (setup.sh, setup-pip-source.sh, etc.)
 ├── docs/                        # Documentation
 ├── requirements.txt             # Dependencies
 └── .env.example                 # Environment template
