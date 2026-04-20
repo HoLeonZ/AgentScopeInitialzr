@@ -558,7 +558,8 @@ def get_skills():
 '''
 
         config = metadata.rag_config or {}
-        store_type = config.get("store_type", "qdrant")
+        # 优先用 store_type（独立 RAG 时），其次用 type（知识库同步时），默认 qdrant
+        store_type = config.get("store_type") or config.get("type") or "qdrant"
         embedding_model = config.get("embedding_model", "openai")
         chunk_size = config.get("chunk_size", 500)
         chunk_overlap = config.get("chunk_overlap", 50)

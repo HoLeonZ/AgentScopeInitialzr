@@ -386,25 +386,27 @@ MIT
 
         # RAG Configuration
         if metadata.enable_rag:
-            lines.append("# ==============================================")
-            lines.append("# RAG Configuration")
-            lines.append("# ==============================================")
-            lines.append("ENABLE_RAG=true")
-
             rag_config = metadata.rag_config or {}
-            store_type = rag_config.get("store_type", "qdrant")
+            # 优先用 rag_config.store_type（前端同步时写入），其次用 rag_config.type（知识库同步时写入），默认 qdrant
+            store_type = rag_config.get("store_type") or rag_config.get("type") or "qdrant"
 
-            if store_type == "qdrant":
-                lines.append("# Qdrant vector database configuration")
-                lines.append("RAG_STORE_TYPE=qdrant")
+            if store_type == "kbase":
+                lines.append("# ==============================================")
+                lines.append("# Knowledge Base Configuration (KBase)")
+                lines.append("# ==============================================")
+                lines.append(f"KBASE_URL={rag_config.get('kbase_url', 'https://kbase.example.com')}")
+                lines.append(f"RETRIEVAL_TOP_K={rag_config.get('top_k', 5)}")
+                lines.append(f"SIMILARITY_THRESHOLD={rag_config.get('similarity_threshold', 0.7)}")
+                lines.append("")
+            elif store_type == "qdrant":
+                lines.append("# ==============================================")
+                lines.append("# RAG Configuration (Qdrant)")
+                lines.append("# ==============================================")
                 lines.append("QDRANT_HOST=localhost")
                 lines.append("QDRANT_PORT=6333")
                 lines.append("QDRANT_COLLECTION=agent_documents")
-                lines.append("# Or use full URL: QDRANT_URL=http://localhost:6333")
-            elif store_type == "kbase":
-                lines.append("# KBase knowledge base configuration")
-                lines.append("RAG_STORE_TYPE=kbase")
-                lines.append(f"KBASE_URL={rag_config.get('kbase_url', 'https://kbase.example.com')}")
+                lines.append("")
+
             lines.append("")
 
         # Pipeline Configuration
@@ -425,29 +427,21 @@ MIT
             lines.append("")
 
         # Knowledge Base Configuration
-        if metadata.enable_knowledge:
+        # 注意：kbase 类型由上方 RAG 部分处理，此处仅处理 qdrant 类型
+        if metadata.enable_knowledge and not metadata.enable_rag:
             lines.append("# ==============================================")
-            lines.append("# Knowledge Base Configuration")
+            lines.append("# Knowledge Base Configuration (Qdrant)")
             lines.append("# ==============================================")
-            lines.append("ENABLE_KNOWLEDGE=true")
 
             knowledge_config = metadata.knowledge_config or {}
             kb_type = knowledge_config.get("type", "qdrant")
 
             if kb_type == "qdrant":
-                lines.append("# Qdrant Knowledge Base Configuration")
-                lines.append("KNOWLEDGE_STORE_TYPE=qdrant")
                 lines.append(f"QDRANT_HOST={knowledge_config.get('qdrant_host', 'localhost')}")
                 lines.append(f"QDRANT_PORT={knowledge_config.get('qdrant_port', 6333)}")
                 lines.append(f"QDRANT_COLLECTION={knowledge_config.get('collection_name', 'agent_knowledge')}")
                 lines.append(f"EMBEDDING_MODEL={knowledge_config.get('embedding_model', 'text-embedding-ada-002')}")
                 lines.append(f"EMBEDDING_DIMENSION={knowledge_config.get('dimension', 1536)}")
-                lines.append(f"RETRIEVAL_TOP_K={knowledge_config.get('top_k', 5)}")
-                lines.append(f"SIMILARITY_THRESHOLD={knowledge_config.get('similarity_threshold', 0.7)}")
-            elif kb_type == "kbase":
-                lines.append("# KBase Knowledge Base Configuration")
-                lines.append("KNOWLEDGE_STORE_TYPE=kbase")
-                lines.append(f"KBASE_URL={knowledge_config.get('kbase_url', 'https://kbase.example.com')}")
                 lines.append(f"RETRIEVAL_TOP_K={knowledge_config.get('top_k', 5)}")
                 lines.append(f"SIMILARITY_THRESHOLD={knowledge_config.get('similarity_threshold', 0.7)}")
             lines.append("")

@@ -1,6 +1,8 @@
 #!/bin/bash
 # AgentScope Initializr 部署脚本
-# 停止旧容器 -> 删除旧文件和镜像 -> 加载新镜像 -> 启动服务
+# 停止旧容器 -> 删除旧镜像 -> 加载新镜像 -> 启动服务
+#
+# 前置条件：确保 agentscope-initializr-amd64.tar.gz 与本脚本在同一目录
 
 set -e
 
@@ -18,11 +20,12 @@ echo ""
 # Step 1: 检查镜像文件
 if [ ! -f "${IMAGE_FILE}" ]; then
     echo "错误: 镜像文件不存在: ${IMAGE_FILE}"
+    echo "  请先构建镜像并生成 tar.gz 文件"
     exit 1
 fi
 
 # Step 2: 停止并删除旧容器
-echo "[1/5] 停止并删除旧容器..."
+echo "[1/4] 停止并删除旧容器..."
 if docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
     docker stop ${CONTAINER_NAME} 2>/dev/null || true
     docker rm ${CONTAINER_NAME} 2>/dev/null || true
@@ -31,17 +34,8 @@ else
     echo "  无旧容器需要删除"
 fi
 
-# Step 3: 删除旧镜像文件
-echo "[2/5] 删除旧镜像文件..."
-if [ -f "${IMAGE_FILE}" ]; then
-    rm -f ${IMAGE_FILE}
-    echo "  已删除镜像文件: ${IMAGE_FILE}"
-else
-    echo "  无旧镜像文件需要删除"
-fi
-
-# Step 4: 删除旧镜像
-echo "[3/5] 删除旧镜像..."
+# Step 3: 删除旧镜像
+echo "[2/4] 删除旧镜像..."
 if docker image inspect ${IMAGE_NAME}:${IMAGE_TAG} > /dev/null 2>&1; then
     docker rmi ${IMAGE_NAME}:${IMAGE_TAG} > /dev/null 2>&1 || true
     echo "  已删除旧镜像"
@@ -49,13 +43,13 @@ else
     echo "  无旧镜像需要删除"
 fi
 
-# Step 5: 加载新镜像
-echo "[4/5] 加载新镜像..."
+# Step 4: 加载新镜像
+echo "[3/4] 加载新镜像..."
 docker load < ${IMAGE_FILE}
 echo "  镜像加载完成"
 
-# Step 6: 启动服务
-echo "[5/5] 启动服务..."
+# Step 5: 启动服务
+echo "[4/4] 启动服务..."
 docker run -d \
     --name ${CONTAINER_NAME} \
     -p ${PORT}:8000 \
