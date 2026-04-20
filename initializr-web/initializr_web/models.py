@@ -116,11 +116,21 @@ class TemplatesResponse(BaseModel):
     templates: List[TemplateInfo] = Field(..., description="Available templates")
 
 
+class ModelInfo(BaseModel):
+    """Information about a specific model."""
+
+    id: str = Field(..., description="Model ID")
+    name: str = Field(..., description="Model display name")
+    url: str = Field(..., description="API endpoint URL")
+    is_embedding: bool = Field(default=False, description="Whether this is an embedding model")
+
+
 class ModelProviderInfo(BaseModel):
     """Information about a model provider."""
 
     id: str = Field(..., description="Provider ID")
     name: str = Field(..., description="Provider name")
+    models: List[ModelInfo] = Field(default_factory=list, description="Available models for this provider")
 
 
 class ModelsResponse(BaseModel):

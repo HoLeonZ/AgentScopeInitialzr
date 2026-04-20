@@ -59,9 +59,17 @@ export interface TemplatesResponse {
   templates: TemplateInfo[]
 }
 
+export interface ModelInfo {
+  id: string
+  name: string
+  url: string
+  is_embedding: boolean
+}
+
 export interface ModelProviderInfo {
   id: string
   name: string
+  models: ModelInfo[]
 }
 
 export interface ModelsResponse {

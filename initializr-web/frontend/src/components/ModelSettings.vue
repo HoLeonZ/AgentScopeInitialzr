@@ -26,7 +26,7 @@
             <el-select
               v-model="form.model_provider"
               placeholder="选择提供商"
-              @change="updateField('model_provider', $event)"
+              @change="onProviderChange"
               style="width: 240px"
             >
               <el-option
@@ -38,7 +38,36 @@
             </el-select>
           </el-form-item>
 
-          <el-form-item label="模型名称">
+          <!-- 模型下拉：仅 NPU 提供商显示 -->
+          <el-form-item v-if="form.model_provider === 'npu'" label="模型名称" required>
+            <el-select
+              v-model="selectedModelId"
+              placeholder="选择模型"
+              filterable
+              @change="onModelChange"
+              style="width: 320px"
+            >
+              <el-optgroup label="LLM 模型">
+                <el-option
+                  v-for="model in npuModels.filter(m => !m.is_embedding)"
+                  :key="model.id"
+                  :value="model.id"
+                  :label="model.name"
+                />
+              </el-optgroup>
+              <el-optgroup label="Embedding 模型">
+                <el-option
+                  v-for="model in npuModels.filter(m => m.is_embedding)"
+                  :key="model.id"
+                  :value="model.id"
+                  :label="model.name"
+                />
+              </el-optgroup>
+            </el-select>
+          </el-form-item>
+
+          <!-- 通用模型名称输入 -->
+          <el-form-item v-else label="模型名称">
             <el-input
               :model-value="form.model_config?.model"
               placeholder="模型标识符"
@@ -124,15 +153,22 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useConfigStore } from '@/stores/config'
 import { api } from '@/api'
+import type { ModelProviderInfo, ModelInfo } from '@/types'
 import { Connection, Operation } from '@element-plus/icons-vue'
 
 const configStore = useConfigStore()
 const form = configStore.form
 
-const providers = ref<any[]>([])
+const providers = ref<ModelProviderInfo[]>([])
+const selectedModelId = ref<string>('')
+
+const npuModels = computed<ModelInfo[]>(() => {
+  const npuProvider = providers.value.find(p => p.id === 'npu')
+  return npuProvider?.models ?? []
+})
 
 const temperaturePresets = [
   { label: '0.3 专注', value: 0.3 },
@@ -155,6 +191,24 @@ const setTemperature = (value: number) => {
   updateModelConfig('temperature', value)
 }
 
+// 切换提供商时清空模型选择
+const onProviderChange = (providerId: string) => {
+  selectedModelId.value = ''
+  updateModelConfig('model', undefined)
+  updateModelConfig('base_url', undefined)
+}
+
+// 选择模型时自动填充 API 地址
+const onModelChange = (modelId: string) => {
+  const model = npuModels.value.find(m => m.id === modelId)
+  if (model) {
+    // 提取 base_url（去掉末尾的 /v1/chat/completions 或 /v1/embeddings）
+    const baseUrl = model.url.replace(/\/v1\/.*$/, '')
+    updateModelConfig('model', model.name)
+    updateModelConfig('base_url', baseUrl)
+  }
+}
+
 onMounted(async () => {
   if (!form.model_config) {
     updateModelConfig('model', undefined)
@@ -172,6 +226,14 @@ onMounted(async () => {
   try {
     const response = await api.getModels()
     providers.value = response.providers
+
+    // 如果当前选中了 NPU 且已有模型名，尝试恢复选中状态
+    if (form.model_provider === 'npu' && form.model_config?.model) {
+      const matched = npuModels.value.find(m => m.name === form.model_config?.model)
+      if (matched) {
+        selectedModelId.value = matched.id
+      }
+    }
   } catch (error) {
     console.error('加载模型提供商失败:', error)
   }

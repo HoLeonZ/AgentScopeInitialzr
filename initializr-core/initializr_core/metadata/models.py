@@ -22,6 +22,7 @@ class ModelProvider(Enum):
     DOUBAO = "doubao"
     DEEPSEEK = "deepseek"
     DASHSCOPE = "dashscope"
+    NPU = "npu"
 
 
 class MemoryType(Enum):
