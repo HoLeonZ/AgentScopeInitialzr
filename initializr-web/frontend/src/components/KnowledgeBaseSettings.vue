@@ -262,11 +262,17 @@ const knowledgeConfig = reactive({
 // 更新字段到存储
 const updateField = (field: string, value: any) => {
   configStore.setField(field as any, value)
+  // 同步 enable_knowledge <-> enable_rag（共用同一份配置）
+  if (field === 'enable_knowledge') {
+    configStore.setField('enable_rag' as any, value)
+  }
 }
 
 // 更新知识库配置
 const updateKnowledgeConfig = () => {
   configStore.setField('knowledge_config', { ...knowledgeConfig })
+  // 同步到 rag_config（后端用 enable_rag + rag_config 判断是否生成 rag.py）
+  configStore.setField('rag_config' as any, { ...knowledgeConfig })
 }
 </script>
 

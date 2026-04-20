@@ -404,7 +404,7 @@ MIT
             elif store_type == "kbase":
                 lines.append("# KBase knowledge base configuration")
                 lines.append("RAG_STORE_TYPE=kbase")
-                lines.append("KBASE_RETRIEVAL_URL=https://kbase.example.com/api/retrieve")
+                lines.append(f"KBASE_URL={rag_config.get('kbase_url', 'https://kbase.example.com')}")
             lines.append("")
 
         # Pipeline Configuration

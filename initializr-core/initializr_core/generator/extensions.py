@@ -615,20 +615,59 @@ def get_vector_store() -> "QdrantVectorStore":
     return _vector_store_instance
 ''')
         elif store_type == "kbase":
+            kbase_url = config.get("kbase_url", "")
             lines.append(f'''
-_kbase_client_instance: Optional["KBaseVectorStore"] = None
+import httpx
+from urllib.parse import urljoin
+
+_kbase_client_instance: Optional["KBaseRetriever"] = None
 _kbase_client_lock = threading.Lock()
 
-def get_vector_store() -> "KBaseVectorStore":
-    """Get configured KBase vector store instance (thread-safe singleton)."""
+
+class KBaseRetriever:
+    """KBase knowledge base retriever using POST /open/api/facade/openSearchFacadeSearch."""
+
+    def __init__(self, base_url: str, top_k: int = 5):
+        self.base_url = base_url.rstrip("/")
+        self.search_url = urljoin(self.base_url + "/", "open/api/facade/openSearchFacadeSearch")
+        self.top_k = top_k
+
+    def retrieve(self, query: str, **kwargs) -> list:
+        """Search knowledge base for relevant documents.
+
+        Args:
+            query: Search query string
+            **kwargs: Additional search parameters
+
+        Returns:
+            List of retrieved documents
+        """
+        payload = {{
+            "query": query,
+            "top_k": kwargs.get("top_k", self.top_k),
+        }}
+        with httpx.Client(timeout=30.0) as client:
+            response = client.post(self.search_url, json=payload)
+            response.raise_for_status()
+            result = response.json()
+            # Return list of documents, format depends on KBase API response structure
+            docs = result.get("data", result.get("documents", []))
+            return [doc.get("content", str(doc)) for doc in docs]
+
+    def add_documents(self, documents: list, **kwargs) -> None:
+        """Add documents to knowledge base (not supported for KBase)."""
+        raise NotImplementedError("KBase does not support manual document addition")
+
+
+def get_vector_store() -> "KBaseRetriever":
+    """Get configured KBase retriever instance (thread-safe singleton)."""
     global _kbase_client_instance
     if _kbase_client_instance is None:
         with _kbase_client_lock:
             if _kbase_client_instance is None:
-                from agentscope.rag import KBaseVectorStore
-                _kbase_client_instance = KBaseVectorStore(
-                    retrieval_url=os.getenv("KBASE_RETRIEVAL_URL"),
-                    embedding_model="{embedding_model}",
+                _kbase_client_instance = KBaseRetriever(
+                    base_url=os.getenv("KBASE_URL", "{kbase_url}"),
+                    top_k={chunk_size},
                 )
     return _kbase_client_instance
 ''')
@@ -641,7 +680,14 @@ def get_vector_store():
 ''')
 
         # Add RAG retriever function
-        lines.append(f'''
+        if store_type == "kbase":
+            lines.append('''
+def get_rag_retriever():
+    """Get configured KBase retriever instance (direct retriever, not vector store)."""
+    return get_vector_store()
+''')
+        else:
+            lines.append(f'''
 def get_rag_retriever():
     """Get configured RAG retriever instance."""
     from agentscope.rag import RAGRetriever
