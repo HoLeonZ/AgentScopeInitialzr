@@ -245,7 +245,7 @@ const localForm = reactive({
 
 // 知识库配置
 const knowledgeConfig = reactive({
-  type: form.value.knowledge_config?.type || 'qdrant',
+  type: form.value.knowledge_config?.type || 'kbase',
   // KBase配置
   kbase_url: form.value.knowledge_config?.kbase_url || '',
   // Qdrant配置
