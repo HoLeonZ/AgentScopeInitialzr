@@ -627,32 +627,67 @@ _kbase_client_lock = threading.Lock()
 class KBaseRetriever:
     """KBase knowledge base retriever using POST /open/api/facade/openSearchFacadeSearch."""
 
-    def __init__(self, base_url: str, top_k: int = 5):
+    def __init__(
+        self,
+        base_url: str,
+        top_k: int = 10,
+        embedding: bool = True,
+        is_full_text_search: bool = True,
+        is_question_rewrite: bool = False,
+        chunk_type: str = "all",
+        rerank: str = "",
+        rerank_threshold: float = 0.0,
+    ):
         self.base_url = base_url.rstrip("/")
         self.search_url = urljoin(self.base_url + "/", "open/api/facade/openSearchFacadeSearch")
-        self.top_k = top_k
+        self.default_top_k = top_k
+        self.default_search_config = {{
+            "isQuestionRewrite": is_question_rewrite,
+            "rerankThreshold": rerank_threshold,
+            "searchResultUpLimit": top_k,
+            "isFullTextSaerch": is_full_text_search,
+            "isTimeSlot": False,
+            "embedding": embedding,
+            "embeddingQDThreshold": 0.0,
+            "embeddingQQThreshold": 0.0,
+            "chunkType": chunk_type,
+            "rerank": rerank,
+        }}
 
     def retrieve(self, query: str, **kwargs) -> list:
         """Search knowledge base for relevant documents.
 
         Args:
             query: Search query string
-            **kwargs: Additional search parameters
+            **kwargs: Additional parameters:
+                - top_k: number of results to return
+                - knowledge_library_ids: list of knowledge base IDs to search
+                - doc_ids: list of document IDs to search
 
         Returns:
             List of retrieved documents
         """
+        top_k = kwargs.get("top_k", self.default_top_k)
+        knowledge_ids = kwargs.get("knowledge_library_ids", [])
+        doc_ids = kwargs.get("doc_ids", [])
+
+        search_config = dict(self.default_search_config)
+        search_config["searchResultUpLimit"] = top_k
+
         payload = {{
             "query": query,
-            "top_k": kwargs.get("top_k", self.top_k),
+            "searchConfigInfo": search_config,
         }}
+        if knowledge_ids:
+            payload["knowledgeLibraryIdList"] = knowledge_ids
+        if doc_ids:
+            payload["docIdList"] = doc_ids
+
         with httpx.Client(timeout=30.0) as client:
             response = client.post(self.search_url, json=payload)
             response.raise_for_status()
             result = response.json()
-            # Return list of documents, format depends on KBase API response structure
-            docs = result.get("data", result.get("documents", []))
-            return [doc.get("content", str(doc)) for doc in docs]
+            return result.get("data", [])
 
     def add_documents(self, documents: list, **kwargs) -> None:
         """Add documents to knowledge base (not supported for KBase)."""
