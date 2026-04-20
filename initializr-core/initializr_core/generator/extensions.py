@@ -66,6 +66,11 @@ class ExtensionGenerator:
             imports.append("from .pipeline import get_pipeline")
             all_exports.append('"get_pipeline"')
 
+        if metadata.hooks:
+            imports.append("from .hooks import HookManager, hook_registry")
+            all_exports.append('"HookManager"')
+            all_exports.append('"hook_registry"')
+
         imports_str = "\n".join(imports)
         all_exports_str = ",\n    ".join(all_exports)
 
@@ -86,6 +91,13 @@ __all__ = [
 
     def generate_settings_file(self, metadata: AgentScopeMetadata) -> str:
         """Generate settings.py file with Settings class."""
+        cfg = metadata.model_config or {}
+        model_name = cfg.get("model", "")
+        api_key = cfg.get("api_key", "")
+        base_url = cfg.get("base_url", "")
+        temperature = cfg.get("temperature", 0.7)
+        max_tokens = cfg.get("max_tokens", 2000)
+
         return f'''"""
 Application settings for {metadata.name}.
 
@@ -111,6 +123,11 @@ You should respond in a friendly and professional.""")
 
     # Model Configuration (from .env)
     MODEL_PROVIDER = os.getenv("MODEL_PROVIDER", "{metadata.model_provider.value}")
+    MODEL_NAME = os.getenv("MODEL_NAME", "{model_name}")
+    API_KEY = os.getenv("API_KEY", "{api_key}")
+    BASE_URL = os.getenv("BASE_URL", "{base_url}")
+    MODEL_TEMPERATURE = float(os.getenv("MODEL_TEMPERATURE", "{temperature}"))
+    MODEL_MAX_TOKENS = int(os.getenv("MODEL_MAX_TOKENS", "{max_tokens}"))
     ENABLE_STREAMING = os.getenv("ENABLE_STREAMING", "true").lower() == "true"
     ENABLE_THINKING = os.getenv("ENABLE_THINKING", "false").lower() == "true"
     PARALLEL_TOOL_CALLS = os.getenv("PARALLEL_TOOL_CALLS", "true").lower() == "true"
@@ -140,51 +157,24 @@ settings = Settings()
 '''
 
     def _generate_model_config(self, metadata: AgentScopeMetadata) -> str:
-        """Generate model configuration code."""
-        provider = metadata.model_provider
-
-        if provider == ModelProvider.DOUBAO:
-            return '''
+        """Generate model configuration code using OpenAIChatModel."""
+        return '''
 def get_model():
-    """Get configured model instance."""
-    from agentscope.model import DashScopeChatModel
+    """Get configured model instance.
 
-    return DashScopeChatModel(
-        api_key=os.getenv("DOUBAO_API_KEY"),
-        model_name=os.getenv("DOUBAO_MODEL", "ep-20241105120336-m7qwl"),
-        stream=settings.ENABLE_STREAMING,
-    )
-'''
-        elif provider == ModelProvider.DEEPSEEK:
-            return '''
-def get_model():
-    """Get configured model instance."""
+    Uses OpenAIChatModel which is compatible with any OpenAI-compatible API
+    endpoint (including NPU/PPU servers).
+    """
     from agentscope.model import OpenAIChatModel
 
     return OpenAIChatModel(
-        api_key=os.getenv("DEEPSEEK_API_KEY"),
-        model_name=os.getenv("DEEPSEEK_MODEL", "deepseek-chat"),
-        base_url=os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com"),
+        model_name=settings.MODEL_NAME or "",
+        api_key=settings.API_KEY or "",
+        base_url=settings.BASE_URL or "",
+        temperature=settings.MODEL_TEMPERATURE,
+        max_tokens=settings.MODEL_MAX_TOKENS,
         stream=settings.ENABLE_STREAMING,
     )
-'''
-        elif provider == ModelProvider.DASHSCOPE:
-            return '''
-def get_model():
-    """Get configured model instance."""
-    from agentscope.model import DashScopeChatModel
-
-    return DashScopeChatModel(
-        api_key=os.getenv("DASHSCOPE_API_KEY"),
-        model_name=os.getenv("DASHSCOPE_MODEL", "qwen-max"),
-        stream=settings.ENABLE_STREAMING,
-    )
-'''
-        else:
-            return '''
-def get_model():
-    """Get configured model instance - placeholder."""
-    raise NotImplementedError("Model provider not configured")
 '''
 
     def _generate_memory_config(self, metadata: AgentScopeMetadata) -> str:
@@ -880,7 +870,273 @@ async def {func_name}(observation):
 
         return "\n".join(hooks_code)
 
-    def generate_tests_code(self, metadata: AgentScopeMetadata) -> str:
+    def generate_hooks_file(self, metadata: AgentScopeMetadata) -> str:
+        """
+        Generate hooks.py module for managing hook instances.
+
+        Args:
+            metadata: Project metadata
+
+        Returns:
+            Hooks module code
+        """
+        if not metadata.hooks:
+            return ""
+
+        # Generate hook class definitions based on hook types
+        hook_classes = []
+        for hook in metadata.hooks:
+            if not hook.enabled:
+                continue
+            func_name = hook.name.replace(" ", "_").replace("-", "_").lower() if hook.name else f"{hook.hook_type}_hook"
+
+            # Generate hook class for each hook type
+            if hook.hook_type == "pre_reply":
+                hook_classes.append(f'''
+class {func_name.title().replace("_", "")}Hook:
+    """Hook: {hook.name} - called before agent reply."""
+
+    async def __call__(self, msg):
+        """Execute the hook."""
+        return msg
+''')
+            elif hook.hook_type == "post_reply":
+                hook_classes.append(f'''
+class {func_name.title().replace("_", "")}Hook:
+    """Hook: {hook.name} - called after agent reply."""
+
+    async def __call__(self, response):
+        """Execute the hook."""
+        return response
+''')
+            elif hook.hook_type == "pre_observe":
+                hook_classes.append(f'''
+class {func_name.title().replace("_", "")}Hook:
+    """Hook: {hook.name} - called before agent observation."""
+
+    async def __call__(self, observation):
+        """Execute the hook."""
+        return observation
+''')
+            elif hook.hook_type == "post_observe":
+                hook_classes.append(f'''
+class {func_name.title().replace("_", "")}Hook:
+    """Hook: {hook.name} - called after agent observation."""
+
+    async def __call__(self, observation):
+        """Execute the hook."""
+        return observation
+''')
+
+        # Generate hook instances and registry
+        hook_instances = []
+        hook_registry_entries = []
+        for hook in metadata.hooks:
+            if not hook.enabled:
+                continue
+            func_name = hook.name.replace(" ", "_").replace("-", "_").lower() if hook.name else f"{hook.hook_type}_hook"
+            class_name = func_name.title().replace("_", "") + "Hook"
+            hook_instances.append(f"{func_name}_instance = {class_name}()")
+            hook_registry_entries.append(f'    "{hook.hook_type}:{hook.name}": {func_name}_instance,')
+
+        hook_classes_str = "\n".join(hook_classes)
+        hook_instances_str = "\n".join(hook_instances)
+        hook_registry_str = "\n".join(hook_registry_entries)
+
+        return f'''"""
+Agent Hooks Module
+
+This module manages hook instances and their registration to agents.
+Hooks are called at specific points in the agent lifecycle:
+- pre_reply: Before agent sends a reply
+- post_reply: After agent sends a reply
+- pre_observe: Before agent observes environment
+- post_observe: After agent observes environment
+"""
+
+import logging
+from typing import Dict, Any, List, Optional
+
+logger = logging.getLogger(__name__)
+
+
+# =============================================================================
+# Hook Classes
+# =============================================================================
+
+{hook_classes_str}
+
+
+# =============================================================================
+# Hook Instances
+# =============================================================================
+
+{hook_instances_str}
+
+
+# =============================================================================
+# Hook Registry
+# =============================================================================
+
+class HookRegistry:
+    """Registry for managing hook instances."""
+
+    def __init__(self):
+        self._hooks: Dict[str, Any] = {{}}
+        self._agent_hooks: Dict[str, List[Any]] = {{}}
+
+    def register(self, key: str, hook_instance: Any) -> None:
+        """
+        Register a hook instance.
+
+        Args:
+            key: Unique identifier for the hook (e.g., "pre_reply:logging")
+            hook_instance: Hook instance to register
+        """
+        self._hooks[key] = hook_instance
+        logger.debug(f"Registered hook: {{key}}")
+
+    def get(self, key: str) -> Optional[Any]:
+        """Get a hook instance by key."""
+        return self._hooks.get(key)
+
+    def get_by_type(self, hook_type: str) -> List[Any]:
+        """
+        Get all hook instances for a specific hook type.
+
+        Args:
+            hook_type: Type of hook (e.g., "pre_reply", "post_reply")
+
+        Returns:
+            List of hook instances
+        """
+        return [
+            hook for key, hook in self._hooks.items()
+            if key.startswith(f"{{hook_type}}:")
+        ]
+
+    def attach_to_agent(self, agent: Any, hook_keys: Optional[List[str]] = None) -> None:
+        """
+        Attach registered hooks to an agent instance.
+
+        Args:
+            agent: Agent instance to attach hooks to
+            hook_keys: Optional list of specific hook keys to attach.
+                      If None, attaches all registered hooks.
+        """
+        if hook_keys is None:
+            hook_keys = list(self._hooks.keys())
+
+        for key in hook_keys:
+            hook = self._hooks.get(key)
+            if hook:
+                # Extract hook type from key
+                hook_type = key.split(":")[0] if ":" in key else key
+                try:
+                    agent.hook(hook_type)(hook)
+                    logger.info(f"Attached hook {{key}} to agent")
+                except Exception as e:
+                    logger.warning(f"Failed to attach hook {{key}}: {{e}}")
+
+    def clear(self) -> None:
+        """Clear all registered hooks."""
+        self._hooks.clear()
+        self._agent_hooks.clear()
+
+
+# Global hook registry instance
+hook_registry = HookRegistry()
+
+
+# =============================================================================
+# Hook Manager
+# =============================================================================
+
+class HookManager:
+    """
+    Manages hook lifecycle and registration.
+
+    This class provides a high-level interface for managing hooks,
+    including initialization, attachment to agents, and cleanup.
+    """
+
+    def __init__(self):
+        self._initialized = False
+        self._hook_configs = {{
+{hook_registry_str}
+        }}
+
+    def initialize(self) -> None:
+        """
+        Initialize the hook manager and register all hooks.
+
+        This should be called during application initialization.
+        """
+        if self._initialized:
+            return
+
+        # Register all hook instances
+        for key, hook_instance in self._hook_configs.items():
+            hook_registry.register(key, hook_instance)
+
+        self._initialized = True
+        logger.info(f"HookManager initialized with {{len(self._hook_configs)}} hooks")
+
+    def shutdown(self) -> None:
+        """
+        Shutdown the hook manager and cleanup hooks.
+
+        This should be called during application shutdown.
+        """
+        if not self._initialized:
+            return
+
+        hook_registry.clear()
+        self._initialized = False
+        logger.info("HookManager shutdown complete")
+
+    def attach_to_agent(self, agent: Any, hook_types: Optional[List[str]] = None) -> None:
+        """
+        Attach hooks to an agent.
+
+        Args:
+            agent: Agent instance to attach hooks to
+            hook_types: Optional list of hook types to attach
+        """
+        if not self._initialized:
+            logger.warning("HookManager not initialized. Call initialize() first.")
+            return
+
+        if hook_types is None:
+            # Attach all hooks
+            hook_registry.attach_to_agent(agent)
+        else:
+            # Attach only specified hook types
+            keys = [
+                key for key in self._hook_configs.keys()
+                if any(key.startswith(f"{{ht}}:") for ht in hook_types)
+            ]
+            hook_registry.attach_to_agent(agent, keys)
+
+    def get_hook(self, name: str) -> Optional[Any]:
+        """
+        Get a specific hook by name.
+
+        Args:
+            name: Hook name (e.g., "logging" for "pre_reply:logging")
+
+        Returns:
+            Hook instance or None
+        """
+        for key, hook in self._hook_configs.items():
+            if name in key:
+                return hook
+        return None
+
+
+# Global hook manager instance
+HookManager = HookManager()
+'''
         """Generate test module code."""
         if not metadata.generate_tests:
             return ""
@@ -1117,9 +1373,10 @@ def generate_html_report(result, metadata, output_path: str = "evaluation_report
     metrics_html = ""
     if isinstance(scores, dict):
         for metric_name, score_value in scores.items():
+            score_fmt = f"{score_value:.4f}"
             metrics_html += f"""
         <div class="metric-card">
-            <div class="metric-value">{score_value:.4f}</div>
+            <div class="metric-value">{score_fmt}</div>
             <div class="metric-name">{metric_name}</div>
         </div>"""
 
@@ -1740,119 +1997,256 @@ def map_to_agent_params() -> Dict[str, Any]:
 '''
 
     def generate_lifecycle_manager_file(self, metadata: AgentScopeMetadata) -> str:
-        """Generate application lifecycle manager."""
-        lines = []
-        lines.append(f'''"""
-Application lifecycle manager for {metadata.name}.
+        """Generate application lifecycle manager with instance-based state."""
+        pkg_name = metadata.package_name
+        proj_name = metadata.name
+
+        # Build imports
+        imports = [
+            f'''"""
+Application lifecycle manager for {proj_name}.
 
 This module provides framework-level initialization and shutdown
 integrated with AgentScope lifecycle.
-"""
-
+"""''',
+            '''
 import os
+import logging
+from typing import Optional, Dict, Any
+
 import agentscope
-from {metadata.package_name}.config.middleware import (
+from ''' + pkg_name + '''.config.middleware import (
     middleware_manager,
     register_core_middlewares,
     map_to_agent_params,
-)''')
+)''',
+        ]
 
         if metadata.enable_rag:
-            lines.append(f'''
-from {metadata.package_name}.config.rag import get_rag_retriever''')
+            imports.append(f'''
+from {pkg_name}.config.rag import get_rag_retriever''')
 
         if metadata.enable_pipeline:
-            lines.append(f'''
-from {metadata.package_name}.config.pipeline import get_pipeline''')
+            imports.append(f'''
+from {pkg_name}.config.pipeline import get_pipeline''')
 
-        lines.append('''
+        if metadata.hooks:
+            imports.append(f'''
+from {pkg_name}.config.hooks import HookManager, hook_registry''')
+
+        # Build class definition
+        class_def = '''
+logger = logging.getLogger(__name__)
 
 
 class ApplicationLifecycle:
-    """Application lifecycle manager integrated with AgentScope."""
+    """
+    Application lifecycle manager integrated with AgentScope.
 
-    _initialized = False
+    This class manages the application lifecycle including:
+    - AgentScope initialization
+    - Middleware registration and initialization
+    - Hook instantiation and registration
+    - Resource cleanup on shutdown
 
-    @classmethod
-    def initialize(cls):
+    Uses instance-based state to avoid class-level state issues.
+    """
+
+    def __init__(self):
+        """Initialize lifecycle manager with instance-based state."""
+        self._initialized = False
+        self._agentscope_initialized = False
+
+    def initialize(self) -> None:
         """
         Initialize application with AgentScope and all middlewares.
 
         This should be called before creating any agents.
         """
-        if cls._initialized:
+        if self._initialized:
+            logger.debug("ApplicationLifecycle already initialized")
             return
 
-        # 1. Initialize AgentScope''')
+        logger.info("Initializing ApplicationLifecycle...")
 
-        lines.append(f'''
-        agentscope.init(
-            project="{metadata.name}",
-            name="{metadata.name}_instance",
-            logging_path="logs",
-            logging_level=os.getenv("LOG_LEVEL", "INFO"),
-        )''')
-
-        lines.append('''
+        # 1. Initialize AgentScope (if not already initialized)
+        if not self._agentscope_initialized:
+            agentscope.init(
+                project="''' + proj_name + '''",
+                name="''' + proj_name + '''_instance",
+                logging_path="logs",
+                logging_level=os.getenv("LOG_LEVEL", "INFO"),
+            )
+            self._agentscope_initialized = True
 
         # 2. Register core middlewares
         register_core_middlewares()
 
-        # 3. Register optional middlewares''')
+        # 3. Register optional middlewares'''
 
         if metadata.enable_rag:
-            lines.append('''
+            class_def += '''
         # Register RAG as knowledge middleware
         middleware_manager.register(
             'knowledge',
             lambda: get_rag_retriever(),
             {}
-        )''')
+        )'''
 
         if metadata.enable_pipeline:
-            lines.append('''
+            class_def += '''
         # Register pipeline as plan notebook middleware
         middleware_manager.register(
             'plan_notebook',
             lambda: get_pipeline(),
             {}
-        )''')
+        )'''
 
-        lines.append('''
+        class_def += '''
 
         # 4. Initialize all middlewares
-        middleware_manager.initialize_all()
+        middleware_manager.initialize_all()'''
 
-        cls._initialized = True
+        if metadata.hooks:
+            class_def += '''
 
-    @classmethod
-    def shutdown(cls):
+        # 5. Initialize hook manager
+        HookManager.initialize()
+        logger.info("Initialized " + str(len(HookManager._hook_configs)) + " hooks")'''
+
+        class_def += '''
+
+        self._initialized = True
+        logger.info("ApplicationLifecycle initialization complete")
+
+    def shutdown(self) -> None:
         """
         Shutdown application and cleanup resources.
 
         This should be called when exiting the application.
         """
-        if not cls._initialized:
+        if not self._initialized:
+            logger.debug("ApplicationLifecycle not initialized, skipping shutdown")
             return
 
-        # Cleanup all middlewares
+        logger.info("Shutting down ApplicationLifecycle...")'''
+
+        if metadata.hooks:
+            class_def += '''
+        # 1. Shutdown hooks
+        HookManager.shutdown()'''
+
+        class_def += '''
+
+        # 2. Shutdown middlewares
         middleware_manager.shutdown_all()
 
-        cls._initialized = False
+        self._initialized = False
+        logger.info("ApplicationLifecycle shutdown complete")
 
-    @classmethod
-    def get_agent_params(cls) -> dict:
+    def get_agent_params(self) -> Dict[str, Any]:
         """
         Get agent parameters with all middlewares auto-injected.
 
         Returns:
             Dictionary of agent parameters
+
+        Raises:
+            RuntimeError: If lifecycle not initialized
         """
-        if not cls._initialized:
+        if not self._initialized:
             raise RuntimeError(
                 "Application not initialized. Call ApplicationLifecycle.initialize() first."
             )
 
         return map_to_agent_params()
-''')
-        return '\n'.join(lines)
+
+    def attach_hooks_to_agent(self, agent: Any, hook_types: Optional[list] = None) -> None:
+        """
+        Attach configured hooks to an agent instance.
+
+        This should be called after creating an agent to register
+        all configured hooks.
+
+        Args:
+            agent: Agent instance to attach hooks to
+            hook_types: Optional list of specific hook types to attach
+                       (e.g., ["pre_reply", "post_reply"])
+                       If None, all hooks are attached.
+        """
+        if not self._initialized:
+            raise RuntimeError(
+                "Application not initialized. Call ApplicationLifecycle.initialize() first."
+            )'''
+
+        if metadata.hooks:
+            class_def += '''
+        HookManager.attach_to_agent(agent, hook_types)
+        logger.info("Attached hooks to agent " + str(agent.name))'''
+        else:
+            class_def += '''
+        logger.debug("No hooks configured, skipping hook attachment")'''
+
+        class_def += '''
+
+    @property
+    def is_initialized(self) -> bool:
+        """Check if lifecycle manager is initialized."""
+        return self._initialized
+
+
+# Global lifecycle manager instance
+_app_lifecycle: Optional[ApplicationLifecycle] = None
+
+
+def get_lifecycle() -> ApplicationLifecycle:
+    """
+    Get the global ApplicationLifecycle instance.
+
+    Returns:
+        The global ApplicationLifecycle instance
+    """
+    global _app_lifecycle
+    if _app_lifecycle is None:
+        _app_lifecycle = ApplicationLifecycle()
+    return _app_lifecycle
+
+
+# Backwards compatibility: singleton-style class methods
+class _ApplicationLifecycleCompat:
+    """
+    Backwards compatibility wrapper for ApplicationLifecycle.
+
+    Provides class-method interface while using instance-based lifecycle.
+    """
+
+    @classmethod
+    def initialize(cls) -> None:
+        """Initialize the application lifecycle."""
+        get_lifecycle().initialize()
+
+    @classmethod
+    def shutdown(cls) -> None:
+        """Shutdown the application lifecycle."""
+        get_lifecycle().shutdown()
+
+    @classmethod
+    def get_agent_params(cls) -> Dict[str, Any]:
+        """Get agent parameters."""
+        return get_lifecycle().get_agent_params()
+
+    @classmethod
+    def attach_hooks_to_agent(cls, agent: Any, hook_types: Optional[list] = None) -> None:
+        """Attach hooks to an agent."""
+        get_lifecycle().attach_hooks_to_agent(agent, hook_types)
+
+    @classmethod
+    def is_initialized(cls) -> bool:
+        """Check if initialized."""
+        return get_lifecycle().is_initialized
+
+
+# Use compatibility class for backwards compatibility
+ApplicationLifecycle = _ApplicationLifecycleCompat
+'''
+        return '\n'.join(imports) + class_def

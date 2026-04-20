@@ -324,29 +324,15 @@ MIT
         lines.append("# ==============================================")
         lines.append("# Model Configuration")
         lines.append("# ==============================================")
-        lines.append("MODEL_PROVIDER=openai")
+        cfg = metadata.model_config or {}
+        lines.append(f"MODEL_NAME={cfg.get('model', '')}")
+        lines.append(f"API_KEY={cfg.get('api_key', '')}")
+        lines.append(f"BASE_URL={cfg.get('base_url', '')}")
+        lines.append(f"MODEL_TEMPERATURE={cfg.get('temperature', 0.7)}")
+        lines.append(f"MODEL_MAX_TOKENS={cfg.get('max_tokens', 2000)}")
         lines.append("ENABLE_STREAMING=true")
         lines.append("ENABLE_THINKING=false")
         lines.append("PARALLEL_TOOL_CALLS=true")
-        lines.append("")
-
-        # Model API Keys and Base URL
-        if metadata.model_provider.value == "openai":
-            lines.append("OPENAI_API_KEY=your-api-key-here")
-            lines.append("OPENAI_MODEL=gpt-4")
-            lines.append("# OPENAI_BASE_URL=https://api.openai.com/v1  # Optional, for custom endpoints")
-        elif metadata.model_provider.value == "dashscope":
-            lines.append("DASHSCOPE_API_KEY=your-api-key-here")
-            lines.append("DASHSCOPE_MODEL=qwen-max")
-            lines.append("# DASHSCOPE_BASE_URL=  # Optional, for custom endpoints")
-        elif metadata.model_provider.value == "anthropic":
-            lines.append("ANTHROPIC_API_KEY=your-api-key-here")
-            lines.append("ANTHROPIC_MODEL=claude-3-5-sonnet-20241022")
-            lines.append("# ANTHROPIC_BASE_URL=https://api.anthropic.com  # Optional, for custom endpoints")
-        elif metadata.model_provider.value == "gemini":
-            lines.append("GEMINI_API_KEY=your-api-key-here")
-            lines.append("GEMINI_MODEL=gemini-pro")
-            lines.append("# GEMINI_BASE_URL=https://generativelanguage.googleapis.com  # Optional, for custom endpoints")
         lines.append("")
 
         # Memory Configuration

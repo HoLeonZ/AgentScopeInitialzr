@@ -81,6 +81,7 @@ def project_request_to_metadata(request: ProjectRequest) -> AgentScopeMetadata:
         # Agent configuration
         agent_type=AgentType(request.agent_type),
         model_provider=ModelProvider(request.model_provider),
+        model_config=request.model_config or {},
 
         # Tools
         tools=tool_configs,

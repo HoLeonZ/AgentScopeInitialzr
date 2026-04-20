@@ -129,6 +129,7 @@ class AgentScopeMetadata:
     enable_streaming: bool = True
     enable_thinking: bool = False
     parallel_tool_calls: bool = True
+    model_config: Dict[str, Any] = field(default_factory=dict)  # model, api_key, base_url, temperature, max_tokens
 
     # Author information
     author: str = ""
