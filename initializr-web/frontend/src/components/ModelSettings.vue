@@ -6,7 +6,7 @@
         <el-icon :size="28" color="#FFFFFF" class="header-icon"><Connection /></el-icon>
         <div class="header-content">
           <h2 class="header-title">模型配置</h2>
-          <p class="header-description">选择提供商并配置模型参数</p>
+          <p class="header-description">选择模型并配置参数</p>
         </div>
         <el-tag type="primary" size="large" effect="dark">核心配置</el-tag>
       </div>
@@ -22,24 +22,7 @@
             <span>模型选择</span>
           </div>
 
-          <el-form-item label="提供商" required>
-            <el-select
-              v-model="form.model_provider"
-              placeholder="选择提供商"
-              @change="onProviderChange"
-              style="width: 240px"
-            >
-              <el-option
-                v-for="provider in providers"
-                :key="provider.id"
-                :value="provider.id"
-                :label="provider.name"
-              />
-            </el-select>
-          </el-form-item>
-
-          <!-- 模型下拉：仅 NPU 提供商显示 -->
-          <el-form-item v-if="form.model_provider === 'npu'" label="模型名称" required>
+          <el-form-item label="模型名称" required>
             <el-select
               v-model="selectedModelId"
               placeholder="选择模型"
@@ -47,36 +30,16 @@
               @change="onModelChange"
               style="width: 320px"
             >
-              <el-optgroup label="LLM 模型">
-                <el-option
-                  v-for="model in npuModels.filter(m => !m.is_embedding)"
-                  :key="model.id"
-                  :value="model.id"
-                  :label="model.name"
-                />
-              </el-optgroup>
-              <el-optgroup label="Embedding 模型">
-                <el-option
-                  v-for="model in npuModels.filter(m => m.is_embedding)"
-                  :key="model.id"
-                  :value="model.id"
-                  :label="model.name"
-                />
-              </el-optgroup>
+              <el-option
+                v-for="model in llmModels"
+                :key="model.id"
+                :value="model.id"
+                :label="model.name"
+              />
             </el-select>
           </el-form-item>
 
-          <!-- 通用模型名称输入 -->
-          <el-form-item v-else label="模型名称">
-            <el-input
-              :model-value="form.model_config?.model"
-              placeholder="模型标识符"
-              style="width: 320px"
-              @input="updateModelConfig('model', $event)"
-            />
-          </el-form-item>
-
-          <el-form-item label="API密钥">
+          <el-form-item label="API密钥" required>
             <el-input
               :model-value="form.model_config?.api_key"
               type="password"
@@ -90,11 +53,11 @@
           <el-form-item label="API地址">
             <el-input
               :model-value="form.model_config?.base_url"
-              placeholder="例如: https://api.openai.com/v1（可选，用于自定义端点）"
+              placeholder="选择模型后自动填充（可手动修改）"
               style="width: 320px"
               @input="updateModelConfig('base_url', $event)"
             />
-            <div class="inline-hint">可选，用于自定义API端点或私有部署</div>
+            <div class="inline-hint">选择模型后自动填充，可根据需要手动修改</div>
           </el-form-item>
         </div>
 
@@ -156,18 +119,17 @@
 import { ref, computed, onMounted } from 'vue'
 import { useConfigStore } from '@/stores/config'
 import { api } from '@/api'
-import type { ModelProviderInfo, ModelInfo } from '@/types'
+import type { ModelInfo } from '@/types'
 import { Connection, Operation } from '@element-plus/icons-vue'
 
 const configStore = useConfigStore()
 const form = configStore.form
 
-const providers = ref<ModelProviderInfo[]>([])
+const allModels = ref<ModelInfo[]>([])
 const selectedModelId = ref<string>('')
 
-const npuModels = computed<ModelInfo[]>(() => {
-  const npuProvider = providers.value.find(p => p.id === 'npu')
-  return npuProvider?.models ?? []
+const llmModels = computed<ModelInfo[]>(() => {
+  return allModels.value.filter(m => !m.is_embedding)
 })
 
 const temperaturePresets = [
@@ -191,18 +153,10 @@ const setTemperature = (value: number) => {
   updateModelConfig('temperature', value)
 }
 
-// 切换提供商时清空模型选择
-const onProviderChange = (providerId: string) => {
-  selectedModelId.value = ''
-  updateModelConfig('model', undefined)
-  updateModelConfig('base_url', undefined)
-}
-
 // 选择模型时自动填充 API 地址
 const onModelChange = (modelId: string) => {
-  const model = npuModels.value.find(m => m.id === modelId)
+  const model = llmModels.value.find(m => m.id === modelId)
   if (model) {
-    // 提取 base_url（去掉末尾的 /v1/chat/completions 或 /v1/embeddings）
     const baseUrl = model.url.replace(/\/v1\/.*$/, '')
     updateModelConfig('model', model.name)
     updateModelConfig('base_url', baseUrl)
@@ -225,11 +179,16 @@ onMounted(async () => {
 
   try {
     const response = await api.getModels()
-    providers.value = response.providers
+    // 收集所有 LLM 模型（从所有 provider）
+    const llmList: ModelInfo[] = []
+    for (const provider of response.providers) {
+      llmList.push(...provider.models.filter((m: ModelInfo) => !m.is_embedding))
+    }
+    allModels.value = llmList
 
-    // 如果当前选中了 NPU 且已有模型名，尝试恢复选中状态
-    if (form.model_provider === 'npu' && form.model_config?.model) {
-      const matched = npuModels.value.find(m => m.name === form.model_config?.model)
+    // 如果已有模型名，尝试恢复选中状态
+    if (form.model_config?.model) {
+      const matched = llmModels.value.find(m => m.name === form.model_config?.model)
       if (matched) {
         selectedModelId.value = matched.id
       }
