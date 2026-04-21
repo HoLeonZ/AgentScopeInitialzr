@@ -13,6 +13,39 @@
         </div>
       </div>
 
+      <!-- 操作入口区 -->
+      <div class="section-block">
+        <el-row :gutter="16">
+          <el-col :span="16">
+            <el-card shadow="hover" class="action-card">
+              <div class="action-content">
+                <div class="action-text">
+                  <div class="action-title">立即开始创建项目</div>
+                  <div class="action-desc">配置参数 → 生成代码 → 下载使用，全程可视化操作</div>
+                </div>
+                <el-button type="primary" size="large" @click="startConfiguration">
+                  <el-icon><Upload /></el-icon>
+                  开始创建项目
+                </el-button>
+              </div>
+            </el-card>
+          </el-col>
+          <el-col :span="8">
+            <el-card shadow="hover" class="offline-card">
+              <div class="offline-content">
+                <div class="offline-icon">
+                  <el-icon :size="28" color="#E6A23C"><Download /></el-icon>
+                </div>
+                <div class="offline-text">
+                  <div class="offline-title">离线环境安装</div>
+                  <div class="offline-desc">运行 <code>setup-pip-source.sh</code>（Linux/Mac）或 <code>setup-pip-source.bat</code>（Windows）即可自动配置 pip 私服地址</div>
+                </div>
+              </div>
+            </el-card>
+          </el-col>
+        </el-row>
+      </div>
+
       <!-- 功能特性 -->
       <div class="section-block">
         <div class="section-header">
@@ -24,7 +57,7 @@
             <div class="feature-card">
               <el-icon :size="28" color="#409EFF"><Connection /></el-icon>
               <div class="feature-name">模型配置</div>
-              <div class="feature-desc">NPU / PPU / DashScope 等多种模型可选</div>
+              <div class="feature-desc">DeepSeek / Qwen / DashScope 等多种模型可选</div>
             </div>
           </el-col>
           <el-col :span="6">
@@ -57,14 +90,18 @@
           <el-icon :size="18" color="#409EFF"><Guide /></el-icon>
           <span>使用流程</span>
         </div>
-        <el-card shadow="hover" class="steps-card">
-          <el-steps :active="-1" align-center>
-            <el-step title="配置项目参数" description="在向导中选择 Agent 类型、模型、知识库、记忆等配置项" />
-            <el-step title="生成并下载代码" description="点击生成按钮，系统自动渲染模板并打包为 ZIP 文件供下载" />
-            <el-step title="配置运行环境" description="复制 .env.example 为 .env，填入模型 API Key 等信息" />
-            <el-step title="安装依赖并启动" description="执行 pip install 后，运行 python src/main.py 启动项目" />
-          </el-steps>
-        </el-card>
+        <div class="steps-row">
+          <div v-for="(step, i) in steps" :key="i" class="step-item">
+            <div class="step-num-circle">{{ i + 1 }}</div>
+            <div class="step-body">
+              <div class="step-title">{{ step.title }}</div>
+              <div class="step-desc">{{ step.desc }}</div>
+            </div>
+            <div v-if="i < 3" class="step-arrow">
+              <el-icon><ArrowRight /></el-icon>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- 开发指南 -->
@@ -93,7 +130,7 @@
 MODEL_NAME=deepseek-qwen-32b-NPU
 API_KEY=your-api-key-here
 BASE_URL=http://203.3.234.97:8082/v1
-KBASE_URL=https://kbase.example.com
+KBASE_URL=http://203.3.221.154:32734
                 </div>
               </div>
               <div class="guide-item">
@@ -185,30 +222,6 @@ twine upload dist/*</div>
         </el-row>
       </div>
 
-      <!-- 底部操作区 -->
-      <el-card shadow="hover" class="action-card">
-        <div class="action-content">
-          <div class="action-text">
-            <div class="action-title">立即开始创建项目</div>
-            <div class="action-desc">配置参数 → 生成代码 → 下载使用，全程可视化操作</div>
-          </div>
-          <el-button type="primary" size="large" @click="startConfiguration">
-            <el-icon><Upload /></el-icon>
-            开始创建项目
-          </el-button>
-        </div>
-      </el-card>
-
-      <!-- 离线提示 -->
-      <el-alert type="info" :closable="false" show-icon class="tips-alert">
-        <template #default>
-          <div class="tips-text">
-            <strong>离线环境提示：</strong>如果你处于离线环境或使用私有 PyPI 源，运行项目根目录下的
-            <code>setup-pip-source.sh</code>（Linux/Mac）或 <code>setup-pip-source.bat</code>（Windows）
-            脚本即可自动配置 pip 私服地址。
-          </div>
-        </template>
-      </el-alert>
     </div>
   </div>
 </template>
@@ -229,6 +242,8 @@ import {
   Edit,
   Coin,
   Upload,
+  Download,
+  ArrowRight,
 } from '@element-plus/icons-vue'
 
 const router = useRouter()
@@ -236,6 +251,13 @@ const router = useRouter()
 const startConfiguration = () => {
   router.push('/configure')
 }
+
+const steps = [
+  { title: '配置项目参数', desc: '在向导中选择 Agent 类型、模型、知识库、记忆等配置项' },
+  { title: '生成并下载代码', desc: '点击生成按钮，系统自动渲染模板并打包为 ZIP 文件供下载' },
+  { title: '配置运行环境', desc: '复制 .env.example 为 .env，填入模型 API Key 等信息' },
+  { title: '安装依赖并启动', desc: '执行 pip install 后，运行 python src/main.py 启动项目' },
+]
 </script>
 
 <style scoped>
@@ -345,6 +367,67 @@ const startConfiguration = () => {
   border-radius: 12px;
 }
 
+/* 横向步骤组 */
+.steps-row {
+  display: flex;
+  align-items: center;
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 24px 20px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  gap: 0;
+}
+
+.step-item {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  gap: 12px;
+}
+
+.step-num-circle {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  border-radius: 50%;
+  background: #409EFF;
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.35);
+}
+
+.step-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.step-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #303133;
+  line-height: 1.4;
+  margin-bottom: 4px;
+}
+
+.step-desc {
+  font-size: 12px;
+  color: #909399;
+  line-height: 1.5;
+  white-space: normal;
+}
+
+.step-arrow {
+  color: #409EFF;
+  font-size: 18px;
+  margin: 0 12px;
+  flex-shrink: 0;
+  opacity: 0.6;
+}
+
 :deep(.el-step__title) {
   font-size: 14px;
   font-weight: 600;
@@ -434,6 +517,54 @@ const startConfiguration = () => {
 .action-desc {
   font-size: 13px;
   color: #909399;
+}
+
+/* 离线环境卡片 */
+.offline-card {
+  border-radius: 12px;
+}
+
+.offline-content {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 4px 0;
+}
+
+.offline-icon {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  background: #fdf6ec;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.offline-text {
+  flex: 1;
+}
+
+.offline-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #303133;
+  margin-bottom: 4px;
+}
+
+.offline-desc {
+  font-size: 12px;
+  color: #909399;
+  line-height: 1.5;
+}
+
+.offline-desc code {
+  background: #f5f7fa;
+  padding: 1px 4px;
+  border-radius: 4px;
+  font-size: 11px;
+  color: #409EFF;
 }
 
 /* 提示框 */

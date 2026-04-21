@@ -394,7 +394,7 @@ MIT
                 lines.append("# ==============================================")
                 lines.append("# Knowledge Base Configuration (KBase)")
                 lines.append("# ==============================================")
-                lines.append(f"KBASE_URL={rag_config.get('kbase_url', 'https://kbase.example.com')}")
+                lines.append(f"KBASE_URL={rag_config.get('kbase_url', 'http://203.3.221.154:32734')}")
                 lines.append(f"RETRIEVAL_TOP_K={rag_config.get('top_k', 5)}")
                 lines.append(f"SIMILARITY_THRESHOLD={rag_config.get('similarity_threshold', 0.7)}")
                 lines.append("")

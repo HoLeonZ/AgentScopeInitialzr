@@ -103,7 +103,7 @@
             <el-form-item label="服务地址">
               <el-input
                 v-model="knowledgeConfig.kbase_url"
-                placeholder="https://kbase.example.com"
+                placeholder="http://203.3.221.154:32734"
                 @input="updateKnowledgeConfig"
               />
               <span class="hint">KBase服务地址</span>
@@ -247,7 +247,7 @@ const localForm = reactive({
 const knowledgeConfig = reactive({
   type: form.value.knowledge_config?.type || 'kbase',
   // KBase配置
-  kbase_url: form.value.knowledge_config?.kbase_url || '',
+  kbase_url: form.value.knowledge_config?.kbase_url || 'http://203.3.221.154:32734',
   // Qdrant配置
   qdrant_host: form.value.knowledge_config?.qdrant_host || 'localhost',
   qdrant_port: form.value.knowledge_config?.qdrant_port || 6333,
