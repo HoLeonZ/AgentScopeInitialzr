@@ -1924,7 +1924,7 @@ python -m {metadata.package_name}.main "$@"
 #
 # Usage:
 #   ./scripts/setup-pip-source.sh              # Configure global pip (default)
-#   ./scripts/setup-pip-source.sh --venv      # Configure venv pip (venv/pip.conf)
+#   ./scripts/setup-pip-source.sh --venv       # Configure venv pip (venv/pip.conf)
 #
 # The actual source of truth is pip-sources.ini - edit that file to change
 # your private PyPI settings, then re-run this script to regenerate pip.conf.
@@ -1935,40 +1935,21 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 INI_FILE="$PROJECT_DIR/pip-sources.ini"
 
-# Resolve output pip.conf location
 MODE="global"
 for arg in "$@"; do
     case $arg in
         --venv) MODE="venv" ;;
         --help|-h)
             echo "Usage: $0 [--venv]"
-            echo "  (no flag)  Configure global pip (${HOME}/.config/pip/pip.conf)"
+            echo "  (no flag)  Configure global pip (pip's default config location)"
             echo "  --venv     Configure venv pip (venv/pip.conf)"
             exit 0
             ;;
     esac
 done
 
-if [ "$MODE" = "venv" ]; then
-    if [ ! -d "$PROJECT_DIR/venv" ]; then
-        echo "❌ Error: venv not found at $PROJECT_DIR/venv"
-        exit 1
-    fi
-    PIP_CONF="$PROJECT_DIR/venv/pip.conf"
-else
-    # Cross-platform global pip config dir
-    if [ -n "$XDG_CONFIG_HOME" ]; then
-        PIP_DIR="$XDG_CONFIG_HOME/pip"
-    elif [ "$(uname)" = "Darwin" ]; then
-        PIP_DIR="$HOME/Library/Application Support/pip"
-    else
-        PIP_DIR="$HOME/.config/pip"
-    fi
-    PIP_CONF="$PIP_DIR/pip.conf"
-fi
-
 # Parse pip-sources.ini
-INDEX_URL=$(sed -n 's/^index_url *= *//p' "$INI_FILE" | tr -d ' "'  )
+INDEX_URL=$(sed -n 's/^index_url *= *//p' "$INI_FILE" | tr -d ' "')
 EXTRA_INDEX_URL=$(sed -n 's/^extra_index_url *= *//p' "$INI_FILE" | tr -d ' "')
 TRUSTED_HOST=$(sed -n 's/^trusted_host *= *//p' "$INI_FILE" | tr -d ' "')
 
@@ -1978,32 +1959,120 @@ if [ -z "$INDEX_URL" ]; then
     exit 0
 fi
 
-# Auto-detect trusted host from index_url if not set
+# Auto-detect trusted host from index_url
 if [ -z "$TRUSTED_HOST" ]; then
     HOST_WITH_AUTH=$(echo "$INDEX_URL" | sed -E 's|^https?://||' | cut -d'/' -f1)
     TRUSTED_HOST=$(echo "$HOST_WITH_AUTH" | cut -d'@' -f2)
 fi
 
-# Ensure trusted hosts include any hosts from extra_index_url too
+# Add extra_index_url host to trusted hosts
 if [ -n "$EXTRA_INDEX_URL" ]; then
     EXTRA_HOST=$(echo "$EXTRA_INDEX_URL" | sed -E 's|^https?://||' | cut -d'/' -f1 | cut -d'@' -f2)
-    # Deduplicate
     if [ -n "$EXTRA_HOST" ] && [ "$EXTRA_HOST" != "$TRUSTED_HOST" ]; then
         TRUSTED_HOST="$TRUSTED_HOST,$EXTRA_HOST"
     fi
 fi
 
-mkdir -p "$(dirname "$PIP_CONF")"
+# Detect all pip config file paths that pip actually uses
+# Use pip config debug to find the files, then deduplicate
+# On Windows (Git Bash/MSYS2) pip may use %APPDATA%/pip/pip.ini
+get_pip_config_paths() {
+    local paths=""
+    # Try pip config debug to find paths (works on all platforms)
+    if command -v pip &>/dev/null; then
+        local debug_output
+        debug_output=$(pip config debug 2>/dev/null || true)
+        # Extract file paths that actually exist (format: "  /path/to/pip.conf, exists: True")
+        local existing_paths
+        existing_paths=$(echo "$debug_output" \
+            | grep 'exists: True' \
+            | grep -oE '/[^ ,]+[.]conf' \
+            | grep pip \
+            | grep -v '^$' || true)
+        if [ -n "$existing_paths" ]; then
+            paths="$existing_paths"
+        fi
+    fi
+    # Normalize Windows paths to Git Bash Unix paths (e.g. C:\folder -> /c/folder)
+    if echo "$paths" | grep -qE '^[A-Za-z]:'; then
+        paths=$(echo "$paths" | while read -r p; do
+            # Convert C: to /c, D: to /d, etc.
+            first=$(echo "$p" | cut -c1 | tr '[:upper:]' '[:lower:]')
+            rest=$(echo "$p" | cut -c3- | tr '\\' '/')
+            echo "/$first$rest"
+        done)
+    fi
 
-{
-    echo "[global]"
-    echo "index-url = $INDEX_URL"
-    [ -n "$EXTRA_INDEX_URL" ] && echo "extra-index-url = $EXTRA_INDEX_URL"
-    echo "trusted-host = $TRUSTED_HOST"
-} > "$PIP_CONF"
+    # Fallback: probe common locations
+    # 1. Linux/macOS
+    if [ -z "$paths" ]; then
+        local xdg="${XDG_CONFIG_HOME:-$HOME/.config}"
+        [ -d "$xdg/pip" ] && paths="$xdg/pip/pip.conf"
+        # macOS
+        [ -d "$HOME/Library/Application Support/pip" ] && paths="$paths"$'\n'"$HOME/Library/Application Support/pip/pip.conf"
+    fi
 
-echo "✅ pip.conf written to: $PIP_CONF"
-cat "$PIP_CONF"
+    echo "$paths"
+}
+
+# Build pip.conf content
+write_pip_conf() {
+    local file="$1"
+    local dir
+    dir=$(dirname "$file")
+    mkdir -p "$dir"
+    {
+        echo "[global]"
+        echo "index-url = $INDEX_URL"
+        [ -n "$EXTRA_INDEX_URL" ] && echo "extra-index-url = $EXTRA_INDEX_URL"
+        echo "trusted-host = $TRUSTED_HOST"
+    } > "$file"
+}
+
+if [ "$MODE" = "venv" ]; then
+    if [ ! -d "$PROJECT_DIR/venv" ]; then
+        echo "❌ Error: venv not found at $PROJECT_DIR/venv"
+        exit 1
+    fi
+    PIP_CONF="$PROJECT_DIR/venv/pip.conf"
+    write_pip_conf "$PIP_CONF"
+    echo "✅ pip.conf written to: $PIP_CONF"
+else
+    # Write to ALL pip config locations found
+    local all_paths
+    all_paths=$(get_pip_config_paths)
+    if [ -z "$all_paths" ]; then
+        # Ultimate fallback: common Unix-style pip config locations
+        local xdg="${XDG_CONFIG_HOME:-$HOME/.config}"
+        all_paths="$HOME/.config/pip/pip.conf"$'\n'"$HOME/Library/Application Support/pip/pip.conf"
+        # Windows Git Bash: also probe pip.ini alongside pip.conf
+        if [ -d "$APPDATA" ] || [ -n "$APPDATA" ]; then
+            local appdata_win="${APPDATA:-${LOCALAPPDATA:-}}"
+            [ -n "$appdata_win" ] && all_paths="$all_paths"$'\n'"$appdata_win/pip/pip.conf"$'\n'"$appdata_win/pip/pip.ini"
+        fi
+    fi
+
+    # Deduplicate and write
+    local written=0
+    local IFS=$'\n'
+    for p in $all_paths; do
+        [ -z "$p" ] && continue
+        write_pip_conf "$p"
+        echo "✅ pip.conf written to: $p"
+        written=1
+    done
+
+    if [ "$written" -eq 0 ]; then
+        echo "❌ Could not find any pip config file location."
+        echo "   Please set PIP_CONFIG_FILE env var and re-run."
+        exit 1
+    fi
+fi
+
+# Verify
+echo ""
+echo "📋 Verifying pip config..."
+pip config list
 '''
         (project_path / "scripts" / "setup-pip-source.sh").write_text(pip_source_script)
 

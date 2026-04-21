@@ -5,6 +5,7 @@
 
 # Stage 1: Builder - download and bundle all dependencies
 FROM python:3.11-slim AS builder
+ARG CACHEBUST=1
 
 WORKDIR /app
 
@@ -49,7 +50,7 @@ COPY initializr-web/initializr_web ./initializr-web/initializr_web
 
 # Build frontend
 WORKDIR /app/initializr-web/frontend
-RUN npm run build
+RUN rm -rf node_modules/.vite && CACHEBUST=$CACHEBUST npm run build
 
 # Verify build output
 RUN ls -la /app/initializr-web/initializr_web/static/
