@@ -356,8 +356,10 @@ def get_short_term_memory():
         with _short_term_lock:
             if _short_term_memory_instance is None:
                 from agentscope.memory import RedisMemory
+                key_prefix = os.getenv("REDIS_KEY_PREFIX", "agent:")
                 _short_term_memory_instance = RedisMemory(
                     connection_pool=_get_redis_short_term_pool(),
+                    key_prefix=key_prefix,
                 )
     return _short_term_memory_instance
 ''')
@@ -626,34 +628,18 @@ _kbase_client_lock = threading.Lock()
 
 
 class KBaseRetriever:
-    """KBase knowledge base retriever using POST /open/api/facade/openSearchFacadeSearch."""
+    """KBase knowledge base retriever using POST."""
 
     def __init__(
         self,
         base_url: str,
         top_k: int = 10,
-        embedding: bool = True,
-        is_full_text_search: bool = True,
-        is_question_rewrite: bool = False,
-        chunk_type: str = "all",
-        rerank: str = "",
-        rerank_threshold: float = 0.0,
+        library_id: str = "",
     ):
         self.base_url = base_url.rstrip("/")
-        self.search_url = urljoin(self.base_url + "/", "open/api/facade/openSearchFacadeSearch")
+        self.search_url = self.base_url
         self.default_top_k = top_k
-        self.default_search_config = {{
-            "isQuestionRewrite": is_question_rewrite,
-            "rerankThreshold": rerank_threshold,
-            "searchResultUpLimit": top_k,
-            "isFullTextSaerch": is_full_text_search,
-            "isTimeSlot": False,
-            "embedding": embedding,
-            "embeddingQDThreshold": 0.0,
-            "embeddingQQThreshold": 0.0,
-            "chunkType": chunk_type,
-            "rerank": rerank,
-        }}
+        self.library_id = library_id
 
     def retrieve(self, query: str, **kwargs) -> list:
         """Search knowledge base for relevant documents.
@@ -662,33 +648,28 @@ class KBaseRetriever:
             query: Search query string
             **kwargs: Additional parameters:
                 - top_k: number of results to return
-                - knowledge_library_ids: list of knowledge base IDs to search
-                - doc_ids: list of document IDs to search
+                - library_id: knowledge base library ID
 
         Returns:
             List of retrieved documents
         """
         top_k = kwargs.get("top_k", self.default_top_k)
-        knowledge_ids = kwargs.get("knowledge_library_ids", [])
-        doc_ids = kwargs.get("doc_ids", [])
+        library_id = kwargs.get("library_id", self.library_id)
 
-        search_config = dict(self.default_search_config)
-        search_config["searchResultUpLimit"] = top_k
-
-        payload = {{
-            "query": query,
-            "searchConfigInfo": search_config,
-        }}
-        if knowledge_ids:
-            payload["knowledgeLibraryIdList"] = knowledge_ids
-        if doc_ids:
-            payload["docIdList"] = doc_ids
+        payload = {
+            "sent": query,
+            "library_id": library_id,
+            "topk": top_k,
+        }
 
         with httpx.Client(timeout=30.0) as client:
             response = client.post(self.search_url, json=payload)
             response.raise_for_status()
             result = response.json()
-            return result.get("data", [])
+            # 响应结构: rag_prompt (str), rag_source (jsonobject)
+            rag_prompt = result.get("rag_prompt", "")
+            rag_source = result.get("rag_source", dict())
+            return [{"prompt": rag_prompt, "source": rag_source, "score": 1.0}]
 
     def add_documents(self, documents: list, **kwargs) -> None:
         """Add documents to knowledge base (not supported for KBase)."""
@@ -704,6 +685,7 @@ def get_vector_store() -> "KBaseRetriever":
                 _kbase_client_instance = KBaseRetriever(
                     base_url=os.getenv("KBASE_URL", "{kbase_url}"),
                     top_k={chunk_size},
+                    library_id=os.getenv("KBASE_LIBRARY_ID", ""),
                 )
     return _kbase_client_instance
 ''')

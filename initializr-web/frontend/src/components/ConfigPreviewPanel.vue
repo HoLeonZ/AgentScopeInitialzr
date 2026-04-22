@@ -355,6 +355,17 @@ const envPreview = computed(() => {
     lines.push(`ENABLE_MEMORY=true`)
     if (form.value.short_term_memory) {
       lines.push(`SHORT_TERM_MEMORY=${form.value.short_term_memory}`)
+      // Redis specific config
+      if (form.value.short_term_memory === 'redis') {
+        const redisConfig = form.value.redis_config || {}
+        lines.push(`REDIS_HOST=${redisConfig.redis_host || '203.1.173.220'}`)
+        lines.push(`REDIS_PORT=${redisConfig.redis_port || 6379}`)
+        lines.push(`REDIS_DB=${redisConfig.redis_db || 0}`)
+        lines.push(`REDIS_KEY_PREFIX=${redisConfig.redis_key_prefix || 'agent:'}`)
+        if (redisConfig.redis_password) {
+          lines.push(`REDIS_PASSWORD=${redisConfig.redis_password}`)
+        }
+      }
     }
     if (form.value.long_term_memory) {
       lines.push(`LONG_TERM_MEMORY=${form.value.long_term_memory}`)
@@ -369,8 +380,11 @@ const envPreview = computed(() => {
     lines.push('# ==============================================')
     lines.push(`ENABLE_KNOWLEDGE=true`)
     lines.push(`KNOWLEDGE_TYPE=${form.value.knowledge_config.type || 'qdrant'}`)
-    if (form.value.knowledge_config.type === 'kbase' && form.value.knowledge_config.kbase_url) {
-      lines.push(`KBASE_URL=${form.value.knowledge_config.kbase_url}`)
+    if (form.value.knowledge_config.type === 'kbase') {
+      lines.push(`KBASE_URL=${form.value.knowledge_config.kbase_url || 'http://203.4.129.4:6201/http_rag_kbase'}`)
+      if (form.value.knowledge_config.kbase_library_id) {
+        lines.push(`KBASE_LIBRARY_ID=${form.value.knowledge_config.kbase_library_id}`)
+      }
     } else if (form.value.knowledge_config.type === 'qdrant') {
       lines.push(`QDRANT_HOST=${form.value.knowledge_config.qdrant_host || 'localhost'}`)
       lines.push(`QDRANT_PORT=${form.value.knowledge_config.qdrant_port || 6333}`)

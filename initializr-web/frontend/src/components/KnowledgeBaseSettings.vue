@@ -103,10 +103,19 @@
             <el-form-item label="服务地址">
               <el-input
                 v-model="knowledgeConfig.kbase_url"
-                placeholder="http://203.3.221.154:32734"
+                placeholder="http://203.4.129.4:6201/http_rag_kbase"
                 @input="updateKnowledgeConfig"
               />
               <span class="hint">KBase服务地址</span>
+            </el-form-item>
+
+            <el-form-item label="知识库 ID">
+              <el-input
+                v-model="knowledgeConfig.kbase_library_id"
+                placeholder="library_id"
+                @input="updateKnowledgeConfig"
+              />
+              <span class="hint">知识库的唯一标识符</span>
             </el-form-item>
           </template>
 
@@ -247,7 +256,8 @@ const localForm = reactive({
 const knowledgeConfig = reactive({
   type: form.value.knowledge_config?.type || 'kbase',
   // KBase配置
-  kbase_url: form.value.knowledge_config?.kbase_url || 'http://203.3.221.154:32734',
+  kbase_url: form.value.knowledge_config?.kbase_url || 'http://203.4.129.4:6201/http_rag_kbase',
+  kbase_library_id: form.value.knowledge_config?.kbase_library_id || '',
   // Qdrant配置
   qdrant_host: form.value.knowledge_config?.qdrant_host || 'localhost',
   qdrant_port: form.value.knowledge_config?.qdrant_port || 6333,

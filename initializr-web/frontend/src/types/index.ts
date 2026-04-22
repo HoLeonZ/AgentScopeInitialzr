@@ -17,6 +17,7 @@ export interface ProjectRequest {
   enable_memory?: boolean
   short_term_memory?: string | null
   long_term_memory?: string | null
+  redis_config?: Record<string, any> | null
   enable_knowledge?: boolean
   knowledge_config?: Record<string, any> | null
   enable_tools?: boolean

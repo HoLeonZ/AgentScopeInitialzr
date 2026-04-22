@@ -352,10 +352,11 @@ MIT
                 if metadata.rag_config and metadata.rag_config.get('redis_url'):
                     lines.append(f"REDIS_URL={metadata.rag_config.get('redis_url')}")
                 else:
-                    lines.append("REDIS_HOST=localhost")
+                    lines.append("REDIS_HOST=203.1.173.220")
                     lines.append("REDIS_PORT=6379")
                     lines.append("REDIS_DB=0")
-                    lines.append("# REDIS_PASSWORD=your-redis-password  # Optional")
+                    lines.append("REDIS_KEY_PREFIX=agent:")
+                    lines.append("REDIS_PASSWORD=Red@2023")
             elif metadata.short_term_memory == 'oceanbase':
                 lines.append("# Short-term Memory: OceanBase Configuration")
                 lines.append("OCEANBASE_CONNECTION_STRING=postgresql://user:password@localhost:2881/tenant")
@@ -378,10 +379,10 @@ MIT
                 lines.append("OCEANBASE_TABLE_NAME=agent_memory")
             elif metadata.long_term_memory == "redis":
                 lines.append("# Long-term Memory: Redis Configuration")
-                lines.append("REDIS_HOST=localhost")
+                lines.append("REDIS_HOST=203.1.173.220")
                 lines.append("REDIS_PORT=6379")
                 lines.append("REDIS_DB=0")
-                lines.append("# REDIS_PASSWORD=your-redis-password  # Optional")
+                lines.append("REDIS_PASSWORD=Red@2023")
         lines.append("")
 
         # RAG Configuration
@@ -394,9 +395,9 @@ MIT
                 lines.append("# ==============================================")
                 lines.append("# Knowledge Base Configuration (KBase)")
                 lines.append("# ==============================================")
-                lines.append(f"KBASE_URL={rag_config.get('kbase_url', 'http://203.3.221.154:32734')}")
+                lines.append(f"KBASE_URL={rag_config.get('kbase_url', 'http://203.4.129.4:6201/http_rag_kbase')}")
+                lines.append(f"KBASE_LIBRARY_ID={rag_config.get('library_id', '')}")
                 lines.append(f"RETRIEVAL_TOP_K={rag_config.get('top_k', 5)}")
-                lines.append(f"SIMILARITY_THRESHOLD={rag_config.get('similarity_threshold', 0.7)}")
                 lines.append("")
             elif store_type == "qdrant":
                 lines.append("# ==============================================")
@@ -2039,22 +2040,21 @@ if [ "$MODE" = "venv" ]; then
     echo "✅ pip.conf written to: $PIP_CONF"
 else
     # Write to ALL pip config locations found
-    local all_paths
     all_paths=$(get_pip_config_paths)
     if [ -z "$all_paths" ]; then
         # Ultimate fallback: common Unix-style pip config locations
-        local xdg="${XDG_CONFIG_HOME:-$HOME/.config}"
+        xdg="${XDG_CONFIG_HOME:-$HOME/.config}"
         all_paths="$HOME/.config/pip/pip.conf"$'\n'"$HOME/Library/Application Support/pip/pip.conf"
         # Windows Git Bash: also probe pip.ini alongside pip.conf
         if [ -d "$APPDATA" ] || [ -n "$APPDATA" ]; then
-            local appdata_win="${APPDATA:-${LOCALAPPDATA:-}}"
+            appdata_win="${APPDATA:-${LOCALAPPDATA:-}}"
             [ -n "$appdata_win" ] && all_paths="$all_paths"$'\n'"$appdata_win/pip/pip.conf"$'\n'"$appdata_win/pip/pip.ini"
         fi
     fi
 
     # Deduplicate and write
-    local written=0
-    local IFS=$'\n'
+    written=0
+    IFS=$'\n'
     for p in $all_paths; do
         [ -z "$p" ] && continue
         write_pip_conf "$p"
@@ -2079,6 +2079,140 @@ pip config list
         import stat
         pip_source_path = project_path / "scripts" / "setup-pip-source.sh"
         pip_source_path.chmod(pip_source_path.stat().st_mode | stat.S_IEXEC)
+
+        # Generate Windows batch script for pip source configuration
+        pip_source_bat = '''@echo off
+REM Generate pip.ini from pip-sources.ini
+REM
+REM Usage:
+REM   setup-pip-source.bat              Configure global pip (default)
+REM   setup-pip-source.bat --venv       Configure venv pip (venv/pip.ini)
+REM
+REM The actual source of truth is pip-sources.ini - edit that file to change
+REM your private PyPI settings, then re-run this script to regenerate pip.ini.
+
+setlocal enabledelayedexpansion
+
+set "SCRIPT_DIR=%~dp0"
+set "PROJECT_DIR=%SCRIPT_DIR%.."
+set "INI_FILE=%PROJECT_DIR%\\pip-sources.ini"
+set "MODE=global"
+
+REM Parse command line arguments
+for %%a in (%*) do (
+    if /i "%%a"=="--venv" set "MODE=venv"
+    if /i "%%a"=="--help" goto :usage
+    if /i "%%a"=="-h" goto :usage
+)
+
+goto :parse_ini
+
+:usage
+echo Usage: %0 [--venv]
+echo   (no flag)  Configure global pip (pip's default config location)
+echo   --venv     Configure venv pip (venv/pip.ini)
+exit /b 0
+
+:parse_ini
+REM Parse pip-sources.ini
+set "INDEX_URL="
+set "EXTRA_INDEX_URL="
+set "TRUSTED_HOST="
+
+for /f "usebackq tokens=1,* delims==" %%a in ("%INI_FILE%") do (
+    set "key=%%a"
+    set "val=%%b"
+    REM Remove surrounding spaces and quotes
+    for /f "tokens=* delims= " %%i in ("!val!") do set "val=%%i"
+    set "val=!val: "=!"
+    set "val=!val:" =!"
+
+    if /i "!key!"=="index_url" set "INDEX_URL=!val!"
+    if /i "!key!"=="extra_index_url" set "EXTRA_INDEX_URL=!val!"
+    if /i "!key!"=="trusted_host" set "TRUSTED_HOST=!val!"
+)
+
+if not defined INDEX_URL (
+    echo [WARNING] index_url is empty in pip-sources.ini - skipping pip configuration.
+    echo    Edit pip-sources.ini and re-run this script to configure.
+    exit /b 0
+)
+
+REM Auto-detect trusted host from index_url
+if not defined TRUSTED_HOST (
+    for /f "tokens=2 delims=//" %%a in ("!INDEX_URL!") do (
+        for /f "tokens=1 delims=/ " %%b in ("%%a") do (
+            REM Remove credentials if present (user:pass@host)
+            for /f "tokens=2 delims=@" %%c in ("%%b") do (
+                set "TRUSTED_HOST=%%c"
+            )
+            if not defined TRUSTED_HOST set "TRUSTED_HOST=%%b"
+        )
+    )
+)
+
+REM Add extra_index_url host to trusted hosts
+if defined EXTRA_INDEX_URL (
+    set "EXTRA_HOST="
+    for /f "tokens=2 delims=//" %%a in ("!EXTRA_INDEX_URL!") do (
+        for /f "tokens=1 delims=/ " %%b in ("%%a") do (
+            for /f "tokens=2 delims=@" %%c in ("%%b") do (
+                set "EXTRA_HOST=%%c"
+            )
+            if not defined EXTRA_HOST set "EXTRA_HOST=%%b"
+        )
+    )
+    if defined EXTRA_HOST (
+        echo !TRUSTED_HOST! | findstr /i /c:"!EXTRA_HOST!" >nul
+        if !errorlevel! neq 0 (
+            set "TRUSTED_HOST=!TRUSTED_HOST!,!EXTRA_HOST!"
+        )
+    )
+)
+
+goto :write_config
+
+:write_config
+if "%MODE%"=="venv" (
+    if not exist "%PROJECT_DIR%\\venv" (
+        echo [ERROR] venv not found at %PROJECT_DIR%\\venv
+        exit /b 1
+    )
+    set "PIP_INI=%PROJECT_DIR%\\venv\\pip.ini"
+    call :write_pip_ini
+    echo [OK] pip.ini written to: !PIP_INI!
+) else (
+    REM Write to user-level pip config location
+    set "PIP_CONFIG_DIR=%APPDATA%\\pip"
+    set "PIP_INI=%PIP_CONFIG_DIR%\\pip.ini"
+
+    if not exist "!PIP_CONFIG_DIR!" mkdir "!PIP_CONFIG_DIR!"
+    call :write_pip_ini
+    echo [OK] pip.ini written to: !PIP_INI!
+
+    REM Also try to write to virtualenv pip if using venv
+    if exist "%PROJECT_DIR%\\venv" (
+        set "VENV_PIP=%PROJECT_DIR%\\venv\\pip.ini"
+        call :write_pip_ini
+        echo [OK] pip.ini written to: !VENV_PIP!
+    )
+)
+
+echo.
+echo [INFO] Verifying pip config...
+pip config list
+exit /b 0
+
+:write_pip_ini
+(
+    echo [global]
+    echo index-url = !INDEX_URL!
+    if defined EXTRA_INDEX_URL echo extra-index-url = !EXTRA_INDEX_URL!
+    echo trusted-host = !TRUSTED_HOST!
+) > "%PIP_INI%"
+exit /b 0
+'''
+        (project_path / "scripts" / "setup-pip-source.bat").write_text(pip_source_bat)
 
     def _generate_docs(self, project_path: Path, metadata: AgentScopeMetadata):
         """Generate documentation files."""

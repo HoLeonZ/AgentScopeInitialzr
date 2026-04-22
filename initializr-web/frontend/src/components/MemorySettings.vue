@@ -100,15 +100,12 @@
                   />
                 </el-form-item>
 
-                <el-form-item label="数据库">
-                  <el-input-number
-                    v-model="redisDb"
-                    :min="0"
-                    :max="15"
-                    placeholder="0"
-                    controls-position="right"
-                    style="width: 200px"
+                <el-form-item label="Key 前缀" required>
+                  <el-input
+                    v-model="redisKeyPrefix"
+                    placeholder="agent:"
                   />
+                  <span class="hint">Redis key 的前缀，不可为空</span>
                 </el-form-item>
 
                 <el-form-item label="密码">
@@ -242,7 +239,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useConfigStore } from '@/stores/config'
 import { api } from '@/api'
 import { Memo, FolderOpened } from '@element-plus/icons-vue'
@@ -268,11 +265,29 @@ const oceanbaseShortTermTableName = ref('agent_conversation')
 
 // Redis 配置
 const redisConnectionMode = ref('manual')
-const redisHost = ref('localhost')
+const redisHost = ref('203.1.173.220')
 const redisPort = ref(6379)
-const redisDb = ref(0)
-const redisPassword = ref('')
+const redisKeyPrefix = ref('agent:')
+const redisPassword = ref('Red@2023')
 const redisUrl = ref('')
+
+const validateRedisKeyPrefix = () => {
+  if (!redisKeyPrefix.value || redisKeyPrefix.value.trim() === '') {
+    redisKeyPrefix.value = 'agent:'
+  }
+}
+
+// 同步 Redis 配置到 store
+const syncRedisConfig = () => {
+  configStore.setField('redis_config', {
+    redis_host: redisHost.value,
+    redis_port: redisPort.value,
+    redis_db: 0,
+    redis_key_prefix: redisKeyPrefix.value,
+    redis_password: redisPassword.value,
+    redis_url: redisUrl.value,
+  })
+}
 
 const updateField = (field: string, value: any) => {
   configStore.setField(field as any, value)
@@ -295,6 +310,18 @@ const formatMemoryName = (type: string) => {
 }
 
 onMounted(async () => {
+  // 确保 Redis key 前缀不为空
+  validateRedisKeyPrefix()
+  // 加载已保存的 Redis 配置
+  if (form.redis_config) {
+    redisHost.value = form.redis_config.redis_host || '203.1.173.220'
+    redisPort.value = form.redis_config.redis_port || 6379
+    redisKeyPrefix.value = form.redis_config.redis_key_prefix || 'agent:'
+    redisPassword.value = form.redis_config.redis_password || 'Red@2023'
+    redisUrl.value = form.redis_config.redis_url || ''
+  }
+  // 同步初始配置
+  syncRedisConfig()
   try {
     const response = await api.getExtensions()
     extensions.value = response
