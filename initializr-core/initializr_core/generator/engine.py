@@ -242,9 +242,14 @@ If you use a private PyPI server, edit `pip-sources.ini` first, then run the set
 # 1. Edit pip-sources.ini - fill in your private PyPI URLs
 vim pip-sources.ini
 
-# 2. Generate pip.conf from pip-sources.ini
-./scripts/setup-pip-source.sh              # Global pip (~/.config/pip/pip.conf)
-./scripts/setup-pip-source.sh --venv       # venv pip (venv/pip.conf)
+# 2. Run the setup script to configure pip
+# Linux/macOS/Git Bash:
+./scripts/setup-pip-source.sh              # Global pip
+./scripts/setup-pip-source.sh --venv       # venv pip
+
+# Windows CMD/PowerShell:
+scripts\setup-pip-source.bat                # Global pip
+scripts\setup-pip-source.bat --venv         # venv pip
 
 # 3. Re-run install with private index
 pip install -r requirements.txt
@@ -631,10 +636,12 @@ Thumbs.db
 # =============================================================================
 #
 # Edit this file to configure your private PyPI server(s).
-# Then run: ./scripts/setup-pip-source.sh
+# Then run the setup script:
+#   Linux/macOS/Git Bash: ./scripts/setup-pip-source.sh
+#   Windows CMD/PowerShell: scripts\\setup-pip-source.bat
 #
-# This file is the source of truth - do NOT edit pip.conf directly,
-# as it will be overwritten by setup-pip-source.sh.
+# The script uses 'pip config set' to configure pip, which is portable
+# and works across all platforms without manually editing config files.
 #
 # =============================================================================
 
@@ -647,8 +654,8 @@ index_url = http://203.3.234.97:8082/repository/pypi/simple
 extra_index_url = http://mypypi.ai.test.com:4000/simple
 
 [trusted]
-# Comma-separated list of trusted hosts
-trusted_host = 203.3.234.97,mypypi.ai.test.com
+# Space-separated list of trusted hosts (no commas needed)
+trusted_host = 203.3.234.97 mypypi.ai.test.com
 '''
 
     def _generate_package_init(self, metadata: AgentScopeMetadata) -> str:
@@ -1806,7 +1813,9 @@ echo ""
 echo "🔧 Pip source configuration (optional):"
 echo "   If you use a private PyPI server:"
 echo "   1. Edit pip-sources.ini to fill in your private PyPI URLs"
-echo "   2. Run: ./scripts/setup-pip-source.sh"
+echo "   2. Run:"
+echo "      Linux/macOS/Git Bash: ./scripts/setup-pip-source.sh"
+echo "      Windows CMD/PowerShell: scripts\\setup-pip-source.bat"
 echo "   3. Then re-run: pip install -r requirements.txt"
 
 # Create .env file from example
@@ -1952,7 +1961,8 @@ done
 # Parse pip-sources.ini
 INDEX_URL=$(sed -n 's/^index_url *= *//p' "$INI_FILE" | tr -d ' "')
 EXTRA_INDEX_URL=$(sed -n 's/^extra_index_url *= *//p' "$INI_FILE" | tr -d ' "')
-TRUSTED_HOST=$(sed -n 's/^trusted_host *= *//p' "$INI_FILE" | tr -d ' "')
+# Read trusted_host and convert commas to spaces (pip uses space as separator)
+TRUSTED_HOST=$(sed -n 's/^trusted_host *= *//p' "$INI_FILE" | tr -d ' "' | tr ',' ' ')
 
 if [ -z "$INDEX_URL" ]; then
     echo "⚠️  index_url is empty in pip-sources.ini - skipping pip configuration."
@@ -1960,113 +1970,72 @@ if [ -z "$INDEX_URL" ]; then
     exit 0
 fi
 
-# Auto-detect trusted host from index_url
+# Auto-detect trusted host from index_url (strip port numbers)
 if [ -z "$TRUSTED_HOST" ]; then
     HOST_WITH_AUTH=$(echo "$INDEX_URL" | sed -E 's|^https?://||' | cut -d'/' -f1)
-    TRUSTED_HOST=$(echo "$HOST_WITH_AUTH" | cut -d'@' -f2)
+    HOST=$(echo "$HOST_WITH_AUTH" | cut -d'@' -f2)
+    # Strip port number (e.g., :8082 -> empty)
+    TRUSTED_HOST=$(echo "$HOST" | sed 's/:.*//')
 fi
 
-# Add extra_index_url host to trusted hosts
+# Add extra_index_url host to trusted hosts (strip port numbers)
 if [ -n "$EXTRA_INDEX_URL" ]; then
     EXTRA_HOST=$(echo "$EXTRA_INDEX_URL" | sed -E 's|^https?://||' | cut -d'/' -f1 | cut -d'@' -f2)
-    if [ -n "$EXTRA_HOST" ] && [ "$EXTRA_HOST" != "$TRUSTED_HOST" ]; then
-        TRUSTED_HOST="$TRUSTED_HOST,$EXTRA_HOST"
+    # Strip port number
+    EXTRA_HOST=$(echo "$EXTRA_HOST" | sed 's/:.*//')
+    # Check if already in trusted hosts (with or without port)
+    if [ -n "$EXTRA_HOST" ]; then
+        # Remove existing entries with ports for this host
+        TRUSTED_HOST=$(echo "$TRUSTED_HOST" | sed "s/ *$EXTRA_HOST:*[0-9]*//g" | sed 's/^ *//;s/ *$//')
+        # Check if already present
+        if ! echo "$TRUSTED_HOST" | grep -q "^$EXTRA_HOST$"; then
+            TRUSTED_HOST="${TRUSTED_HOST:+$TRUSTED_HOST }$EXTRA_HOST"
+        fi
     fi
 fi
 
-# Detect all pip config file paths that pip actually uses
-# Use pip config debug to find the files, then deduplicate
-# On Windows (Git Bash/MSYS2) pip may use %APPDATA%/pip/pip.ini
-get_pip_config_paths() {
-    local paths=""
-    # Try pip config debug to find paths (works on all platforms)
-    if command -v pip &>/dev/null; then
-        local debug_output
-        debug_output=$(pip config debug 2>/dev/null || true)
-        # Extract file paths that actually exist (format: "  /path/to/pip.conf, exists: True")
-        local existing_paths
-        existing_paths=$(echo "$debug_output" \
-            | grep 'exists: True' \
-            | grep -oE '/[^ ,]+[.]conf' \
-            | grep pip \
-            | grep -v '^$' || true)
-        if [ -n "$existing_paths" ]; then
-            paths="$existing_paths"
-        fi
-    fi
-    # Normalize Windows paths to Git Bash Unix paths (e.g. C:\folder -> /c/folder)
-    if echo "$paths" | grep -qE '^[A-Za-z]:'; then
-        paths=$(echo "$paths" | while read -r p; do
-            # Convert C: to /c, D: to /d, etc.
-            first=$(echo "$p" | cut -c1 | tr '[:upper:]' '[:lower:]')
-            rest=$(echo "$p" | cut -c3- | tr '\\' '/')
-            echo "/$first$rest"
-        done)
-    fi
-
-    # Fallback: probe common locations
-    # 1. Linux/macOS
-    if [ -z "$paths" ]; then
-        local xdg="${XDG_CONFIG_HOME:-$HOME/.config}"
-        [ -d "$xdg/pip" ] && paths="$xdg/pip/pip.conf"
-        # macOS
-        [ -d "$HOME/Library/Application Support/pip" ] && paths="$paths"$'\n'"$HOME/Library/Application Support/pip/pip.conf"
-    fi
-
-    echo "$paths"
-}
-
-# Build pip.conf content
-write_pip_conf() {
-    local file="$1"
-    local dir
-    dir=$(dirname "$file")
-    mkdir -p "$dir"
-    {
-        echo "[global]"
-        echo "index-url = $INDEX_URL"
-        [ -n "$EXTRA_INDEX_URL" ] && echo "extra-index-url = $EXTRA_INDEX_URL"
-        echo "trusted-host = $TRUSTED_HOST"
-    } > "$file"
-}
+# Use pip config commands to set/unset configuration
+# This is more portable and reliable than directly writing config files
 
 if [ "$MODE" = "venv" ]; then
     if [ ! -d "$PROJECT_DIR/venv" ]; then
         echo "❌ Error: venv not found at $PROJECT_DIR/venv"
         exit 1
     fi
-    PIP_CONF="$PROJECT_DIR/venv/pip.conf"
-    write_pip_conf "$PIP_CONF"
-    echo "✅ pip.conf written to: $PIP_CONF"
+    echo "📝 Configuring pip for virtual environment..."
+    # Unset global config first to avoid conflicts
+    pip config unset global.index-url 2>/dev/null || true
+    pip config unset global.extra-index-url 2>/dev/null || true
+    pip config unset global.trusted-host 2>/dev/null || true
+    # Set pip config file location for venv
+    export PIP_CONFIG_FILE="$PROJECT_DIR/venv/pip.conf"
+    pip config set global.index-url "$INDEX_URL"
+    [ -n "$EXTRA_INDEX_URL" ] && pip config set global.extra-index-url "$EXTRA_INDEX_URL"
+    pip config set global.trusted-host "$TRUSTED_HOST"
+    echo "✅ pip configured for venv: $PIP_CONFIG_FILE"
 else
-    # Write to ALL pip config locations found
-    all_paths=$(get_pip_config_paths)
-    if [ -z "$all_paths" ]; then
-        # Ultimate fallback: common Unix-style pip config locations
-        xdg="${XDG_CONFIG_HOME:-$HOME/.config}"
-        all_paths="$HOME/.config/pip/pip.conf"$'\n'"$HOME/Library/Application Support/pip/pip.conf"
-        # Windows Git Bash: also probe pip.ini alongside pip.conf
-        if [ -d "$APPDATA" ] || [ -n "$APPDATA" ]; then
-            appdata_win="${APPDATA:-${LOCALAPPDATA:-}}"
-            [ -n "$appdata_win" ] && all_paths="$all_paths"$'\n'"$appdata_win/pip/pip.conf"$'\n'"$appdata_win/pip/pip.ini"
-        fi
-    fi
+    echo "📝 Configuring global pip..."
+    echo "   index-url: $INDEX_URL"
+    [ -n "$EXTRA_INDEX_URL" ] && echo "   extra-index-url: $EXTRA_INDEX_URL"
+    echo "   trusted-host: $TRUSTED_HOST"
+    echo ""
 
-    # Deduplicate and write
-    written=0
-    IFS=$'\n'
-    for p in $all_paths; do
-        [ -z "$p" ] && continue
-        write_pip_conf "$p"
-        echo "✅ pip.conf written to: $p"
-        written=1
-    done
+    # Unset existing configurations first
+    echo "🧹 Clearing existing pip configurations..."
+    pip config unset global.index-url 2>/dev/null || true
+    pip config unset global.extra-index-url 2>/dev/null || true
+    pip config unset global.trusted-host 2>/dev/null || true
 
-    if [ "$written" -eq 0 ]; then
-        echo "❌ Could not find any pip config file location."
-        echo "   Please set PIP_CONFIG_FILE env var and re-run."
-        exit 1
+    # Set new configurations
+    echo "⚙️  Setting new pip configurations..."
+    pip config set global.index-url "$INDEX_URL"
+    if [ -n "$EXTRA_INDEX_URL" ]; then
+        pip config set global.extra-index-url "$EXTRA_INDEX_URL"
     fi
+    pip config set global.trusted-host "$TRUSTED_HOST"
+
+    echo ""
+    echo "✅ pip configuration complete!"
 fi
 
 # Verify
@@ -2138,7 +2107,7 @@ if not defined INDEX_URL (
     exit /b 0
 )
 
-REM Auto-detect trusted host from index_url
+REM Auto-detect trusted host from index_url (strip port numbers)
 if not defined TRUSTED_HOST (
     for /f "tokens=2 delims=//" %%a in ("!INDEX_URL!") do (
         for /f "tokens=1 delims=/ " %%b in ("%%a") do (
@@ -2149,9 +2118,11 @@ if not defined TRUSTED_HOST (
             if not defined TRUSTED_HOST set "TRUSTED_HOST=%%b"
         )
     )
+    REM Strip port number from TRUSTED_HOST (e.g., host:8082 -> host)
+    for /f "tokens=1 delims=:" %%a in ("!TRUSTED_HOST!") do set "TRUSTED_HOST=%%a"
 )
 
-REM Add extra_index_url host to trusted hosts
+REM Add extra_index_url host to trusted hosts (strip port numbers)
 if defined EXTRA_INDEX_URL (
     set "EXTRA_HOST="
     for /f "tokens=2 delims=//" %%a in ("!EXTRA_INDEX_URL!") do (
@@ -2162,40 +2133,52 @@ if defined EXTRA_INDEX_URL (
             if not defined EXTRA_HOST set "EXTRA_HOST=%%b"
         )
     )
+    REM Strip port number
+    for /f "tokens=1 delims=:" %%a in ("!EXTRA_HOST!") do set "EXTRA_HOST=%%a"
     if defined EXTRA_HOST (
         echo !TRUSTED_HOST! | findstr /i /c:"!EXTRA_HOST!" >nul
         if !errorlevel! neq 0 (
-            set "TRUSTED_HOST=!TRUSTED_HOST!,!EXTRA_HOST!"
+            set "TRUSTED_HOST=!TRUSTED_HOST! !EXTRA_HOST!"
         )
     )
 )
 
-goto :write_config
+goto :configure_pip
 
-:write_config
+:configure_pip
 if "%MODE%"=="venv" (
     if not exist "%PROJECT_DIR%\\venv" (
         echo [ERROR] venv not found at %PROJECT_DIR%\\venv
         exit /b 1
     )
-    set "PIP_INI=%PROJECT_DIR%\\venv\\pip.ini"
-    call :write_pip_ini
-    echo [OK] pip.ini written to: !PIP_INI!
+    echo [INFO] Configuring pip for virtual environment...
+    set "PIP_CONFIG_FILE=%PROJECT_DIR%\\venv\\pip.ini"
+    call :unset_global
+    pip config set global.index-url "!INDEX_URL!"
+    if defined EXTRA_INDEX_URL pip config set global.extra-index-url "!EXTRA_INDEX_URL!"
+    pip config set global.trusted-host "!TRUSTED_HOST!"
+    echo [OK] pip configured for venv: !PIP_CONFIG_FILE!
 ) else (
-    REM Write to user-level pip config location
-    set "PIP_CONFIG_DIR=%APPDATA%\\pip"
-    set "PIP_INI=%PIP_CONFIG_DIR%\\pip.ini"
+    echo [INFO] Configuring global pip...
+    echo    index-url: !INDEX_URL!
+    if defined EXTRA_INDEX_URL echo    extra-index-url: !EXTRA_INDEX_URL!
+    echo    trusted-host: !TRUSTED_HOST!
+    echo.
 
-    if not exist "!PIP_CONFIG_DIR!" mkdir "!PIP_CONFIG_DIR!"
-    call :write_pip_ini
-    echo [OK] pip.ini written to: !PIP_INI!
+    REM Unset existing configurations first
+    echo [INFO] Clearing existing pip configurations...
+    pip config unset global.index-url  >nul 2>&1
+    pip config unset global.extra-index-url  >nul 2>&1
+    pip config unset global.trusted-host  >nul 2>&1
 
-    REM Also try to write to virtualenv pip if using venv
-    if exist "%PROJECT_DIR%\\venv" (
-        set "VENV_PIP=%PROJECT_DIR%\\venv\\pip.ini"
-        call :write_pip_ini
-        echo [OK] pip.ini written to: !VENV_PIP!
-    )
+    REM Set new configurations
+    echo [INFO] Setting new pip configurations...
+    pip config set global.index-url "!INDEX_URL!"
+    if defined EXTRA_INDEX_URL pip config set global.extra-index-url "!EXTRA_INDEX_URL!"
+    pip config set global.trusted-host "!TRUSTED_HOST!"
+
+    echo.
+    echo [OK] pip configuration complete!
 )
 
 echo.
@@ -2203,13 +2186,11 @@ echo [INFO] Verifying pip config...
 pip config list
 exit /b 0
 
-:write_pip_ini
-(
-    echo [global]
-    echo index-url = !INDEX_URL!
-    if defined EXTRA_INDEX_URL echo extra-index-url = !EXTRA_INDEX_URL!
-    echo trusted-host = !TRUSTED_HOST!
-) > "%PIP_INI%"
+:unset_global
+REM Unset global config to avoid conflicts
+pip config unset global.index-url  >nul 2>&1
+pip config unset global.extra-index-url  >nul 2>&1
+pip config unset global.trusted-host  >nul 2>&1
 exit /b 0
 '''
         (project_path / "scripts" / "setup-pip-source.bat").write_text(pip_source_bat)
