@@ -248,8 +248,8 @@ vim pip-sources.ini
 ./scripts/setup-pip-source.sh --venv       # venv pip
 
 # Windows CMD/PowerShell:
-scripts\setup-pip-source.bat                # Global pip
-scripts\setup-pip-source.bat --venv         # venv pip
+scripts\\setup-pip-source.bat                # Global pip
+scripts\\setup-pip-source.bat --venv         # venv pip
 
 # 3. Re-run install with private index
 pip install -r requirements.txt
@@ -689,6 +689,7 @@ from dotenv import load_dotenv
 from {package_name}.config import settings
 from {package_name}.config.lifecycle import ApplicationLifecycle
 from {package_name}.agents.react_agent import create_react_agent
+from {package_name}.utils.log.logging import setup_logging, cleanup_old_logs
 
 # Load environment variables
 load_dotenv()
