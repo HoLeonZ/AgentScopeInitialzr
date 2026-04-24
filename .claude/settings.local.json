@@ -155,7 +155,8 @@
       "Bash(unzip -l /tmp/test_logs2.zip)",
       "Bash(unzip -p /tmp/test_custom_model.zip src/test_custom_model/.env.example)",
       "Bash(unzip -l /tmp/test_custom_model.zip)",
-      "Bash(unzip *)"
+      "Bash(unzip *)",
+      "Bash(gzip -f agentscope-initializr-linux-amd64.tar)"
     ]
   },
   "spinnerTipsEnabled": true

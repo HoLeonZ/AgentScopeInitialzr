@@ -861,8 +861,9 @@ def create_react_agent(
     model = get_model()
     formatter = get_formatter()
 
-    # Get optional middlewares
-    memory = get_memory() if middleware_manager.has('memory') else None
+    # Get optional middlewares (memory is always required, use InMemoryMemory as fallback)
+    from agentscope.memory import InMemoryMemory
+    memory = get_memory() if middleware_manager.has('memory') else InMemoryMemory()
     toolkit = get_toolkit() if middleware_manager.has('toolkit') else None
 
     # Get configuration parameters

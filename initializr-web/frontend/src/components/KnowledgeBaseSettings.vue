@@ -61,7 +61,7 @@
 
           <!-- 知识库类型选择 -->
           <el-divider content-position="left">
-            <el-icon><Setting /></el-icon>
+            <el-icon><SetUp /></el-icon>
             知识库类型
           </el-divider>
 
@@ -96,7 +96,7 @@
           <!-- KBase 配置 -->
           <template v-if="knowledgeConfig.type === 'kbase'">
             <el-divider content-position="left">
-              <el-icon><Setting /></el-icon>
+              <el-icon><SetUp /></el-icon>
               KBase 配置
             </el-divider>
 
@@ -122,7 +122,7 @@
           <!-- Qdrant 配置 -->
           <template v-if="knowledgeConfig.type === 'qdrant'">
             <el-divider content-position="left">
-              <el-icon><Setting /></el-icon>
+              <el-icon><SetUp /></el-icon>
               Qdrant 配置
             </el-divider>
 
@@ -240,7 +240,7 @@ import { reactive, computed } from 'vue'
 import { useConfigStore } from '@/stores/config'
 import {
   Reading,
-  Setting,
+  SetUp,
   Operation
 } from '@element-plus/icons-vue'
 
