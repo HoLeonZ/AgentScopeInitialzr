@@ -1926,12 +1926,11 @@ This module provides automatic middleware injection and lifecycle management.
 """
 
 from typing import Dict, Any, Optional, List
-from {metadata.package_name}.config import (
-    get_model,
-    get_formatter,
-    get_memory,
-    get_toolkit,
-)
+# Import from specific modules to avoid circular imports
+from {metadata.package_name}.config.model import get_model
+from {metadata.package_name}.config.formatter import get_formatter
+from {metadata.package_name}.config.memory import get_memory
+from {metadata.package_name}.config.toolkit import get_toolkit
 
 
 class MiddlewareManager:
@@ -2260,10 +2259,13 @@ class ApplicationLifecycle:
 
 
 # Global lifecycle manager instance
-_app_lifecycle: Optional[ApplicationLifecycle] = None
+_app_lifecycle: Optional["ApplicationLifecycle"] = None
+
+# Save reference to the original class before reassignment
+_ApplicationLifecycleBase = ApplicationLifecycle
 
 
-def get_lifecycle() -> ApplicationLifecycle:
+def get_lifecycle() -> "ApplicationLifecycle":
     """
     Get the global ApplicationLifecycle instance.
 
@@ -2272,7 +2274,7 @@ def get_lifecycle() -> ApplicationLifecycle:
     """
     global _app_lifecycle
     if _app_lifecycle is None:
-        _app_lifecycle = ApplicationLifecycle()
+        _app_lifecycle = _ApplicationLifecycleBase()
     return _app_lifecycle
 
 
