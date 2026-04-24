@@ -87,9 +87,10 @@ class ProjectGenerator:
             shutil.rmtree(project_path)
         project_path.mkdir(parents=True)
 
-        # Step 3.5: Create logs directory
+        # Step 3.5: Create logs directory (with .gitkeep to ensure it's included in zip)
         logs_dir = project_path / "logs"
         logs_dir.mkdir(parents=True, exist_ok=True)
+        (logs_dir / ".gitkeep").touch()
 
         # Step 4: Generate project structure
         self._generate_project_structure(metadata, project_path)
@@ -1085,6 +1086,9 @@ def setup_logging(
         log_dir = LoggerConfig.LOG_DIR
     else:
         log_dir = Path(log_dir)
+
+    # Ensure log directory exists
+    log_dir.mkdir(parents=True, exist_ok=True)
 
     # Create formatters
     file_formatter = logging.Formatter(

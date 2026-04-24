@@ -2133,6 +2133,8 @@ class ApplicationLifecycle:
 
         # 1. Initialize AgentScope (if not already initialized)
         if not self._agentscope_initialized:
+            # Ensure logs directory exists
+            os.makedirs("logs", exist_ok=True)
             agentscope.init(
                 project="''' + proj_name + '''",
                 name="''' + proj_name + '''_instance",
