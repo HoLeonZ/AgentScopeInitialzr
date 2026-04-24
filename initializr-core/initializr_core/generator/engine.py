@@ -887,7 +887,26 @@ def create_react_agent(
     )
 ''' + hook_attachment + '''
 
-    return agent
+    # Wrap agent to handle string input
+    from agentscope.message import Msg
+
+    class WrappedAgent:
+        """Wrapper to handle string input by converting to Msg."""
+
+        def __init__(self, agent: ReActAgent):
+            self._agent = agent
+            self.name = agent.name
+
+        async def __call__(self, msg: str | Msg) -> Msg:
+            """Call agent with string or Msg input."""
+            if isinstance(msg, str):
+                msg = Msg(name="user", content=msg, role="user")
+            return await self._agent.reply(msg)
+
+        def __getattr__(self, name: str):
+            return getattr(self._agent, name)
+
+    return WrappedAgent(agent)
 '''
             (pkg_dir / "agents" / "react_agent.py").write_text(agent_content)
 
