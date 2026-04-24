@@ -13,7 +13,7 @@ export interface ProjectRequest {
   agent_type?: string
   python_version?: string
   model_provider?: string
-  model_config?: Record<string, any>
+  model_settings?: Record<string, any>
   enable_memory?: boolean
   short_term_memory?: string | null
   long_term_memory?: string | null

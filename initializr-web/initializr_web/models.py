@@ -31,9 +31,9 @@ class ProjectRequest(BaseModel):
 
     # Model configuration
     model_provider: str = Field(default="dashscope", description="Model provider")
-    model_config: Dict[str, Any] = Field(
+    model_settings: Dict[str, Any] = Field(
         default_factory=dict,
-        description="Model configuration parameters"
+        description="Model settings (model, api_key, base_url, temperature, max_tokens)"
     )
 
     # Extension points
@@ -80,17 +80,6 @@ class ProjectRequest(BaseModel):
         le=100,
         description="Number of initial benchmark tasks"
     )
-
-    model_config = {"json_schema_extra": {"examples": [{
-        "name": "my-agent",
-        "description": "My custom agent",
-        "agent_type": "multi-agent",
-        "model_provider": "dashscope",
-        "model_config": {"model": "qwen-max", "temperature": 0.7},
-        "enable_memory": False,
-        "short_term_memory": None,
-        "long_term_memory": None,
-    }]}}
 
 
 class ProjectResponse(BaseModel):

@@ -92,9 +92,11 @@ __all__ = [
     def generate_settings_file(self, metadata: AgentScopeMetadata) -> str:
         """Generate settings.py file with Settings class."""
         cfg = metadata.model_config or {}
-        model_name = cfg.get("model", "")
-        api_key = cfg.get("api_key", "")
-        base_url = cfg.get("base_url", "")
+
+        # Extract model config from request, use defaults if not provided
+        model_name = cfg.get("model", "qwen-max")
+        api_key = cfg.get("api_key", "sk-fake-api-key-placeholder-please-replace")
+        base_url = cfg.get("base_url", "https://dashscope.aliyuncs.com/compatible-mode/v1")
         temperature = cfg.get("temperature", 0.7)
         max_tokens = cfg.get("max_tokens", 2000)
 
@@ -121,11 +123,11 @@ class Settings:
 {metadata.description}
 You should respond in a friendly and professional.""")
 
-    # Model Configuration (from .env)
+    # Model Configuration (from .env, with frontend config as defaults)
     MODEL_PROVIDER = os.getenv("MODEL_PROVIDER", "{metadata.model_provider.value}")
-    MODEL_NAME = os.getenv("MODEL_NAME") or os.getenv("DASHSCOPE_MODEL") or "{model_name}" or "qwen-max"
-    API_KEY = os.getenv("API_KEY") or os.getenv("DASHSCOPE_API_KEY") or "{api_key}" or "sk-fake-api-key-placeholder-please-replace"
-    BASE_URL = os.getenv("BASE_URL") or os.getenv("DASHSCOPE_BASE_URL") or "{base_url}" or "https://dashscope.aliyuncs.com/compatible-mode/v1"
+    MODEL_NAME = os.getenv("MODEL_NAME") or os.getenv("DASHSCOPE_MODEL") or "{model_name}"
+    API_KEY = os.getenv("API_KEY") or os.getenv("DASHSCOPE_API_KEY") or "{api_key}"
+    BASE_URL = os.getenv("BASE_URL") or os.getenv("DASHSCOPE_BASE_URL") or "{base_url}"
     MODEL_TEMPERATURE = float(os.getenv("MODEL_TEMPERATURE", "{temperature}"))
     MODEL_MAX_TOKENS = int(os.getenv("MODEL_MAX_TOKENS", "{max_tokens}"))
     ENABLE_STREAMING = os.getenv("ENABLE_STREAMING", "true").lower() == "true"
@@ -431,20 +433,20 @@ def get_memory():
         lines.append('''
 def get_toolkit():
     """Get configured toolkit instance."""
-    from agentscope.tools import Toolkit
+    from agentscope.tool import Toolkit
 
     toolkit = Toolkit()
 ''')
 
         # Add enabled tools (metadata.tools is a list of ToolConfig objects)
         tool_mappings = {
-            "execute_python_code": ("execute_python_code", "from agentscope.tools import execute_python_code"),
-            "execute_shell_command": ("execute_shell_command", "from agentscope.tools import execute_shell_command"),
-            "web_search": ("web_search_tavily", "from agentscope.tools import web_search_tavily"),
-            "browser_navigate": ("browser_navigate", "from agentscope.tools import browser_navigate"),
-            "browser_click": ("browser_click", "from agentscope.tools import browser_click"),
-            "browser_type": ("browser_type", "from agentscope.tools import browser_type"),
-            "browser_screenshot": ("browser_screenshot", "from agentscope.tools import browser_screenshot"),
+            "execute_python_code": ("execute_python_code", "from agentscope.tool import execute_python_code"),
+            "execute_shell_command": ("execute_shell_command", "from agentscope.tool import execute_shell_command"),
+            "web_search": ("web_search_tavily", "from agentscope.tool import web_search_tavily"),
+            "browser_navigate": ("browser_navigate", "from agentscope.tool import browser_navigate"),
+            "browser_click": ("browser_click", "from agentscope.tool import browser_click"),
+            "browser_type": ("browser_type", "from agentscope.tool import browser_type"),
+            "browser_screenshot": ("browser_screenshot", "from agentscope.tool import browser_screenshot"),
         }
 
         # Import statements for tools

@@ -133,7 +133,7 @@ const isSectionComplete = (sectionId: string): boolean => {
     case 'basic':
       return !!(form.name && form.description)
     case 'model':
-      return !!(form.model_provider && form.model_config?.model && form.model_config?.api_key)
+      return !!(form.model_provider && form.model_settings?.model && form.model_settings?.api_key)
     case 'memory':
       return form.enable_memory !== undefined
     case 'knowledge':

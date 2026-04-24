@@ -152,7 +152,10 @@
       "Bash(PYTHONPATH=./src python3 -c \"from aaaa.config import settings; print\\('Import OK'\\)\")",
       "Bash(tar -tzf /tmp/test_gen_result.tar.gz)",
       "Bash(unzip -l /tmp/test_logs_check.zip)",
-      "Bash(unzip -l /tmp/test_logs2.zip)"
+      "Bash(unzip -l /tmp/test_logs2.zip)",
+      "Bash(unzip -p /tmp/test_custom_model.zip src/test_custom_model/.env.example)",
+      "Bash(unzip -l /tmp/test_custom_model.zip)",
+      "Bash(unzip *)"
     ]
   },
   "spinnerTipsEnabled": true

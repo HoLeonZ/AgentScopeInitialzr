@@ -41,7 +41,7 @@
 
           <el-form-item label="API密钥" required>
             <el-input
-              :model-value="form.model_config?.api_key"
+              :model-value="form.model_settings?.api_key"
               type="password"
               placeholder="输入API密钥"
               show-password
@@ -52,7 +52,7 @@
 
           <el-form-item label="API地址">
             <el-input
-              :model-value="form.model_config?.base_url"
+              :model-value="form.model_settings?.base_url"
               placeholder="选择模型后自动填充（可手动修改）"
               style="width: 320px"
               @input="updateModelConfig('base_url', $event)"
@@ -72,7 +72,7 @@
           <el-form-item label="温度">
             <div class="control-row">
               <el-input-number
-                :model-value="form.model_config?.temperature ?? 0.7"
+                :model-value="form.model_settings?.temperature ?? 0.7"
                 :min="0"
                 :max="1"
                 :step="0.1"
@@ -85,7 +85,7 @@
                 <el-tag
                   v-for="preset in temperaturePresets"
                   :key="preset.value"
-                  :type="(form.model_config?.temperature ?? 0.7) === preset.value ? 'primary' : 'info'"
+                  :type="(form.model_settings?.temperature ?? 0.7) === preset.value ? 'primary' : 'info'"
                   size="small"
                   class="preset-tag"
                   @click="setTemperature(preset.value)"
@@ -99,7 +99,7 @@
 
           <el-form-item label="最大令牌">
             <el-input-number
-              :model-value="form.model_config?.max_tokens ?? 2000"
+              :model-value="form.model_settings?.max_tokens ?? 2000"
               :min="1"
               :max="128000"
               :step="1000"
@@ -143,8 +143,8 @@ const updateField = (field: string, value: any) => {
 }
 
 const updateModelConfig = (key: string, value: any) => {
-  configStore.setField('model_config', {
-    ...form.model_config,
+  configStore.setField('model_settings', {
+    ...form.model_settings,
     [key]: value
   })
 }
@@ -164,16 +164,16 @@ const onModelChange = (modelId: string) => {
 }
 
 onMounted(async () => {
-  if (!form.model_config) {
+  if (!form.model_settings) {
     updateModelConfig('model', undefined)
     updateModelConfig('api_key', undefined)
   }
 
-  if (form.model_config?.temperature === undefined) {
+  if (form.model_settings?.temperature === undefined) {
     updateModelConfig('temperature', 0.7)
   }
 
-  if (form.model_config?.max_tokens === undefined) {
+  if (form.model_settings?.max_tokens === undefined) {
     updateModelConfig('max_tokens', 2000)
   }
 
@@ -187,8 +187,8 @@ onMounted(async () => {
     allModels.value = llmList
 
     // 如果已有模型名，尝试恢复选中状态
-    if (form.model_config?.model) {
-      const matched = llmModels.value.find(m => m.name === form.model_config?.model)
+    if (form.model_settings?.model) {
+      const matched = llmModels.value.find(m => m.name === form.model_settings?.model)
       if (matched) {
         selectedModelId.value = matched.id
       }

@@ -54,21 +54,21 @@
                     <span class="detail-label">Provider:</span>
                     <span class="detail-value">{{ form.model_provider }}</span>
                   </div>
-                  <div v-if="form.model_config?.model" class="module-detail">
+                  <div v-if="form.model_settings?.model" class="module-detail">
                     <span class="detail-label">Model:</span>
-                    <span class="detail-value">{{ form.model_config.model }}</span>
+                    <span class="detail-value">{{ form.model_settings.model }}</span>
                   </div>
-                  <div v-if="form.model_config?.base_url" class="module-detail">
+                  <div v-if="form.model_settings?.base_url" class="module-detail">
                     <span class="detail-label">API地址:</span>
-                    <span class="detail-value">{{ form.model_config.base_url }}</span>
+                    <span class="detail-value">{{ form.model_settings.base_url }}</span>
                   </div>
-                  <div v-if="form.model_config?.temperature !== undefined" class="module-detail">
+                  <div v-if="form.model_settings?.temperature !== undefined" class="module-detail">
                     <span class="detail-label">Temperature:</span>
-                    <span class="detail-value">{{ form.model_config.temperature }}</span>
+                    <span class="detail-value">{{ form.model_settings.temperature }}</span>
                   </div>
-                  <div v-if="form.model_config?.max_tokens" class="module-detail">
+                  <div v-if="form.model_settings?.max_tokens" class="module-detail">
                     <span class="detail-label">Max Tokens:</span>
-                    <span class="detail-value">{{ form.model_config.max_tokens }}</span>
+                    <span class="detail-value">{{ form.model_settings.max_tokens }}</span>
                   </div>
                 </div>
                 <div v-else class="module-pending-hint">
@@ -258,7 +258,7 @@ const isSectionComplete = (sectionId: string): boolean => {
     case 'basic':
       return !!(form.value.name && form.value.description)
     case 'model':
-      return !!(form.value.model_provider && form.value.model_config?.model && form.value.model_config?.api_key)
+      return !!(form.value.model_provider && form.value.model_settings?.model && form.value.model_settings?.api_key)
     case 'memory':
       return form.value.enable_memory !== undefined
     case 'knowledge':
@@ -311,7 +311,7 @@ const envPreview = computed(() => {
   lines.push('# Model Configuration')
   lines.push('# ==============================================')
   const provider = form.value.model_provider || 'openai'
-  const modelConfig = form.value.model_config
+  const modelConfig = form.value.model_settings
   
   if (provider === 'openai') {
     lines.push(`OPENAI_API_KEY=${modelConfig?.api_key || 'your-api-key-here'}`)
