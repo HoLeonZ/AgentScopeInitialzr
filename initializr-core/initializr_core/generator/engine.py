@@ -87,6 +87,10 @@ class ProjectGenerator:
             shutil.rmtree(project_path)
         project_path.mkdir(parents=True)
 
+        # Step 3.5: Create logs directory
+        logs_dir = project_path / "logs"
+        logs_dir.mkdir(parents=True, exist_ok=True)
+
         # Step 4: Generate project structure
         self._generate_project_structure(metadata, project_path)
 
@@ -266,7 +270,8 @@ cp .env.example .env
 ## Usage
 
 ```bash
-python -m {metadata.package_name}.main
+cd src
+python {metadata.package_name}/main.py
 ```
 
 ## Project Structure
@@ -284,7 +289,7 @@ python -m {metadata.package_name}.main
 │       └── main.py              # Entry point
 ├── tests/                       # Tests
 ├── examples/                    # Usage examples
-├── scripts/                     # Utility scripts (setup.sh, setup-pip-source.sh, etc.)
+├── scripts/                     # Utility scripts (setup-pip-source.sh, etc.)
 ├── docs/                        # Documentation
 ├── requirements.txt             # Dependencies
 ├── pip-sources.ini              # Private PyPI source configuration
@@ -330,9 +335,9 @@ MIT
         lines.append("# Model Configuration")
         lines.append("# ==============================================")
         cfg = metadata.model_config or {}
-        lines.append(f"MODEL_NAME={cfg.get('model', '')}")
-        lines.append(f"API_KEY={cfg.get('api_key', '')}")
-        lines.append(f"BASE_URL={cfg.get('base_url', '')}")
+        lines.append(f"MODEL_NAME={cfg.get('model', 'qwen-max')}")
+        lines.append(f"API_KEY={cfg.get('api_key', 'sk-fake-api-key-placeholder-please-replace')}")
+        lines.append(f"BASE_URL={cfg.get('base_url', 'https://dashscope.aliyuncs.com/compatible-mode/v1')}")
         lines.append(f"MODEL_TEMPERATURE={cfg.get('temperature', 0.7)}")
         lines.append(f"MODEL_MAX_TOKENS={cfg.get('max_tokens', 2000)}")
         lines.append("ENABLE_STREAMING=true")
@@ -528,7 +533,8 @@ MIT
         lines.append("# ==============================================")
         lines.append("# Logging Configuration")
         lines.append("# ==============================================")
-        lines.append("# Log directory path (relative or absolute)")
+        lines.append("# Log directory path (absolute or relative to project root)")
+        lines.append("# On Windows, use absolute path like C:\\Users\\<name>\\AppData\\Local\\Temp\\agentscope_logs")
         lines.append("LOG_DIR=logs")
         lines.append("LOG_LEVEL=INFO")
         lines.append("LOG_TO_FILE=true")
@@ -674,25 +680,30 @@ __version__ = "{metadata.version}"
         template = '''"""
 Main entry point for {name}.
 
-This module follows Single Responsibility Principle:
-- Loads logging configuration
-- Creates the agent
-- Provides basic agent interaction example
+Usage: python main.py
 """
 
 import asyncio
 import logging
 import sys
 import os
+from pathlib import Path
+
+# Set up paths so the package can be imported from anywhere
+_package_dir = Path(__file__).parent.resolve()
+_project_root = _package_dir.parent.parent
+sys.path.insert(0, str(_project_root / "src"))
+os.chdir(_project_root)
+
 from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 from {package_name}.config import settings
 from {package_name}.config.lifecycle import ApplicationLifecycle
 from {package_name}.agents.react_agent import create_react_agent
-from {package_name}.utils.log.logging import setup_logging, cleanup_old_logs
-
-# Load environment variables
-load_dotenv()
+from {package_name}.utils.log import setup_logging, cleanup_old_logs
 
 # Setup unified logging with file rotation and retention
 logger = setup_logging(
@@ -704,6 +715,13 @@ logger = setup_logging(
     backup_count=settings.LOG_FILE_BACKUP_COUNT,
     retention_days=settings.LOG_RETENTION_DAYS,
 )
+
+
+def check_api_key():
+    """Check if API key is configured."""
+    if not settings.API_KEY or settings.API_KEY == "":
+        return False
+    return True
 
 
 async def main():
@@ -730,10 +748,20 @@ async def main():
         )
         logger.info("Agent created successfully")
 
-        # Step 5: Example usage
+        # Step 5: Check API key
         print("🤖 Agent '{name}' is ready!\\n")
+        print(f"Model: {{settings.MODEL_NAME}}")
+        print(f"Base URL: {{settings.BASE_URL}}")
 
-        # Simple example
+        if not check_api_key():
+            print("\\n⚠️  Warning: API_KEY not configured in .env file")
+            print("   Please edit .env and set a valid API_KEY")
+            print("   Then run: python src/{package_name}/main.py")
+            print()
+            return
+
+        # Step 6: Example usage
+        print("Example: Asking agent to introduce itself...\\n")
         response = await agent("Hello! Please introduce yourself.")
         print("Agent:", response)
         logger.info("Example interaction completed")
@@ -878,7 +906,7 @@ from .calculator import calculator
 Calculator tool implementation.
 """
 
-from agentscope.tools import tool
+from agentscope.tool import tool
 
 
 @tool("calculate")
@@ -911,7 +939,7 @@ from .get_current_time import get_current_time
 Get current time tool implementation.
 """
 
-from agentscope.tools import tool
+from agentscope.tool import tool
 
 
 @tool("get_current_time")
@@ -1070,15 +1098,19 @@ def setup_logging(
         use_colors=True
     )
 
+    # Console handler (always add first so user sees warnings)
+    if log_to_console:
+        console_handler = logging.StreamHandler(sys.stdout)
+        console_handler.setLevel(getattr(logging, level.upper()))
+        console_handler.setFormatter(console_formatter)
+        logger.addHandler(console_handler)
+
     # File handler with rotation
     if log_to_file:
-        # Ensure log directory exists
-        log_dir.mkdir(parents=True, exist_ok=True)
-
         # Use rotating file handler (size-based)
         log_file = log_dir / f"{{name}}.log"
         file_handler = RotatingFileHandler(
-            filename=log_file,
+            filename=str(log_file),
             maxBytes=max_bytes,
             backupCount=backup_count,
             encoding='utf-8'
@@ -1089,7 +1121,7 @@ def setup_logging(
 
         # Also add time-based rotation for daily cleanup
         timed_handler = TimedRotatingFileHandler(
-            filename=log_dir / f"{{name}}_daily.log",
+            filename=str(log_dir / f"{{name}}_daily.log"),
             when='midnight',
             interval=1,
             backupCount=retention_days,
@@ -1099,13 +1131,6 @@ def setup_logging(
         timed_handler.setFormatter(file_formatter)
         timed_handler.suffix = "%Y-%m-%d"
         logger.addHandler(timed_handler)
-
-    # Console handler
-    if log_to_console:
-        console_handler = logging.StreamHandler(sys.stdout)
-        console_handler.setLevel(getattr(logging, level.upper()))
-        console_handler.setFormatter(console_formatter)
-        logger.addHandler(console_handler)
 
     return logger
 
@@ -1685,9 +1710,20 @@ def get_browser_agent_prompt() -> str:
 Basic usage example for {name}.
 
 This example demonstrates how to use the agent to answer questions.
+
+Usage: python examples/basic_usage.py
 """
 
 import asyncio
+import sys
+import os
+from pathlib import Path
+
+# Set up paths
+_src_dir = Path(__file__).parent.parent / "src"
+sys.path.insert(0, str(_src_dir))
+os.chdir(Path(__file__).parent.parent)
+
 from {package_name}.agents.react_agent import create_react_agent
 
 
@@ -1722,9 +1758,20 @@ if __name__ == "__main__":
 Advanced multi-agent example for {name}.
 
 This example demonstrates multi-agent collaboration.
+
+Usage: python examples/advanced_multiagent.py
 """
 
 import asyncio
+import sys
+import os
+from pathlib import Path
+
+# Set up paths
+_src_dir = Path(__file__).parent.parent / "src"
+sys.path.insert(0, str(_src_dir))
+os.chdir(Path(__file__).parent.parent)
+
 from agentscope.agent import ReActAgent
 from {package_name}.config import get_model, get_memory, get_toolkit, get_formatter
 
@@ -1831,11 +1878,9 @@ echo ""
 echo "✅ Setup complete!"
 echo ""
 echo "📝 Next steps:"
-echo "  1. Activate the environment: source venv/bin/activate"
-echo "  2. Configure your API keys in .env file"
-echo "  3. Run the agent: {metadata.package_name}"
-echo "  4. Or run with: python -m {metadata.package_name}.main"
-echo "  5. Run tests: pytest tests/"
+echo "  1. Configure your API keys in .env file"
+echo "  2. Run the agent: python src/{metadata.package_name}/main.py"
+echo "  3. Or run examples: python examples/basic_usage.py"
 echo ""
 '''
         (project_path / "scripts" / "setup.sh").write_text(setup_script)
@@ -1844,90 +1889,6 @@ echo ""
         import stat
         setup_path = project_path / "scripts" / "setup.sh"
         setup_path.chmod(setup_path.stat().st_mode | stat.S_IEXEC)
-
-        deploy_script = '''#!/bin/bash
-# Deploy script for AgentScope project
-
-set -e
-
-echo "🚀 Deploying AgentScope project..."
-
-# Activate virtual environment
-if [ -d "venv" ]; then
-    source venv/bin/activate
-    echo "✓ Virtual environment activated"
-else
-    echo "❌ Virtual environment not found. Run ./scripts/setup.sh first"
-    exit 1
-fi
-
-# Run code quality checks
-echo "🔍 Running code quality checks..."
-
-# Format with black (if installed)
-if command -v black &> /dev/null; then
-    echo "🎨 Formatting code with black..."
-    black src/ tests/ --check
-fi
-
-# Sort imports with isort (if installed)
-if command -v isort &> /dev/null; then
-    echo "📦 Sorting imports with isort..."
-    isort src/ tests/ --check-only
-fi
-
-# Type checking with mypy (if installed)
-if command -v mypy &> /dev/null; then
-    echo "🔎 Type checking with mypy..."
-    mypy src/
-fi
-
-# Run tests
-echo "🧪 Running tests..."
-pytest tests/ -v --tb=short
-
-# Check if tests passed
-if [ $? -eq 0 ]; then
-    echo "✅ All tests passed!"
-else
-    echo "❌ Tests failed. Aborting deployment."
-    exit 1
-fi
-
-echo ""
-echo "✅ Deployment ready!"
-echo "📦 To build the package: python -m build"
-echo "📤 To publish: twine upload dist/*"
-'''
-        (project_path / "scripts" / "deploy.sh").write_text(deploy_script)
-
-        # Make deploy script executable
-        deploy_path = project_path / "scripts" / "deploy.sh"
-        deploy_path.chmod(deploy_path.stat().st_mode | stat.S_IEXEC)
-
-        # Add run script for convenience
-        run_script = f'''#!/bin/bash
-# Run script for {metadata.name}
-
-set -e
-
-# Activate virtual environment
-if [ -d "venv" ]; then
-    source venv/bin/activate
-else
-    echo "❌ Virtual environment not found. Run ./scripts/setup.sh first"
-    exit 1
-fi
-
-# Run the agent
-echo "🚀 Starting {metadata.name}..."
-python -m {metadata.package_name}.main "$@"
-'''
-        (project_path / "scripts" / "run.sh").write_text(run_script)
-
-        # Make run script executable
-        run_path = project_path / "scripts" / "run.sh"
-        run_path.chmod(run_path.stat().st_mode | stat.S_IEXEC)
 
         # Generate pip source configuration script
         pip_source_script = '''#!/bin/bash
@@ -2217,7 +2178,7 @@ exit /b 0
 │       └── main.py              # Entry point
 ├── tests/                       # Tests
 ├── examples/                    # Usage examples
-├── scripts/                     # Utility scripts (setup.sh, setup-pip-source.sh, etc.)
+├── scripts/                     # Utility scripts (setup-pip-source.sh, etc.)
 ├── docs/                        # Documentation
 ├── requirements.txt             # Dependencies
 └── .env.example                 # Environment template
@@ -2264,11 +2225,10 @@ exit /b 0
 
 ## Development Workflow
 
-1. **Setup**: Run `./scripts/setup.sh`
-2. **Development**: Modify code in `src/{metadata.package_name}/`
-3. **Testing**: Run `pytest tests/`
+1. **Install dependencies**: `pip install -r requirements.txt`
+2. **Configure**: Edit `.env` file with your API keys
+3. **Run**: `python src/{metadata.package_name}/main.py`
 4. **Examples**: Check `examples/` for usage patterns
-5. **Deployment**: Run `./scripts/deploy.sh`
 
 ## Contributing
 

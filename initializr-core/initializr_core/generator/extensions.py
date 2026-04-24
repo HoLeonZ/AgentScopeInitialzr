@@ -123,9 +123,9 @@ You should respond in a friendly and professional.""")
 
     # Model Configuration (from .env)
     MODEL_PROVIDER = os.getenv("MODEL_PROVIDER", "{metadata.model_provider.value}")
-    MODEL_NAME = os.getenv("MODEL_NAME", "{model_name}")
-    API_KEY = os.getenv("API_KEY", "{api_key}")
-    BASE_URL = os.getenv("BASE_URL", "{base_url}")
+    MODEL_NAME = os.getenv("MODEL_NAME") or os.getenv("DASHSCOPE_MODEL") or "{model_name}" or "qwen-max"
+    API_KEY = os.getenv("API_KEY") or os.getenv("DASHSCOPE_API_KEY") or "{api_key}" or "sk-fake-api-key-placeholder-please-replace"
+    BASE_URL = os.getenv("BASE_URL") or os.getenv("DASHSCOPE_BASE_URL") or "{base_url}" or "https://dashscope.aliyuncs.com/compatible-mode/v1"
     MODEL_TEMPERATURE = float(os.getenv("MODEL_TEMPERATURE", "{temperature}"))
     MODEL_MAX_TOKENS = int(os.getenv("MODEL_MAX_TOKENS", "{max_tokens}"))
     ENABLE_STREAMING = os.getenv("ENABLE_STREAMING", "true").lower() == "true"
@@ -170,10 +170,9 @@ def get_model():
     return OpenAIChatModel(
         model_name=settings.MODEL_NAME or "",
         api_key=settings.API_KEY or "",
-        base_url=settings.BASE_URL or "",
-        temperature=settings.MODEL_TEMPERATURE,
-        max_tokens=settings.MODEL_MAX_TOKENS,
         stream=settings.ENABLE_STREAMING,
+        client_kwargs={"base_url": settings.BASE_URL or ""},
+        generate_kwargs={"temperature": settings.MODEL_TEMPERATURE, "max_tokens": settings.MODEL_MAX_TOKENS},
     )
 '''
 
@@ -2137,7 +2136,7 @@ class ApplicationLifecycle:
             agentscope.init(
                 project="''' + proj_name + '''",
                 name="''' + proj_name + '''_instance",
-                logging_path="logs",
+                logging_path="logs/agentscope.log",
                 logging_level=os.getenv("LOG_LEVEL", "INFO"),
             )
             self._agentscope_initialized = True
