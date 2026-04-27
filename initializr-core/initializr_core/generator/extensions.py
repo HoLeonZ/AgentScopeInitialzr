@@ -161,18 +161,17 @@ settings = Settings()
     def _generate_model_config(self, metadata: AgentScopeMetadata) -> str:
         """Generate model configuration code using OpenAIChatModel."""
         return '''
-def _normalize_base_url(url: str) -> str:
-    """Normalize base URL by removing trailing paths that OpenAI client will add.
+def _get_base_url() -> str:
+    """Get normalized base URL for OpenAI client.
 
-    Handles cases where users accidentally include /v1/chat/completions in BASE_URL.
+    Handles both full URLs (with /v1/chat/completions) and base URLs.
     """
-    if not url:
-        return url
-    # Remove trailing /chat/completions or /v1/chat/completions
-    for suffix in ["/chat/completions", "/v1/chat/completions"]:
+    url = settings.BASE_URL or ""
+    # If URL ends with /v1/chat/completions, use parent path as base
+    for suffix in ["/v1/chat/completions", "/chat/completions"]:
         if url.rstrip("/").endswith(suffix):
-            url = url[: -len(suffix)]
-    return url.rstrip("/")
+            return url[: -len(suffix)].rstrip("/")
+    return url
 
 
 def get_model():
@@ -187,7 +186,7 @@ def get_model():
         model_name=settings.MODEL_NAME or "",
         api_key=settings.API_KEY or "",
         stream=settings.ENABLE_STREAMING,
-        client_kwargs={"base_url": _normalize_base_url(settings.BASE_URL)},
+        client_kwargs={"base_url": _get_base_url()},
         generate_kwargs={"temperature": settings.MODEL_TEMPERATURE, "max_tokens": settings.MODEL_MAX_TOKENS},
     )
 '''

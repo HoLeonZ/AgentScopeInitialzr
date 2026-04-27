@@ -163,14 +163,13 @@ const setTemperature = (value: number) => {
   updateModelConfig('temperature', value)
 }
 
-// 选择模型时自动填充 API 地址
+// 选择模型时自动填充 API 地址（保留完整路径）
 const onModelChange = (modelId: string) => {
   const model = llmModels.value.find(m => m.id === modelId)
   if (model) {
-    const baseUrl = model.url.replace(/\/v1\/.*$/, '')
-    // 使用去掉架构后缀的模型名称
+    // 直接使用完整 URL，不去除 /v1/chat/completions
     updateModelConfig('model', stripChipSuffix(model.name))
-    updateModelConfig('base_url', baseUrl)
+    updateModelConfig('base_url', model.url)
   }
 }
 
