@@ -622,7 +622,18 @@ Thumbs.db
 
         # Add memory-specific dependencies
         if metadata.memory_type.value == "long-term":
-            deps.append("mem0ai>=0.1.0")
+            if metadata.long_term_memory == "mem0":
+                deps.append("mem0ai>=0.1.0")
+            elif metadata.long_term_memory == "oceanbase":
+                deps.append("psycopg2-binary>=2.9.0")
+            elif metadata.long_term_memory == "redis":
+                deps.append("redis>=5.0.0")
+
+        # Add short-term memory dependencies
+        if metadata.short_term_memory == "redis":
+            deps.append("redis>=5.0.0")
+        elif metadata.short_term_memory == "oceanbase":
+            deps.append("psycopg2-binary>=2.9.0")
 
         # Add agent-type specific dependencies
         if metadata.agent_type.value == "research":
