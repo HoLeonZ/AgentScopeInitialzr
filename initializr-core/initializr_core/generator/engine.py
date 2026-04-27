@@ -148,9 +148,9 @@ class ProjectGenerator:
         project_path: Path
     ):
         """Generate configuration files."""
-        # Generate .env.example
-        env_example = self._generate_env_example(metadata)
-        (project_path / ".env.example").write_text(env_example)
+        # Generate .env file
+        env_example = self._generate_env_file(metadata)
+        (project_path / ".env").write_text(env_example)
 
         # Generate requirements.txt
         requirements = self._generate_requirements(metadata)
@@ -262,10 +262,10 @@ pip install -r requirements.txt
 
 ## Configuration
 
-Copy `.env.example` to `.env` and configure your API keys:
+Configure your API keys in `.env` file:
 
 ```bash
-cp .env.example .env
+# Edit .env and set your API keys
 ```
 
 ## Usage
@@ -294,7 +294,7 @@ python {metadata.package_name}/main.py
 ├── docs/                        # Documentation
 ├── requirements.txt             # Dependencies
 ├── pip-sources.ini              # Private PyPI source configuration
-└── .env.example                 # Environment template
+└── .env                        # Environment configuration (copy from .env.example if needed)
 ```
 
 ## AgentScope Configuration
@@ -319,8 +319,8 @@ MIT
 """
         (project_path / "README.md").write_text(readme)
 
-    def _generate_env_example(self, metadata: AgentScopeMetadata) -> str:
-        """Generate .env.example content."""
+    def _generate_env_file(self, metadata: AgentScopeMetadata) -> str:
+        """Generate .env file content."""
         lines = []
 
         # Agent Configuration
@@ -1901,12 +1901,9 @@ echo "      Linux/macOS/Git Bash: ./scripts/setup-pip-source.sh"
 echo "      Windows CMD/PowerShell: scripts\\setup-pip-source.bat"
 echo "   3. Then re-run: pip install -r requirements.txt"
 
-# Create .env file from example
+# Ensure .env file exists
 if [ ! -f .env ]; then
-    cp .env.example .env
-    echo "⚠️  Created .env file - Please update it with your API keys"
-else
-    echo "✓ .env file already exists"
+    echo "⚠️  .env file not found! Please create it from .env.example"
 fi
 
 echo ""
@@ -2216,7 +2213,7 @@ exit /b 0
 ├── scripts/                     # Utility scripts (setup-pip-source.sh, etc.)
 ├── docs/                        # Documentation
 ├── requirements.txt             # Dependencies
-└── .env.example                 # Environment template
+└── .env                        # Environment configuration (copy from .env.example if needed)
 ```
 
 ## Architecture Overview
