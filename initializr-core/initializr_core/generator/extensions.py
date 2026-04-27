@@ -199,7 +199,11 @@ def get_model():
             '',
             'import os',
             'import threading',
-            'from typing import Optional',
+            'from pathlib import Path',
+            'from dotenv import load_dotenv',
+            '',
+            '# Load .env file if not already loaded',
+            'load_dotenv(dotenv_path=Path(__file__).parent.parent / ".env", override=False)',
             '',
         ]
 
