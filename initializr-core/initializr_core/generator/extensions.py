@@ -108,10 +108,11 @@ Settings are accessed via the `settings` object.
 """
 
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
-load_dotenv()
+# Load environment variables from .env file (use project root path)
+load_dotenv(dotenv_path=Path(__file__).parent.parent / ".env")
 
 
 class Settings:
