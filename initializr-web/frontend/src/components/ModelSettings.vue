@@ -34,7 +34,7 @@
                 v-for="model in llmModels"
                 :key="model.id"
                 :value="model.id"
-                :label="model.name"
+                :label="getDisplayName(model.name)"
               />
             </el-select>
           </el-form-item>
@@ -128,6 +128,16 @@ const form = configStore.form
 const allModels = ref<ModelInfo[]>([])
 const selectedModelId = ref<string>('')
 
+// 去掉芯片架构相关后缀，只保留模型名称
+const stripChipSuffix = (name: string): string => {
+  return name.replace(/-(PPU|NPU|CPU|GPU)$/i, '')
+}
+
+// 显示用的模型名称（去掉架构后缀）
+const getDisplayName = (name: string): string => {
+  return stripChipSuffix(name)
+}
+
 const llmModels = computed<ModelInfo[]>(() => {
   return allModels.value.filter(m => !m.is_embedding)
 })
@@ -158,7 +168,8 @@ const onModelChange = (modelId: string) => {
   const model = llmModels.value.find(m => m.id === modelId)
   if (model) {
     const baseUrl = model.url.replace(/\/v1\/.*$/, '')
-    updateModelConfig('model', model.name)
+    // 使用去掉架构后缀的模型名称
+    updateModelConfig('model', stripChipSuffix(model.name))
     updateModelConfig('base_url', baseUrl)
   }
 }
@@ -188,7 +199,7 @@ onMounted(async () => {
 
     // 如果已有模型名，尝试恢复选中状态
     if (form.model_settings?.model) {
-      const matched = llmModels.value.find(m => m.name === form.model_settings?.model)
+      const matched = llmModels.value.find(m => stripChipSuffix(m.name) === form.model_settings?.model)
       if (matched) {
         selectedModelId.value = matched.id
       }
