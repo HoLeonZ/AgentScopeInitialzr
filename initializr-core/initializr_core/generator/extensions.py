@@ -206,6 +206,11 @@ def get_model():
         has_short_term = metadata.short_term_memory and metadata.short_term_memory != 'in-memory'
         has_long_term = metadata.long_term_memory
 
+        # Add redis import if needed
+        if metadata.short_term_memory == "redis" or metadata.long_term_memory == "redis":
+            lines.append('import redis')
+            lines.append('')
+
         if has_long_term:
             # Long-term memory configuration
             lines.append(f"""
