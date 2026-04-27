@@ -1019,9 +1019,13 @@ import logging
 import os
 import sys
 from pathlib import Path
+from dotenv import load_dotenv
 from logging.handlers import RotatingFileHandler, TimedRotatingFileHandler
 from typing import Optional
 from datetime import datetime
+
+# Load environment variables from .env file
+load_dotenv(dotenv_path=Path(__file__).parent.parent.parent / ".env", override=False)
 
 
 class LoggerConfig:

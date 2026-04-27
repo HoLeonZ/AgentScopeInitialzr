@@ -37,6 +37,12 @@ class FormatterType(Enum):
     MULTI_AGENT = "multi-agent"
 
 
+class ProjectLayout(Enum):
+    """Project layout enumeration."""
+    STANDARD = "standard"
+    LIGHTWEIGHT = "lightweight"
+
+
 @dataclass
 class Dependency:
     """Represents a project dependency."""

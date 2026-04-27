@@ -2099,7 +2099,11 @@ integrated with AgentScope lifecycle.
             '''
 import os
 import logging
+from pathlib import Path
 from typing import Optional, Dict, Any
+
+from dotenv import load_dotenv
+load_dotenv(dotenv_path=Path(__file__).parent.parent / ".env", override=False)
 
 import agentscope
 from ''' + pkg_name + '''.config.middleware import (
