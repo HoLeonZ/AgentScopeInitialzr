@@ -625,7 +625,7 @@ Thumbs.db
             if metadata.long_term_memory == "mem0":
                 deps.append("mem0ai>=0.1.0")
             elif metadata.long_term_memory == "oceanbase":
-                deps.append("psycopg2-binary>=2.9.0")
+                deps.append("PyMySQL>=1.1.0")
             elif metadata.long_term_memory == "redis":
                 deps.append("redis>=5.0.0")
 
@@ -633,7 +633,7 @@ Thumbs.db
         if metadata.short_term_memory == "redis":
             deps.append("redis>=5.0.0")
         elif metadata.short_term_memory == "oceanbase":
-            deps.append("psycopg2-binary>=2.9.0")
+            deps.append("PyMySQL>=1.1.0")
 
         # Add agent-type specific dependencies
         if metadata.agent_type.value == "research":
