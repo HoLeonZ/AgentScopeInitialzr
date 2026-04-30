@@ -5,7 +5,6 @@
 
 # Stage 1: Builder - download and bundle all dependencies
 FROM python:3.11-slim AS builder
-ARG CACHEBUST=1
 
 WORKDIR /app
 
@@ -24,6 +23,7 @@ RUN sed -i 's/deb.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list.d/debia
 RUN mkdir -p /app/vendor/lib /app/vendor/npm
 
 # Install Python packages to vendor directory (for offline deployment)
+# This layer is cached and only rebuilds if requirements change
 RUN pip install --no-cache-dir --target=/app/vendor/lib -i https://mirrors.aliyun.com/pypi/simple/ \
     fastapi \
     uvicorn \
@@ -36,11 +36,12 @@ RUN pip install --no-cache-dir --target=/app/vendor/lib -i https://mirrors.aliyu
     python-dotenv
 
 # Download frontend packages
-COPY initializr-web/frontend/package.json ./initializr-web/frontend/
+# This layer is cached and only rebuilds if package.json changes
+COPY initializr-web/frontend/package*.json ./initializr-web/frontend/
 WORKDIR /app/initializr-web/frontend
 RUN npm config set registry https://registry.npmmirror.com && npm install --prefer-offline --no-audit --progress=false
 
-# Copy project source
+# Copy project source (changes here won't trigger dependency re-download)
 WORKDIR /app
 COPY initializr-core ./initializr-core
 COPY initializr-cli ./initializr-cli
@@ -50,7 +51,7 @@ COPY initializr-web/initializr_web ./initializr-web/initializr_web
 
 # Build frontend
 WORKDIR /app/initializr-web/frontend
-RUN rm -rf node_modules/.vite && CACHEBUST=$CACHEBUST npm run build
+RUN rm -rf node_modules/.vite && npm run build
 
 # Verify build output
 RUN ls -la /app/initializr-web/initializr_web/static/

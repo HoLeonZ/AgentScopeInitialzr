@@ -350,7 +350,11 @@ MIT
         lines.append("# ==============================================")
         lines.append("# Memory Configuration")
         lines.append("# ==============================================")
-        lines.append(f"MEMORY_TYPE={metadata.memory_type.value}")
+        # Short-term memory takes precedence over metadata.memory_type
+        if metadata.short_term_memory and metadata.short_term_memory != 'in-memory':
+            lines.append(f"MEMORY_TYPE={metadata.short_term_memory}")
+        else:
+            lines.append(f"MEMORY_TYPE={metadata.memory_type.value}")
         if metadata.long_term_memory:
             lines.append(f"LONG_TERM_MEMORY={metadata.long_term_memory}")
 
@@ -359,15 +363,10 @@ MIT
         if metadata.short_term_memory and metadata.short_term_memory != 'in-memory':
             if metadata.short_term_memory == 'redis':
                 lines.append("# Short-term Memory: Redis Configuration")
-                # Check if using URL or manual configuration
-                if metadata.rag_config and metadata.rag_config.get('redis_url'):
-                    lines.append(f"REDIS_URL={metadata.rag_config.get('redis_url')}")
-                else:
-                    lines.append("REDIS_HOST=203.1.173.220")
-                    lines.append("REDIS_PORT=6379")
-                    lines.append("REDIS_DB=0")
-                    lines.append("REDIS_KEY_PREFIX=agent:")
-                    lines.append("REDIS_PASSWORD=Red@2023")
+                lines.append("REDIS_MODE=cluster")
+                lines.append("REDIS_CLUSTER_NODES=203.1.173.64:6379,203.1.173.65:6379,203.1.173.66:6379")
+                lines.append("REDIS_PASSWORD=Red@2023")
+                lines.append("REDIS_KEY_PREFIX=agent:")
             elif metadata.short_term_memory == 'oceanbase':
                 lines.append("# Short-term Memory: OceanBase Configuration")
                 lines.append("OCEANBASE_CONNECTION_STRING=postgresql://user:password@localhost:2881/tenant")
@@ -390,10 +389,10 @@ MIT
                 lines.append("OCEANBASE_TABLE_NAME=agent_memory")
             elif metadata.long_term_memory == "redis":
                 lines.append("# Long-term Memory: Redis Configuration")
-                lines.append("REDIS_HOST=203.1.173.220")
-                lines.append("REDIS_PORT=6379")
-                lines.append("REDIS_DB=0")
+                lines.append("REDIS_MODE=cluster")
+                lines.append("REDIS_CLUSTER_NODES=203.1.173.64:6379,203.1.173.65:6379,203.1.173.66:6379")
                 lines.append("REDIS_PASSWORD=Red@2023")
+                lines.append("REDIS_KEY_PREFIX=agent:")
         lines.append("")
 
         # RAG Configuration
@@ -719,7 +718,7 @@ from {package_name}.utils.log import setup_logging, cleanup_old_logs
 
 # Setup unified logging with file rotation and retention
 logger = setup_logging(
-    level=os.getenv("LOG_LEVEL", "INFO"),
+    level=settings.LOG_LEVEL,
     log_dir=settings.LOG_DIR,
     log_to_file=settings.LOG_TO_FILE,
     log_to_console=settings.LOG_TO_CONSOLE,
@@ -741,7 +740,7 @@ async def main():
     try:
         # Step 1: Initialize logging
         logger.info("Starting {name}...")
-        logger.info("Log Level: " + os.getenv("LOG_LEVEL", "INFO"))
+        logger.info("Log Level: " + settings.LOG_LEVEL)
 
         # Step 2: Clean up old logs
         cleanup_old_logs(
@@ -817,7 +816,12 @@ if __name__ == "__main__":
         (pkg_dir / "__init__.py").write_text(init_content)
 
         # Submodule __init__.py files
-        (pkg_dir / "agents" / "__init__.py").write_text('"""Agent implementations."""\n')
+        (pkg_dir / "agents" / "__init__.py").write_text('''"""Agent implementations."""
+
+from .react_agent import create_react_agent
+
+__all__ = ["create_react_agent"]
+''')
         (pkg_dir / "skills" / "__init__.py").write_text('"""Agent skill modules."""\n')
         (pkg_dir / "tools" / "__init__.py").write_text('"""Tool implementations."""\n')
         (pkg_dir / "prompts" / "__init__.py").write_text('"""Prompt templates."""\n')
@@ -1019,20 +1023,15 @@ import logging
 import os
 import sys
 from pathlib import Path
-from dotenv import load_dotenv
 from logging.handlers import RotatingFileHandler, TimedRotatingFileHandler
 from typing import Optional
 from datetime import datetime
 
-# Load environment variables from .env file
-load_dotenv(dotenv_path=Path(__file__).parent.parent.parent / ".env", override=False)
+from ...config.settings import settings
 
 
 class LoggerConfig:
     """Logger configuration."""
-
-    # Log directory (can be overridden via environment variable)
-    LOG_DIR = Path(os.getenv("LOG_DIR", "logs"))
 
     # Log format
     LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s"
@@ -1763,29 +1762,42 @@ _src_dir = Path(__file__).parent.parent / "src"
 sys.path.insert(0, str(_src_dir))
 os.chdir(Path(__file__).parent.parent)
 
+from {package_name}.config.lifecycle import ApplicationLifecycle
 from {package_name}.agents.react_agent import create_react_agent
 
 
 async def main():
     """Run basic agent example."""
-    # Create agent
-    agent = create_react_agent()
+    # Initialize application lifecycle
+    ApplicationLifecycle.initialize()
 
-    # Example questions
-    questions = [
-        "What is 25 * 34?",
-        "What time is it now?",
-        "Can you help me with a math problem?",
-    ]
+    try:
+        # Create agent
+        agent = create_react_agent(
+            name="{name}",
+            sys_prompt="You are a helpful assistant with access to various tools."
+        )
 
-    for question in questions:
-        print("\\nUser:", question)
-        response = await agent(question)
-        print("Agent:", response)
+        # Example questions
+        questions = [
+            "What is 25 * 34?",
+            "What time is it now?",
+            "Can you help me with a math problem?",
+        ]
+
+        for question in questions:
+            print("\\nUser:", question)
+            response = await agent(question)
+            print("Agent:", response)
+
+    finally:
+        # Cleanup application lifecycle
+        ApplicationLifecycle.shutdown()
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    _main = main
+    asyncio.run(_main())
 '''
         basic_example = basic_template.format(
             name=metadata.name,
@@ -1793,12 +1805,13 @@ if __name__ == "__main__":
         )
         (project_path / "examples" / "basic_usage.py").write_text(basic_example)
 
-        advanced_template = '''"""
-Advanced multi-agent example for {name}.
+        memory_compress_template = '''"""
+Message compression example for {name}.
 
-This example demonstrates multi-agent collaboration.
+This example demonstrates how to use InMemoryMemory with message compression
+to reduce token usage in long conversations.
 
-Usage: python examples/advanced_multiagent.py
+Usage: python examples/memory_compress.py
 """
 
 import asyncio
@@ -1811,42 +1824,566 @@ _src_dir = Path(__file__).parent.parent / "src"
 sys.path.insert(0, str(_src_dir))
 os.chdir(Path(__file__).parent.parent)
 
-from agentscope.agent import ReActAgent
-from {package_name}.config import get_model, get_memory, get_toolkit, get_formatter
+from {package_name}.config.lifecycle import ApplicationLifecycle
+from {package_name}.agents.react_agent import create_react_agent
+
+
+def summarize_messages(messages: list, max_history: int = 10) -> list:
+    """
+    Summarize old messages to save tokens.
+
+    Keeps the last max_history messages and compresses older ones into a summary.
+    """
+    if len(messages) <= max_history:
+        return messages
+
+    # Keep system prompt and recent messages
+    system_msgs = [m for m in messages if getattr(m, "role", None) == "system"]
+    recent = messages[-max_history:]
+
+    # Summarize old messages
+    old = messages[len(system_msgs):-max_history]
+    if old:
+        summary_text = "[Previous " + str(len(old)) + " messages summarized]"
+        from agentscope.message import Msg
+        summary = Msg(role="system", content=summary_text, name="Summary")
+        return system_msgs + [summary] + recent
+
+    return system_msgs + recent
 
 
 async def main():
-    """Run advanced multi-agent example."""
-    # Create specialized agents
-    researcher = ReActAgent(
-        name="Researcher",
-        sys_prompt="You are a research specialist. Find and analyze information.",
-        model=get_model(),
-        formatter=get_formatter(),
-        memory=get_memory(),
-        toolkit=get_toolkit(),
-    )
+    """Run message compression example."""
+    ApplicationLifecycle.initialize()
 
-    analyst = ReActAgent(
-        name="Analyst",
-        sys_prompt="You are an analyst. Synthesize information and provide insights.",
-        model=get_model(),
-        formatter=get_formatter(),
-        memory=get_memory(),
-        toolkit=get_toolkit(),
-    )
+    try:
+        # Create agent
+        agent = create_react_agent(
+            name="{name}",
+            sys_prompt="You are a helpful assistant. Keep responses concise."
+        )
 
-    # Example workflow
-    query = "What are the latest developments in AI?"
+        # Simulate a long conversation
+        print("=== Long conversation with compression ===\\n")
 
-    print("\\nQuery:", query)
-    print("\\n--- Researcher Agent ---")
-    research_result = await researcher(query)
-    print("Research result:", research_result)
+        # Simulate message history
+        from agentscope.message import Msg
+        history = [
+            Msg(role="user", content="Hello, I need help with Python.", name="User"),
+            Msg(role="assistant", content="Of course! What specifically do you need help with?", name="{name}"),
+            Msg(role="user", content="How do I read a file?", name="User"),
+            Msg(role="assistant", content="Use open() with a context manager...", name="{name}"),
+        ]
 
-    print("\\n--- Analyst Agent ---")
-    analysis = await analyst("Analyze this research: " + str(research_result))
-    print("Analysis:", analysis)
+        print("Initial messages:", len(history))
+        compressed = summarize_messages(history, max_history=3)
+        print("After compression:", len(compressed))
+        print()
+
+        # Continue conversation
+        response = await agent("Thanks! Now how about writing to a file?")
+        print("Agent:", response)
+
+    finally:
+        ApplicationLifecycle.shutdown()
+
+
+if __name__ == "__main__":
+    _main = main
+    asyncio.run(_main())
+'''
+        memory_compress_example = memory_compress_template.format(
+            name=metadata.name,
+            package_name=metadata.package_name
+)
+        (project_path / "examples" / "memory_compress.py").write_text(memory_compress_example)
+
+        rag_template = '''"""
+RAG (Retrieval-Augmented Generation) example for {name}.
+
+This example demonstrates how to use knowledge base retrieval
+to augment agent responses with external knowledge.
+
+Usage: python examples/rag_example.py
+"""
+
+import asyncio
+import sys
+import os
+from pathlib import Path
+
+# Set up paths
+_src_dir = Path(__file__).parent.parent / "src"
+sys.path.insert(0, str(_src_dir))
+os.chdir(Path(__file__).parent.parent)
+
+from {package_name}.config.lifecycle import ApplicationLifecycle
+from {package_name}.config import get_model, get_formatter, get_memory, get_toolkit
+
+
+async def main():
+    """Run RAG example."""
+    ApplicationLifecycle.initialize()
+
+    try:
+        from agentscope.agent import ReActAgent
+
+        # Create agent with knowledge retrieval capability
+        agent = ReActAgent(
+            name="{name}",
+            sys_prompt=(
+                "You are a helpful assistant with access to a knowledge base. "
+                "When users ask questions, use the knowledge_retrieval tool "
+                "to find relevant information before answering."
+            ),
+            model=get_model(),
+            formatter=get_formatter(),
+            memory=get_memory(),
+            toolkit=get_toolkit(),
+        )
+
+        print("=== RAG Example ===\\n")
+        print("Agent is ready with knowledge base access.\\n")
+
+        # Example queries that benefit from RAG
+        queries = [
+            "What information do you have in your knowledge base?",
+            "Tell me about the project documentation.",
+        ]
+
+        for query in queries:
+            print("User: " + str(query))
+            response = await agent(query)
+            print("Agent: " + str(response) + "\\n")
+
+    finally:
+        ApplicationLifecycle.shutdown()
+
+
+if __name__ == "__main__":
+    _main = main
+    asyncio.run(_main())
+'''
+        rag_example = rag_template.format(
+            name=metadata.name,
+            package_name=metadata.package_name
+        )
+        (project_path / "examples" / "rag_example.py").write_text(rag_example)
+
+        eval_template = '''"""
+Agent evaluation example for {name}.
+
+This example demonstrates how to evaluate agent performance using
+benchmark questions and automated scoring.
+
+Usage: python examples/eval_example.py
+"""
+
+import asyncio
+import sys
+import os
+from pathlib import Path
+
+# Set up paths
+_src_dir = Path(__file__).parent.parent / "src"
+sys.path.insert(0, str(_src_dir))
+os.chdir(Path(__file__).parent.parent)
+
+from {package_name}.config.lifecycle import ApplicationLifecycle
+from {package_name}.agents.react_agent import create_react_agent
+
+
+class AgentEvaluator:
+    """Simple evaluator for agent responses."""
+
+    def __init__(self, agent):
+        self.agent = agent
+        self.results = []
+
+    def add_result(self, question: str, response: str, score: int, reason: str):
+        self.results.append({{
+            "question": question,
+            "response": response,
+            "score": score,
+            "reason": reason,
+        }})
+
+    def print_report(self):
+        print("\\n" + "=" * 60)
+        print("EVALUATION REPORT")
+        print("=" * 60)
+
+        total = len(self.results)
+        passed = sum(1 for r in self.results if r["score"] >= 3)
+        avg_score = sum(r["score"] for r in self.results) / total if total > 0 else 0
+
+        for i, r in enumerate(self.results, 1):
+            status = "PASS" if r["score"] >= 3 else "FAIL"
+            print("\\n[" + str(i) + "] " + status + " (score: " + str(r['score']) + "/5)")
+            print("    Q: " + r["question"])
+            print("    A: " + r["response"][:100] + "...")
+            print("    Reason: " + r["reason"])
+
+        print("\\n" + "-" * 60)
+        print("Total: " + str(total) + " | Passed: " + str(passed) + " | Failed: " + str(total - passed))
+        print("Average Score: {{:.2f}}/5.00".format(avg_score))
+        print("=" * 60)
+
+
+def simple_scorer(question: str, response: str) -> tuple[int, str]:
+    """
+    Simple rule-based scorer for evaluation.
+
+    Returns (score, reason) where score is 1-5.
+    """
+    response_lower = response.lower()
+    question_lower = question.lower()
+
+    # Check if response is empty or too short
+    if not response or len(response) < 10:
+        return 1, "Response is empty or too short"
+
+    # Check if response contains relevant keywords
+    score = 2
+    reasons = []
+
+    # Length check
+    if len(response) > 50:
+        score += 1
+        reasons.append("adequate length")
+
+    # Check for question keywords
+    if "what" in question_lower:
+        if any(w in response_lower for w in ["is", "are", "refers", "means"]):
+            score += 1
+            reasons.append("contains definition indicators")
+    elif "how" in question_lower:
+        if any(w in response_lower for w in ["step", "process", "using", "by"]):
+            score += 1
+            reasons.append("contains process indicators")
+    elif "why" in question_lower:
+        if any(w in response_lower for w in ["because", "reason", "since", "therefore"]):
+            score += 1
+            reasons.append("contains explanation indicators")
+
+    # Cap at 5
+    score = min(score, 5)
+
+    return score, ", ".join(reasons) if reasons else "basic response"
+
+
+async def run_evaluation():
+    """Run evaluation with benchmark questions."""
+    agent = create_react_agent(name="{name}")
+    evaluator = AgentEvaluator(agent)
+
+    # Benchmark questions
+    benchmark = [
+        ("What is Python?", "definition"),
+        ("How do you read a file in Python?", "how-to"),
+        ("Why use virtual environments?", "explanation"),
+        ("What is the difference between list and tuple?", "comparison"),
+        ("Write a hello world program", "coding"),
+    ]
+
+    for question, qtype in benchmark:
+        print("Evaluating: " + question)
+        try:
+            response = await agent(question)
+            score, reason = simple_scorer(question, response)
+            evaluator.add_result(question, str(response), score, reason)
+            print("  Score: " + str(score) + "/5 - " + reason)
+        except Exception as e:
+            evaluator.add_result(question, f"Error: {{e}}", 0, str(e))
+            print("  Error: " + str(e))
+
+    evaluator.print_report()
+
+
+async def main():
+    """Run evaluation example."""
+    ApplicationLifecycle.initialize()
+
+    try:
+        print("=== Agent Evaluation Example ===")
+        print("Evaluating agent on benchmark questions...\\n")
+
+        await run_evaluation()
+
+    finally:
+        ApplicationLifecycle.shutdown()
+
+
+if __name__ == "__main__":
+    _main = main
+    asyncio.run(_main())
+'''
+        eval_example = eval_template.format(
+            name=metadata.name,
+            package_name=metadata.package_name
+        )
+        (project_path / "examples" / "eval_example.py").write_text(eval_example)
+
+        advanced_template = r'''
+"""
+Orchestra-Worker Multi-Agent Example for {name}.
+
+This example demonstrates the Orchestra-Worker pattern:
+- Orchestrator: Decomposes complex tasks and coordinates workers
+- Workers: Execute specialized subtasks and report results
+- Parallel execution of independent tasks
+
+Usage: python examples/advanced_multiagent.py
+"""
+
+import asyncio
+import sys
+import os
+from pathlib import Path
+from typing import List, Dict, Any, Optional
+from dataclasses import dataclass, field
+
+# Set up paths
+_src_dir = Path(__file__).parent.parent / "src"
+sys.path.insert(0, str(_src_dir))
+os.chdir(Path(__file__).parent.parent)
+
+from agentscope.agent import ReActAgent
+from agentscope.message import Msg
+from {package_name}.config.lifecycle import ApplicationLifecycle
+from {package_name}.config import get_model, get_memory, get_toolkit, get_formatter
+
+
+@dataclass
+class Task:
+    """Represents a task to be executed by a worker."""
+    id: str
+    description: str
+    assigned_worker: str = ""
+    result: Any = None
+    status: str = "pending"
+
+
+@dataclass
+class TaskResult:
+    """Result from a worker's task execution."""
+    task_id: str
+    worker_name: str
+    success: bool
+    result: Any = None
+    error: str = None
+
+
+class OrchestraWorkerMultiAgent:
+    """Orchestra-Worker Multi-Agent System."""
+
+    def __init__(self):
+        self.orchestrator = None
+        self.workers = {{}}
+        self.tasks = []
+        self.results = []
+        self.shared_memory = None
+
+    def setup(self):
+        """Initialize the orchestrator and workers."""
+        model = get_model()
+        formatter = get_formatter()
+        self.shared_memory = get_memory()
+
+        self.orchestrator = ReActAgent(
+            name="Orchestrator",
+            sys_prompt=(
+                "You are an Orchestrator in a multi-agent system. "
+                "Decompose complex requests into subtasks and assign to workers. "
+                "Workers: researcher (info gathering), coder (programming), "
+                "writer (content creation), analyst (data analysis). "
+                "Synthesize worker results into final response."
+            ),
+            model=model,
+            formatter=formatter,
+            memory=self.shared_memory,
+        )
+
+        worker_prompts = {{
+            "researcher": "You are a Research Specialist. Gather accurate information, find facts, verify sources.",
+            "coder": "You are a Coding Specialist. Write clean, well-documented code with error handling.",
+            "writer": "You are a Content Writer. Create clear, engaging content for target audiences.",
+            "analyst": "You are a Data Analyst. Identify patterns, draw conclusions, present insights.",
+        }}
+
+        for worker_name, sys_prompt in worker_prompts.items():
+            self.workers[worker_name] = ReActAgent(
+                name=worker_name.capitalize(),
+                sys_prompt=sys_prompt,
+                model=model,
+                formatter=formatter,
+                memory=self.shared_memory,
+                toolkit=get_toolkit(),
+            )
+
+    async def decompose_task(self, user_request: str) -> List[Task]:
+        """Decompose a user request into subtasks."""
+        print("\\n" + "=" * 50)
+        print("Orchestrator decomposing task...")
+        print("=" * 50)
+
+        prompt = (
+            "Decompose this request into 2-4 subtasks. For each specify: "
+            "task ID (task_1, task_2...), description, and best worker "
+            "(researcher/coder/writer/analyst). "
+            "Request: " + user_request
+        )
+
+        response = await self.orchestrator(prompt)
+        tasks = []
+        task_id_counter = 1
+
+        lines = str(response).split("\\n")
+        current_desc = []
+        current_worker = ""
+
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+            lower = line.lower()
+            if any(x in lower for x in ["task", "step", "subtask"]):
+                if current_desc:
+                    tasks.append(Task(
+                        id="task_" + str(task_id_counter),
+                        description=" ".join(current_desc),
+                        assigned_worker=current_worker or "writer"
+                    ))
+                    task_id_counter += 1
+                    current_desc = []
+            if any(x in lower for x in ["researcher", "coder", "writer", "analyst"]):
+                for w in ["researcher", "coder", "writer", "analyst"]:
+                    if w in lower:
+                        current_worker = w
+                        break
+            elif current_desc or line:
+                current_desc.append(line)
+
+        if current_desc:
+            tasks.append(Task(
+                id="task_" + str(task_id_counter),
+                description=" ".join(current_desc),
+                assigned_worker=current_worker or "writer"
+            ))
+
+        if not tasks:
+            tasks = [Task(id="task_1", description=user_request, assigned_worker="writer")]
+
+        self.tasks = tasks
+        return tasks
+
+    async def execute_task(self, task: Task) -> TaskResult:
+        """Execute a single task with the assigned worker."""
+        worker = self.workers.get(task.assigned_worker)
+        if not worker:
+            return TaskResult(
+                task_id=task.id,
+                worker_name="Unknown",
+                success=False,
+                error="Worker not found: " + task.assigned_worker
+            )
+
+        print("   [" + worker.name + "] Executing " + task.id + ": " + task.description[:50] + "...")
+
+        try:
+            result = await worker(task.description)
+            task.status = "completed"
+            return TaskResult(task_id=task.id, worker_name=worker.name, success=True, result=result)
+        except Exception as e:
+            task.status = "failed"
+            return TaskResult(task_id=task.id, worker_name=worker.name, success=False, error=str(e))
+
+    async def execute_tasks_parallel(self) -> List[TaskResult]:
+        """Execute all tasks in parallel."""
+        print("\\nExecuting " + str(len(self.tasks)) + " tasks in parallel...")
+
+        coroutines = [self.execute_task(task) for task in self.tasks]
+        results = await asyncio.gather(*coroutines, return_exceptions=True)
+
+        task_results = []
+        for i, result in enumerate(results):
+            if isinstance(result, Exception):
+                task_results.append(TaskResult(
+                    task_id=self.tasks[i].id,
+                    worker_name=self.tasks[i].assigned_worker,
+                    success=False,
+                    error=str(result)
+                ))
+            else:
+                task_results.append(result)
+
+        self.results = task_results
+        return task_results
+
+    async def synthesize_results(self, original_request: str) -> str:
+        """Synthesize all worker results into a final response."""
+        print("\\nSynthesizing results...")
+
+        summary = "\\n".join([
+            "Task " + r.task_id + " [" + r.worker_name + "]: " +
+            (str(r.result)[:100] if r.success else "FAILED: " + r.error)
+            for r in self.results
+        ])
+
+        prompt = (
+            "Based on worker results below, provide a comprehensive response. "
+            "Original request: " + original_request + " "
+            "Results: " + summary
+        )
+
+        return await self.orchestrator(prompt)
+
+    async def run(self, user_request: str) -> str:
+        """Main entry point."""
+        sep = "=" * 60
+        print("\\n" + sep)
+        print("Orchestra-Worker Multi-Agent System")
+        print(sep)
+        print("\\nRequest: " + user_request)
+
+        await self.decompose_task(user_request)
+        print("\\nDecomposed into " + str(len(self.tasks)) + " tasks:")
+        for task in self.tasks:
+            print("   - " + task.id + ": " + task.description[:60] + "... (to " + task.assigned_worker + ")")
+
+        results = await self.execute_tasks_parallel()
+
+        print("\\nResults:")
+        for r in results:
+            status = "[OK]" if r.success else "[FAIL]"
+            print("   " + status + " " + r.task_id + ": " +
+                  (str(r.result)[:50] + "..." if r.success else r.error))
+
+        final_response = await self.synthesize_results(user_request)
+
+        print("\\n" + sep)
+        print("Final Response:")
+        print(sep)
+        print(final_response)
+        return final_response
+
+
+async def main():
+    """Run the example."""
+    ApplicationLifecycle.initialize()
+    try:
+        system = OrchestraWorkerMultiAgent()
+        system.setup()
+
+        queries = [
+            "Write a fibonacci function, analyze its complexity, and create documentation.",
+        ]
+
+        for query in queries:
+            await system.run(query)
+            print("\\n" + "=" * 60 + "\\n")
+    finally:
+        ApplicationLifecycle.shutdown()
 
 
 if __name__ == "__main__":
@@ -2371,7 +2908,7 @@ This module contains benchmark tasks for performance evaluation.
 """
 
 import pytest
-from {metadata.package_name}.agents import create_react_agent
+from {metadata.package_name}.agents.react_agent import create_react_agent
 
 
 class TestBenchmarks:

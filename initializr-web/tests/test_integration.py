@@ -46,9 +46,8 @@ def test_full_project_generation_flow(client):
     request_data = {
         "name": "integration-test-agent",
         "description": "Integration test agent",
-        "layout": "standard",
         "agent_type": "basic",
-        "model_provider": "openai",
+        "model_provider": "dashscope",
         "enable_tools": True,
         "tools": ["execute_python_code"],
     }
@@ -84,7 +83,7 @@ def test_error_handling_invalid_project(client):
     """Test error handling for invalid project configuration."""
     request_data = {
         "name": "",  # Invalid: empty name
-        "layout": "invalid",  # Invalid: wrong layout
+        "python_version": "3.12",  # Invalid: not 3.14
     }
 
     response = client.post("/api/v1/projects/generate", json=request_data)

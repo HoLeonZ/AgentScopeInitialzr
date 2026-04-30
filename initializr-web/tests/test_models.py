@@ -17,13 +17,12 @@ def test_project_request_valid():
     data = {
         "name": "test-agent",
         "description": "Test agent",
-        "layout": "standard",
         "agent_type": "basic",
     }
     request = ProjectRequest(**data)
     assert request.name == "test-agent"
-    assert request.layout == "standard"
-    assert request.enable_memory is True  # Default value
+    assert request.agent_type == "basic"
+    assert request.enable_memory is False  # Default value
 
 
 def test_project_request_invalid_name_too_short():
@@ -33,11 +32,11 @@ def test_project_request_invalid_name_too_short():
     assert "string_too_short" in str(exc_info.value).lower() or "min_length" in str(exc_info.value).lower()
 
 
-def test_project_request_invalid_layout():
-    """Test ProjectRequest rejects invalid layout."""
+def test_project_request_invalid_python_version():
+    """Test ProjectRequest rejects invalid python_version."""
     with pytest.raises(ValidationError) as exc_info:
-        ProjectRequest(name="test", layout="invalid")
-    assert "pattern" in str(exc_info.value).lower() or "string" in str(exc_info.value).lower()
+        ProjectRequest(name="test", python_version="3.12")
+    assert "pattern" in str(exc_info.value).lower() or "validation error" in str(exc_info.value).lower()
 
 
 def test_project_request_benchmark_tasks_range():

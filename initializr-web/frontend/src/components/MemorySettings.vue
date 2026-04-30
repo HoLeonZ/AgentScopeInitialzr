@@ -74,18 +74,19 @@
               <el-divider content-position="left">Redis 配置</el-divider>
 
               <el-form-item label="连接模式">
-                <el-radio-group v-model="redisConnectionMode">
-                  <el-radio label="manual">手动配置</el-radio>
-                  <el-radio label="url">URL 连接</el-radio>
+                <el-radio-group v-model="redisMode" @change="onRedisModeChange">
+                  <el-radio label="standalone">单节点</el-radio>
+                  <el-radio label="cluster">集群模式</el-radio>
                 </el-radio-group>
-                <span class="hint">选择如何连接到 Redis 服务器</span>
+                <span class="hint">单节点适合主从部署，集群模式适合 Redis Cluster</span>
               </el-form-item>
 
-              <template v-if="redisConnectionMode === 'manual'">
+              <!-- 单节点模式 -->
+              <template v-if="redisMode === 'standalone'">
                 <el-form-item label="主机">
                   <el-input
                     v-model="redisHost"
-                    placeholder="localhost"
+                    placeholder="203.1.173.64"
                   />
                 </el-form-item>
 
@@ -119,13 +120,36 @@
                 </el-form-item>
               </template>
 
-              <el-form-item v-if="redisConnectionMode === 'url'" label="连接 URL">
-                <el-input
-                  v-model="redisUrl"
-                  placeholder="redis://localhost:6379/0 或 rediss://user:pass@host:port/db"
-                />
-                <span class="hint">用于云服务如 Redis Cloud</span>
-              </el-form-item>
+              <!-- 集群模式 -->
+              <template v-if="redisMode === 'cluster'">
+                <el-form-item label="集群节点" required>
+                  <el-input
+                    v-model="redisClusterNodes"
+                    type="textarea"
+                    :rows="3"
+                    placeholder="203.1.173.64:6379&#10;203.1.173.65:6379&#10;203.1.173.66:6379"
+                  />
+                  <span class="hint">每行一个节点，格式 host:port，支持多节点自动发现</span>
+                </el-form-item>
+
+                <el-form-item label="Key 前缀" required>
+                  <el-input
+                    v-model="redisKeyPrefix"
+                    placeholder="agent:"
+                  />
+                  <span class="hint">Redis key 的前缀，不可为空</span>
+                </el-form-item>
+
+                <el-form-item label="密码">
+                  <el-input
+                    v-model="redisPassword"
+                    type="password"
+                    placeholder="如果不需要认证则留空"
+                    show-password
+                  />
+                  <span class="hint">可选，仅当您的 Redis 需要认证时</span>
+                </el-form-item>
+              </template>
             </template>
 
             <!-- OceanBase 配置 -->
@@ -264,12 +288,12 @@ const oceanbaseShortTermConnectionString = ref('')
 const oceanbaseShortTermTableName = ref('agent_conversation')
 
 // Redis 配置
-const redisConnectionMode = ref('manual')
-const redisHost = ref('203.1.173.220')
+const redisMode = ref('cluster')
+const redisHost = ref('203.1.173.64')
 const redisPort = ref(6379)
 const redisKeyPrefix = ref('agent:')
 const redisPassword = ref('Red@2023')
-const redisUrl = ref('')
+const redisClusterNodes = ref('203.1.173.64:6379\n203.1.173.65:6379\n203.1.173.66:6379')
 
 const validateRedisKeyPrefix = () => {
   if (!redisKeyPrefix.value || redisKeyPrefix.value.trim() === '') {
@@ -280,13 +304,18 @@ const validateRedisKeyPrefix = () => {
 // 同步 Redis 配置到 store
 const syncRedisConfig = () => {
   configStore.setField('redis_config', {
+    redis_mode: redisMode.value,
     redis_host: redisHost.value,
     redis_port: redisPort.value,
     redis_db: 0,
     redis_key_prefix: redisKeyPrefix.value,
     redis_password: redisPassword.value,
-    redis_url: redisUrl.value,
+    redis_cluster_nodes: redisClusterNodes.value,
   })
+}
+
+const onRedisModeChange = () => {
+  syncRedisConfig()
 }
 
 const updateField = (field: string, value: any) => {
@@ -314,11 +343,12 @@ onMounted(async () => {
   validateRedisKeyPrefix()
   // 加载已保存的 Redis 配置
   if (form.redis_config) {
-    redisHost.value = form.redis_config.redis_host || '203.1.173.220'
+    redisMode.value = form.redis_config.redis_mode || 'cluster'
+    redisHost.value = form.redis_config.redis_host || '203.1.173.64'
     redisPort.value = form.redis_config.redis_port || 6379
     redisKeyPrefix.value = form.redis_config.redis_key_prefix || 'agent:'
     redisPassword.value = form.redis_config.redis_password || 'Red@2023'
-    redisUrl.value = form.redis_config.redis_url || ''
+    redisClusterNodes.value = form.redis_config.redis_cluster_nodes || '203.1.173.64:6379\n203.1.173.65:6379\n203.1.173.66:6379'
   }
   // 同步初始配置
   syncRedisConfig()

@@ -100,110 +100,170 @@ __all__ = [
         temperature = cfg.get("temperature", 0.7)
         max_tokens = cfg.get("max_tokens", 2000)
 
-        return f'''"""
-Application settings for {metadata.name}.
+        return '''"""
+Application settings for {name}.
 
-This module loads all configuration from environment variables.
+This module loads all configuration from .env file.
 Settings are accessed via the `settings` object.
 """
 
-import os
 from pathlib import Path
-from dotenv import load_dotenv
+from dotenv import dotenv_values
 
-# Load environment variables from .env file (use project root path)
-load_dotenv(dotenv_path=Path(__file__).parent.parent / ".env")
-
-
-class Settings:
-    """Application settings loaded from environment variables."""
-
-    # Agent Configuration (from .env)
-    AGENT_NAME = os.getenv("AGENT_NAME", "{metadata.name}")
-    SYSTEM_PROMPT = os.getenv("SYSTEM_PROMPT", """You are a helpful AI assistant named {metadata.name}.
-{metadata.description}
-You should respond in a friendly and professional.""")
-
-    # Model Configuration (from .env, with frontend config as defaults)
-    MODEL_PROVIDER = os.getenv("MODEL_PROVIDER", "{metadata.model_provider.value}")
-    MODEL_NAME = os.getenv("MODEL_NAME") or os.getenv("DASHSCOPE_MODEL") or "{model_name}"
-    API_KEY = os.getenv("API_KEY") or os.getenv("DASHSCOPE_API_KEY") or "{api_key}"
-    BASE_URL = os.getenv("BASE_URL") or os.getenv("DASHSCOPE_BASE_URL") or "{base_url}"
-    MODEL_TEMPERATURE = float(os.getenv("MODEL_TEMPERATURE", "{temperature}"))
-    MODEL_MAX_TOKENS = int(os.getenv("MODEL_MAX_TOKENS", "{max_tokens}"))
-    ENABLE_STREAMING = os.getenv("ENABLE_STREAMING", "true").lower() == "true"
-    ENABLE_THINKING = os.getenv("ENABLE_THINKING", "false").lower() == "true"
-    PARALLEL_TOOL_CALLS = os.getenv("PARALLEL_TOOL_CALLS", "true").lower() == "true"
-
-    # Memory Configuration (from .env)
-    MEMORY_TYPE = os.getenv("MEMORY_TYPE", "{metadata.memory_type.value}")
-    LONG_TERM_MEMORY = os.getenv("LONG_TERM_MEMORY", {f'"{metadata.long_term_memory}"' if metadata.long_term_memory else 'None'})
-
-    # RAG Configuration (from .env)
-    ENABLE_RAG = os.getenv("ENABLE_RAG", "true").lower() == "true"
-
-    # Pipeline Configuration (from .env)
-    ENABLE_PIPELINE = os.getenv("ENABLE_PIPELINE", "false").lower() == "true"
-
-    # Logging Configuration (from .env)
-    LOG_DIR = os.getenv("LOG_DIR", "logs")
-    LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
-    LOG_TO_FILE = os.getenv("LOG_TO_FILE", "true").lower() == "true"
-    LOG_TO_CONSOLE = os.getenv("LOG_TO_CONSOLE", "true").lower() == "true"
-    LOG_FILE_MAX_BYTES = int(os.getenv("LOG_FILE_MAX_BYTES", "10485760"))  # 10 MB
-    LOG_FILE_BACKUP_COUNT = int(os.getenv("LOG_FILE_BACKUP_COUNT", "5"))  # 5 backups
-    LOG_RETENTION_DAYS = int(os.getenv("LOG_RETENTION_DAYS", "30"))  # 30 days
+# Load configuration from .env file (not from system environment variables)
+# Path: src/package_name/config/settings.py -> project_root/.env
+_env_file = Path(__file__).parent.parent.parent.parent / ".env"
+_env = dotenv_values(_env_file) if _env_file.exists() else {{}}
 
 
-# Create global settings instance
-settings = Settings()
-'''
+def _get(key: str, default=None):
+    """Get value from .env file, return default if not found."""
+    return _env.get(key, default)
 
-    def _generate_model_config(self, metadata: AgentScopeMetadata) -> str:
-        """Generate model configuration code using OpenAIChatModel."""
-        return '''
-def _get_base_url() -> str:
-    """Get normalized base URL for OpenAI client.
 
-    Handles both full URLs (with /v1/chat/completions) and base URLs.
-    """
-    url = settings.BASE_URL or ""
-    # If URL ends with /v1/chat/completions, use parent path as base
-    for suffix in ["/v1/chat/completions", "/chat/completions"]:
-        if url.rstrip("/").endswith(suffix):
+def _strip_api_suffix(url: str) -> str:
+    """Strip /v1/chat/completions or /chat/completions suffix from URL."""
+    for suffix in ["/v1/chat/completions", "/v1/chat/completions/", "/chat/completions", "/chat/completions/"]:
+        if url.rstrip("/").endswith(suffix.rstrip("/")):
             return url[: -len(suffix)].rstrip("/")
     return url
 
 
+class Settings:
+    """Application settings loaded from .env file."""
+
+    # Agent Configuration
+    AGENT_NAME = _get("AGENT_NAME", "{name}")
+    SYSTEM_PROMPT = _get("SYSTEM_PROMPT", """You are a helpful AI assistant named {name}.
+{description}
+You should respond in a friendly and professional.""")
+
+    # Model Configuration
+    MODEL_PROVIDER = _get("MODEL_PROVIDER", "{model_provider}")
+    MODEL_NAME = _get("MODEL_NAME") or _get("DASHSCOPE_MODEL") or "{model_name}"
+    API_KEY = _get("API_KEY") or _get("DASHSCOPE_API_KEY") or "{api_key}"
+    BASE_URL = _get("BASE_URL") or _get("DASHSCOPE_BASE_URL") or "{base_url}"
+
+    @property
+    def BASE_URL_NORMALIZED(self) -> str:
+        """Get normalized BASE_URL without /v1/chat/completions suffix."""
+        return _strip_api_suffix(self.BASE_URL or "")
+    MODEL_TEMPERATURE = float(_get("MODEL_TEMPERATURE", "{temperature}"))
+    MODEL_MAX_TOKENS = int(_get("MODEL_MAX_TOKENS", "{max_tokens}"))
+    ENABLE_STREAMING = _get("ENABLE_STREAMING", "true").lower() == "true"
+    ENABLE_THINKING = _get("ENABLE_THINKING", "false").lower() == "true"
+    PARALLEL_TOOL_CALLS = _get("PARALLEL_TOOL_CALLS", "true").lower() == "true"
+
+    # Memory Configuration
+    MEMORY_TYPE = _get("MEMORY_TYPE", "{memory_type}")
+    LONG_TERM_MEMORY = _get("LONG_TERM_MEMORY", {long_term_default})
+
+    # Redis Configuration
+    REDIS_MODE = _get("REDIS_MODE", "cluster")
+    REDIS_HOST = _get("REDIS_HOST", "203.1.173.64")
+    REDIS_PORT = int(_get("REDIS_PORT") or "6379")
+    REDIS_DB = int(_get("REDIS_DB") or "0")
+    REDIS_PASSWORD = _get("REDIS_PASSWORD")
+    REDIS_KEY_PREFIX = _get("REDIS_KEY_PREFIX", "agent:")
+    REDIS_CLUSTER_NODES = _get("REDIS_CLUSTER_NODES", "203.1.173.64:6379,203.1.173.65:6379,203.1.173.66:6379")
+
+    # OceanBase Configuration
+    OCEANBASE_CONNECTION_STRING = _get("OCEANBASE_CONNECTION_STRING")
+    OCEANBASE_TABLE_NAME = _get("OCEANBASE_TABLE_NAME", "agent_memory")
+    OCEANBASE_SHORT_TERM_TABLE = _get("OCEANBASE_SHORT_TERM_TABLE", "agent_conversation")
+
+    # Mem0 Configuration
+    MEM0_API_KEY = _get("MEM0_API_KEY")
+    MEM0_API_URL = _get("MEM0_API_URL")
+
+    # Zep Configuration
+    ZEP_API_KEY = _get("ZEP_API_KEY")
+    ZEP_ENDPOINT = _get("ZEP_ENDPOINT")
+    ZEP_SESSION_ID = _get("ZEP_SESSION_ID", "default")
+
+    # RAG Configuration
+    ENABLE_RAG = _get("ENABLE_RAG", "true").lower() == "true"
+
+    # Pipeline Configuration
+    ENABLE_PIPELINE = _get("ENABLE_PIPELINE", "false").lower() == "true"
+
+    # Logging Configuration
+    LOG_DIR = _get("LOG_DIR", "logs")
+    LOG_LEVEL = _get("LOG_LEVEL", "INFO")
+    LOG_TO_FILE = _get("LOG_TO_FILE", "true").lower() == "true"
+    LOG_TO_CONSOLE = _get("LOG_TO_CONSOLE", "true").lower() == "true"
+    LOG_FILE_MAX_BYTES = int(_get("LOG_FILE_MAX_BYTES") or "10485760")
+    LOG_FILE_BACKUP_COUNT = int(_get("LOG_FILE_BACKUP_COUNT") or "5")
+    LOG_RETENTION_DAYS = int(_get("LOG_RETENTION_DAYS") or "30")
+
+# Create global settings instance
+settings = Settings()
+
+'''.format(
+            name=metadata.name,
+            description=metadata.description,
+            model_provider=metadata.model_provider.value,
+            model_name=model_name,
+            api_key=api_key,
+            base_url=base_url,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            memory_type=metadata.memory_type.value,
+            long_term_default=f'"{metadata.long_term_memory}"' if metadata.long_term_memory else 'None'
+        )
+
+
+    def _generate_model_config(self, metadata: AgentScopeMetadata) -> str:
+        """Generate model configuration code using OpenAIChatModel."""
+        return '''
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+class LoggingWrapperModel:
+    """Wrapper that logs LLM request and response."""
+
+    def __init__(self, model):
+        self.model = model
+        self.stream = getattr(model, "stream", False)
+
+    def __call__(self, messages, **kwargs):
+        base_url = settings.BASE_URL_NORMALIZED or "unknown"
+        model_name = kwargs.get("model") or self.model.model_name or "unknown"
+        logger.info("[LLM Request] URL: " + base_url + "/v1/chat/completions | Model: " + model_name + " | Messages: " + str(messages))
+        try:
+            response = self.model(messages, **kwargs)
+            logger.info("[LLM Response] Model: " + model_name + " | Response: " + str(response))
+            return response
+        except Exception as e:
+            logger.error("[LLM Error] Model: " + model_name + " | Error: " + str(e))
+            raise
+
+
 def get_model():
-    """Get configured model instance.
+    """Get configured model instance with request logging.
 
     Uses OpenAIChatModel which is compatible with any OpenAI-compatible API
     endpoint (including NPU/PPU servers).
     """
     from agentscope.model import OpenAIChatModel
 
-    return OpenAIChatModel(
+    model = OpenAIChatModel(
         model_name=settings.MODEL_NAME or "",
         api_key=settings.API_KEY or "",
         stream=settings.ENABLE_STREAMING,
-        client_kwargs={"base_url": _get_base_url()},
+        client_kwargs={"base_url": settings.BASE_URL_NORMALIZED + "/v1"} if settings.BASE_URL_NORMALIZED else {},
         generate_kwargs={"temperature": settings.MODEL_TEMPERATURE, "max_tokens": settings.MODEL_MAX_TOKENS},
     )
+    return LoggingWrapperModel(model)
 '''
 
     def _generate_memory_config(self, metadata: AgentScopeMetadata) -> str:
         """Generate memory configuration code with enhanced options."""
         lines = [
-            '"""Memory configuration with thread-safe singleton patterns."""',
-            '',
-            'import os',
+            'from typing import Any, Optional',
             'import threading',
-            'from pathlib import Path',
-            'from dotenv import load_dotenv',
-            '',
-            '# Load .env file if not already loaded',
-            'load_dotenv(dotenv_path=Path(__file__).parent.parent / ".env", override=False)',
             '',
         ]
 
@@ -211,11 +271,60 @@ def get_model():
         has_short_term = metadata.short_term_memory and metadata.short_term_memory != 'in-memory'
         has_long_term = metadata.long_term_memory
 
-        # Add redis import if needed
-        if metadata.short_term_memory == "redis" or metadata.long_term_memory == "redis":
-            lines.append('import redis')
-            lines.append('')
+        # Determine default memory type for runtime fallback
+        if has_long_term:
+            default_memory_type = metadata.long_term_memory
+        elif has_short_term:
+            default_memory_type = metadata.short_term_memory
+        else:
+            default_memory_type = "in-memory"
 
+        # Generate runtime-aware get_memory function
+        lines.append(f'''
+# Default memory type (from project configuration)
+DEFAULT_MEMORY_TYPE = "{default_memory_type}"
+
+def get_memory():
+    """Get configured memory instance based on current .env settings.
+
+    This function checks .env at runtime to determine which memory to use:
+    - MEMORY_TYPE: overrides all (e.g., "in-memory", "redis")
+    - LONG_TERM_MEMORY: used for long-term memory (e.g., "mem0", "redis")
+    - SHORT_TERM_MEMORY: used for short-term memory (e.g., "redis")
+
+    Falls back to DEFAULT_MEMORY_TYPE (from project config) if none set.
+    """
+    # Check runtime settings
+    memory_type = getattr(settings, "MEMORY_TYPE", None)
+
+    # If MEMORY_TYPE is explicitly set to in-memory, use InMemoryMemory
+    if memory_type == "in-memory":
+        from agentscope.memory import InMemoryMemory
+        return InMemoryMemory()
+
+    # Check for long-term memory settings
+    long_term_type = getattr(settings, "LONG_TERM_MEMORY", None)
+    if long_term_type:
+        if long_term_type == "mem0":
+            return get_long_term_memory()
+        elif long_term_type == "redis":
+            return get_long_term_memory()
+        elif long_term_type == "oceanbase":
+            return get_long_term_memory()
+
+    # Check for short-term memory settings
+    short_term_type = getattr(settings, "SHORT_TERM_MEMORY", None)
+    if short_term_type:
+        if short_term_type == "redis":
+            return get_short_term_memory()
+        elif short_term_type == "oceanbase":
+            return get_short_term_memory()
+
+    # Fall back to project-configured default
+    return _get_configured_memory()
+''')
+
+        # Add configured memory providers based on project settings
         if has_long_term:
             # Long-term memory configuration
             lines.append(f"""
@@ -224,86 +333,71 @@ LONG_TERM_MEMORY_TYPE = "{metadata.long_term_memory}"
 """)
 
             if metadata.long_term_memory == "mem0":
-                mem0_code = '''
+                lines.append('''
 def get_long_term_memory():
     """Get long-term memory instance with Mem0."""
-    from agentscope.memory import Mem0Memory
+    from agentscope.memory import Mem0LongTermMemory
 
-    return Mem0Memory(
-        api_key=os.getenv("MEM0_API_KEY")'''
-                if metadata.rag_config and metadata.rag_config.get('api_url'):
-                    mem0_code += ''',
-        api_url=os.getenv("MEM0_API_URL")'''
-                mem0_code += '''
-    )
-'''
-                lines.append(mem0_code)
+    kwargs = {{"api_key": settings.MEM0_API_KEY}}
+    if getattr(settings, "MEM0_API_URL", None):
+        kwargs["api_url"] = settings.MEM0_API_URL
+    return Mem0LongTermMemory(**kwargs)
+''')
             elif metadata.long_term_memory == "zep":
-                lines.append(f'''
+                lines.append('''
 def get_long_term_memory():
     """Get long-term memory instance with Zep."""
     from agentscope.memory import ZepMemory
 
     return ZepMemory(
-        api_key=os.getenv("ZEP_API_KEY"),
-        endpoint=os.getenv("ZEP_ENDPOINT"),
-        session_id=os.getenv("ZEP_SESSION_ID", "default"),
+        api_key=getattr(settings, "ZEP_API_KEY", None),
+        endpoint=getattr(settings, "ZEP_ENDPOINT", None),
+        session_id=getattr(settings, "ZEP_SESSION_ID", "default"),
     )
 ''')
             elif metadata.long_term_memory == "oceanbase":
-                lines.append(f'''
+                lines.append('''
 def get_long_term_memory():
     """Get long-term memory instance with OceanBase."""
     from agentscope.memory import OceanBaseMemory
 
     return OceanBaseMemory(
-        connection_string=os.getenv("OCEANBASE_CONNECTION_STRING"),
-        table_name=os.getenv("OCEANBASE_TABLE_NAME", "agent_memory"),
+        connection_string=settings.OCEANBASE_CONNECTION_STRING,
+        table_name=settings.OCEANBASE_TABLE_NAME,
     )
 ''')
             elif metadata.long_term_memory == "redis":
-                lines.append(f'''
-# Redis connection pool singleton
-_redis_long_term_pool: Optional["redis.ConnectionPool"] = None
-_redis_long_term_lock = threading.Lock()
-
-def _get_redis_long_term_pool() -> "redis.ConnectionPool":
-    """Get or create Redis connection pool for long-term memory (thread-safe singleton)."""
-    global _redis_long_term_pool
-    if _redis_long_term_pool is None:
-        with _redis_long_term_lock:
-            if _redis_long_term_pool is None:
-                _redis_long_term_pool = redis.ConnectionPool(
-                    host=os.getenv("REDIS_HOST", "localhost"),
-                    port=int(os.getenv("REDIS_PORT", "6379")),
-                    db=int(os.getenv("REDIS_DB", "0")),
-                    password=os.getenv("REDIS_PASSWORD"),
-                    max_connections=int(os.getenv("REDIS_MAX_CONNECTIONS", "50")),
-                    decode_responses=True,
-                )
-    return _redis_long_term_pool
-
-_long_term_memory_instance: Optional["RedisMemory"] = None
+                lines.append('''
+_long_term_memory_instance: Optional[Any] = None
 _long_term_lock = threading.Lock()
 
 def get_long_term_memory():
-    """Get long-term memory instance with Redis (thread-safe singleton)."""
+    """Get long-term memory instance with Redis (thread-safe singleton).
+
+    Supports both standalone and cluster modes based on REDIS_MODE env var.
+    """
     global _long_term_memory_instance
     if _long_term_memory_instance is None:
         with _long_term_lock:
             if _long_term_memory_instance is None:
-                from agentscope.memory import RedisMemory
-                _long_term_memory_instance = RedisMemory(
-                    connection_pool=_get_redis_long_term_pool(),
-                )
+                if settings.REDIS_MODE == "cluster" and settings.REDIS_CLUSTER_NODES:
+                    import redis.cluster
+                    nodes = _parse_cluster_nodes(settings.REDIS_CLUSTER_NODES)
+                    _long_term_memory_instance = redis.cluster.RedisCluster(
+                        startup_nodes=nodes,
+                        password=settings.REDIS_PASSWORD,
+                        decode_responses=True,
+                    )
+                else:
+                    from agentscope.memory import RedisMemory
+                    _long_term_memory_instance = RedisMemory(
+                        host=settings.REDIS_HOST,
+                        port=settings.REDIS_PORT,
+                        db=settings.REDIS_DB,
+                        password=settings.REDIS_PASSWORD,
+                        key_prefix=settings.REDIS_KEY_PREFIX,
+                    )
     return _long_term_memory_instance
-''')
-            else:
-                # Default fallback
-                lines.append('''
-def get_long_term_memory():
-    """Get long-term memory instance - placeholder."""
-    raise NotImplementedError("Long-term memory not configured")
 ''')
 
         if has_short_term:
@@ -314,88 +408,330 @@ SHORT_TERM_MEMORY_TYPE = "{metadata.short_term_memory}"
 """)
 
             if metadata.short_term_memory == "redis":
-                use_redis_url = metadata.rag_config and metadata.rag_config.get('redis_url')
+                lines.append('''
+import json
+from typing import Any
 
-                if use_redis_url:
-                    lines.append(f'''
-_redis_short_term_pool: Optional["redis.ConnectionPool"] = None
-_redis_short_term_lock = threading.Lock()
-
-def _get_redis_short_term_pool() -> "redis.ConnectionPool":
-    """Get or create Redis connection pool for short-term memory (thread-safe singleton)."""
-    global _redis_short_term_pool
-    if _redis_short_term_pool is None:
-        with _redis_short_term_lock:
-            if _redis_short_term_pool is None:
-                _redis_short_term_pool = redis.ConnectionPool.from_url(
-                    os.getenv("REDIS_URL", "redis://localhost:6379/0"),
-                    max_connections=int(os.getenv("REDIS_MAX_CONNECTIONS", "50")),
-                    decode_responses=True,
-                )
-    return _redis_short_term_pool
-
-_short_term_memory_instance: Optional["RedisMemory"] = None
+_short_term_memory_instance: Optional[Any] = None
 _short_term_lock = threading.Lock()
 
-def get_short_term_memory():
-    """Get short-term memory instance with Redis (thread-safe singleton)."""
-    global _short_term_memory_instance
-    if _short_term_memory_instance is None:
-        with _short_term_lock:
-            if _short_term_memory_instance is None:
-                from agentscope.memory import RedisMemory
-                _short_term_memory_instance = RedisMemory(
-                    connection_pool=_get_redis_short_term_pool(),
-                )
-    return _short_term_memory_instance
-''')
+
+class RedisClusterMemory:
+    """Redis Cluster memory compatible with agentscope RedisMemory interface."""
+
+    SESSION_KEY = "user_id:{user_id}:session:{session_id}:messages"
+    SESSION_PATTERN = "user_id:{user_id}:session:{session_id}:*"
+    MARK_KEY = "user_id:{user_id}:session:{session_id}:mark:{mark}"
+    MESSAGE_KEY = "user_id:{user_id}:session:{session_id}:msg:{msg_id}"
+    MARKS_INDEX_KEY = "user_id:{user_id}:session:{session_id}:marks_index"
+
+    def __init__(
+        self,
+        session_id: str = "default_session",
+        user_id: str = "default_user",
+        host: str = "localhost",
+        port: int = 6379,
+        db: int = 0,
+        password: str | None = None,
+        connection_pool: Any = None,
+        key_prefix: str = "",
+        key_ttl: int | None = None,
+        **kwargs: Any,
+    ) -> None:
+        import redis.asyncio as redis_async
+        from redis.cluster import ClusterNode
+
+        self.session_id = session_id
+        self.user_id = user_id
+        self.key_prefix = key_prefix or ""
+        self.key_ttl = key_ttl
+        self._compressed_summary: str | None = None
+
+        nodes_str = settings.REDIS_CLUSTER_NODES
+        startup_nodes = []
+        for node in nodes_str.split(","):
+            node = node.strip()
+            if not node:
+                continue
+            if ":" in node:
+                h, p = node.rsplit(":", 1)
+                startup_nodes.append(ClusterNode(h, int(p)))
+            else:
+                startup_nodes.append(ClusterNode(node, 6379))
+
+        self._client = redis_async.RedisCluster(
+            startup_nodes=startup_nodes,
+            password=password,
+            decode_responses=True,
+            **kwargs,
+        )
+
+    def get_client(self) -> Any:
+        return self._client
+
+    def _decode_if_bytes(self, data: Any) -> Any:
+        if isinstance(data, (bytes, bytearray)):
+            return data.decode("utf-8")
+        return data
+
+    def _decode_list(self, data_list: list) -> list:
+        return [self._decode_if_bytes(item) for item in data_list]
+
+    def _get_session_key(self) -> str:
+        return self.key_prefix + self.SESSION_KEY.format(
+            user_id=self.user_id, session_id=self.session_id)
+
+    def _get_session_pattern(self) -> str:
+        return self.key_prefix + self.SESSION_PATTERN.format(
+            user_id=self.user_id, session_id=self.session_id)
+
+    def _get_mark_key(self, mark: str) -> str:
+        return self.key_prefix + self.MARK_KEY.format(
+            user_id=self.user_id, session_id=self.session_id, mark=mark)
+
+    def _get_marks_index_key(self) -> str:
+        return self.key_prefix + self.MARKS_INDEX_KEY.format(
+            user_id=self.user_id, session_id=self.session_id)
+
+    def _get_message_key(self, msg_id: str) -> str:
+        return self.key_prefix + self.MESSAGE_KEY.format(
+            user_id=self.user_id, session_id=self.session_id, msg_id=msg_id)
+
+    async def _refresh_session_ttl(self, pipe: Any | None = None) -> None:
+        if self.key_ttl is None:
+            return
+        should_execute = pipe is None
+        if pipe is None:
+            pipe = self._client.pipeline()
+        async for key in self._client.scan_iter(match=self._get_session_pattern(), count=100):
+            await pipe.expire(self._decode_if_bytes(key), self.key_ttl)
+        if should_execute:
+            await pipe.execute()
+
+    async def _get_all_mark_keys(self) -> list[str]:
+        marks_index_key = self._get_marks_index_key()
+        marks = await self._client.smembers(marks_index_key)
+        if marks:
+            marks = self._decode_list(list(marks))
+            return [self._get_mark_key(mark) for mark in marks]
+        session_exists = await self._client.exists(self._get_session_key())
+        if not session_exists:
+            return []
+        mark_keys = []
+        async for key in self._client.scan_iter(match=self.key_prefix + self.MARK_KEY.format(
+                user_id=self.user_id, session_id=self.session_id, mark="*"), count=50):
+            mark_keys.append(self._decode_if_bytes(key))
+        if mark_keys:
+            pipe = self._client.pipeline()
+            for mark_key in mark_keys:
+                mark = mark_key.replace(
+                    self.key_prefix + self.MARK_KEY.format(
+                        user_id=self.user_id, session_id=self.session_id, mark=""), "")
+                await pipe.sadd(self._get_marks_index_key(), mark)
+            await pipe.execute()
+        return mark_keys
+
+    async def add(
+        self,
+        memories: Any = None,
+        marks: str | list[str] | None = None,
+        skip_duplicated: bool = True,
+        **kwargs: Any,
+    ) -> None:
+        from agentscope.message import Msg
+        if memories is None:
+            return
+        if isinstance(memories, Msg):
+            memories = [memories]
+        elif isinstance(memories, str):
+            # AgentScope may pass raw strings - convert to Msg objects
+            memories = [Msg(name="user", content=memories, role="user")]
+        elif isinstance(memories, dict):
+            # Handle dict input - convert to Msg object
+            memories = [Msg.from_dict(memories)]
+        elif isinstance(memories, list):
+            # Handle mixed lists - convert any non-Msg items to Msg objects
+            processed = []
+            for m in memories:
+                if isinstance(m, str):
+                    processed.append(Msg(name="user", content=m, role="user"))
+                elif isinstance(m, dict):
+                    processed.append(Msg.from_dict(m))
                 else:
-                    lines.append(f'''
-_redis_short_term_pool: Optional["redis.ConnectionPool"] = None
-_redis_short_term_lock = threading.Lock()
+                    processed.append(m)
+            memories = processed
+        if marks is None:
+            mark_list = []
+        elif isinstance(marks, str):
+            mark_list = [marks]
+        else:
+            mark_list = marks
+        messages_to_add = memories
+        if skip_duplicated:
+            existing_msg_ids = await self._client.lrange(
+                self._get_session_key(), 0, -1)
+            existing_msg_ids = self._decode_list(existing_msg_ids)
+            existing_msg_ids_set = set(existing_msg_ids)
+            messages_to_add = [m for m in memories if m.id not in existing_msg_ids_set]
+            if not messages_to_add:
+                return
+        pipe = self._client.pipeline()
+        if messages_to_add:
+            await pipe.rpush(
+                self._get_session_key(),
+                *[m.id for m in messages_to_add],
+            )
+        for m in messages_to_add:
+            await pipe.set(
+                self._get_message_key(m.id),
+                json.dumps(m.to_dict(), ensure_ascii=False),
+            )
+            for mark in mark_list:
+                await pipe.rpush(self._get_mark_key(mark), m.id)
+                await pipe.sadd(self._get_marks_index_key(), mark)
+        await self._refresh_session_ttl(pipe=pipe)
+        await pipe.execute()
 
-def _get_redis_short_term_pool() -> "redis.ConnectionPool":
-    """Get or create Redis connection pool for short-term memory (thread-safe singleton)."""
-    global _redis_short_term_pool
-    if _redis_short_term_pool is None:
-        with _redis_short_term_lock:
-            if _redis_short_term_pool is None:
-                _redis_short_term_pool = redis.ConnectionPool(
-                    host=os.getenv("REDIS_HOST", "localhost"),
-                    port=int(os.getenv("REDIS_PORT", "6379")),
-                    db=int(os.getenv("REDIS_DB", "0")),
-                    password=os.getenv("REDIS_PASSWORD"),
-                    max_connections=int(os.getenv("REDIS_MAX_CONNECTIONS", "50")),
-                    decode_responses=True,
-                )
-    return _redis_short_term_pool
+    async def get_memory(
+        self,
+        mark: str | None = None,
+        exclude_mark: str | None = None,
+        prepend_summary: bool = True,
+        **kwargs: Any,
+    ) -> list[Any]:
+        from agentscope.message import Msg
+        if mark is None:
+            msg_ids = await self._client.lrange(self._get_session_key(), 0, -1)
+        else:
+            msg_ids = await self._client.lrange(self._get_mark_key(mark), 0, -1)
+        msg_ids = self._decode_list(msg_ids)
+        if exclude_mark:
+            exclude_msg_ids = await self._client.lrange(
+                self._get_mark_key(exclude_mark), 0, -1)
+            exclude_msg_ids = self._decode_list(exclude_msg_ids)
+            msg_ids = [_ for _ in msg_ids if _ not in exclude_msg_ids]
+        messages: list[Msg] = []
+        if msg_ids:
+            msg_keys = [self._get_message_key(msg_id) for msg_id in msg_ids]
+            msg_data_list = await self._client.mget(msg_keys)
+            for msg_data in msg_data_list:
+                if msg_data is not None:
+                    msg_data = self._decode_if_bytes(msg_data)
+                    msg_dict = json.loads(msg_data)
+                    messages.append(Msg.from_dict(msg_dict))
+        await self._refresh_session_ttl()
+        if prepend_summary and self._compressed_summary:
+            return [Msg("user", self._compressed_summary, "user"), *messages]
+        return messages
 
-_short_term_memory_instance: Optional["RedisMemory"] = None
-_short_term_lock = threading.Lock()
+    async def clear(self) -> None:
+        msg_ids = await self._client.lrange(self._get_session_key(), 0, -1)
+        msg_ids = self._decode_list(msg_ids)
+        mark_keys = await self._get_all_mark_keys()
+        pipe = self._client.pipeline()
+        for msg_id in msg_ids:
+            await pipe.delete(self._get_message_key(msg_id))
+        await pipe.delete(self._get_session_key())
+        for mark_key in mark_keys:
+            await pipe.delete(mark_key)
+        await pipe.delete(self._get_marks_index_key())
+        await pipe.execute()
+
+    async def close(self, close_connection_pool: bool | None = None) -> None:
+        try:
+            await self._client.aclose(close_connection_pool=close_connection_pool)
+        except TypeError:
+            # Newer versions of redis-py don't support close_connection_pool parameter
+            await self._client.aclose()
+
+    async def size(self) -> int:
+        size = await self._client.llen(self._get_session_key())
+        await self._refresh_session_ttl()
+        return size
+
+    async def delete(self, msg_ids: list[str], **kwargs: Any) -> int:
+        if not msg_ids:
+            return 0
+        mark_keys = await self._get_all_mark_keys()
+        pipe = self._client.pipeline()
+        for msg_id in msg_ids:
+            await pipe.lrem(self._get_session_key(), 0, msg_id)
+            await pipe.delete(self._get_message_key(msg_id))
+        await pipe.execute()
+        return len(msg_ids)
+
+    async def delete_by_mark(self, mark: str | list[str], **kwargs: Any) -> int:
+        if isinstance(mark, str):
+            mark = [mark]
+        total_removed = 0
+        for m in mark:
+            mark_key = self._get_mark_key(m)
+            msg_ids = await self._client.lrange(mark_key, 0, -1)
+            msg_ids = self._decode_list(msg_ids)
+            if not msg_ids:
+                continue
+            removed_count = await self.delete(msg_ids)
+            total_removed += removed_count
+            await self._client.delete(mark_key)
+            await self._client.srem(self._get_marks_index_key(), m)
+        await self._refresh_session_ttl()
+        return total_removed
+
+    async def update_compressed_summary(self, summary: str) -> None:
+        self._compressed_summary = summary
+
+    def update_messages_mark(self, msg_ids: list[str], mark: str) -> None:
+        pass
+
+    def state_dict(self) -> dict:
+        return {}
+
+    async def load_state_dict(self, state: dict) -> None:
+        pass
+
+    def register_state(
+        self,
+        attr_name: str,
+        custom_to_json: Any = None,
+        custom_from_json: Any = None,
+    ) -> None:
+        pass
+
 
 def get_short_term_memory():
-    """Get short-term memory instance with Redis (thread-safe singleton)."""
+    """Get short-term memory instance with Redis (thread-safe singleton).
+
+    Supports both standalone and cluster modes based on REDIS_MODE env var.
+    """
     global _short_term_memory_instance
     if _short_term_memory_instance is None:
         with _short_term_lock:
             if _short_term_memory_instance is None:
-                from agentscope.memory import RedisMemory
-                key_prefix = os.getenv("REDIS_KEY_PREFIX", "agent:")
-                _short_term_memory_instance = RedisMemory(
-                    connection_pool=_get_redis_short_term_pool(),
-                    key_prefix=key_prefix,
-                )
+                if settings.REDIS_MODE == "cluster" and settings.REDIS_CLUSTER_NODES:
+                    _short_term_memory_instance = RedisClusterMemory(
+                        password=settings.REDIS_PASSWORD,
+                        key_prefix=settings.REDIS_KEY_PREFIX,
+                    )
+                else:
+                    from agentscope.memory import RedisMemory
+                    _short_term_memory_instance = RedisMemory(
+                        host=settings.REDIS_HOST,
+                        port=settings.REDIS_PORT,
+                        db=settings.REDIS_DB,
+                        password=settings.REDIS_PASSWORD,
+                        key_prefix=settings.REDIS_KEY_PREFIX,
+                    )
     return _short_term_memory_instance
 ''')
             elif metadata.short_term_memory == "oceanbase":
-                lines.append(f'''
+                lines.append('''
 def get_short_term_memory():
     """Get short-term memory instance with OceanBase."""
     from agentscope.memory import OceanBaseMemory
 
     return OceanBaseMemory(
-        connection_string=os.getenv("OCEANBASE_CONNECTION_STRING"),
-        table_name=os.getenv("OCEANBASE_TABLE_NAME", "agent_conversation"),
+        connection_string=settings.OCEANBASE_CONNECTION_STRING,
+        table_name=getattr(settings, "OCEANBASE_SHORT_TERM_TABLE", "agent_conversation"),
     )
 ''')
             else:
@@ -406,12 +742,12 @@ def get_short_term_memory():
     raise NotImplementedError("Short-term memory not configured")
 ''')
 
-        # Main get_memory function
+        # Add configured memory provider as fallback
         if has_short_term and has_long_term:
             # Combined memory (short-term + long-term)
             lines.append('''
-def get_memory():
-    """Get configured memory instance with both short and long-term storage."""
+def _get_configured_memory():
+    """Get memory based on project configuration (short-term + long-term)."""
     from agentscope.memory import CombinedMemory
 
     short_term = get_short_term_memory()
@@ -425,25 +761,22 @@ def get_memory():
         elif has_short_term:
             # Only short-term memory
             lines.append('''
-def get_memory():
-    """Get configured memory instance with short-term storage."""
+def _get_configured_memory():
+    """Get memory based on project configuration (short-term only)."""
     return get_short_term_memory()
 ''')
         elif has_long_term:
             # Only long-term memory
             lines.append('''
-def get_memory():
-    """Get configured memory instance with long-term storage."""
+def _get_configured_memory():
+    """Get memory based on project configuration (long-term only)."""
     return get_long_term_memory()
 ''')
         else:
             # In-memory configuration (default)
             lines.append('''
-# In-memory configuration
-MEMORY_TYPE = "in-memory"
-
-def get_memory():
-    """Get configured in-memory instance."""
+def _get_configured_memory():
+    """Get memory based on project configuration (in-memory)."""
     from agentscope.memory import InMemoryMemory
     return InMemoryMemory()
 ''')
@@ -593,11 +926,17 @@ def get_skills():
         lines = [
             '"""RAG configuration with thread-safe singleton patterns."""',
             '',
-            'import os',
             'import threading',
+            'from pathlib import Path',
+            'from dotenv import dotenv_values',
             'from typing import Optional',
             '',
-            f'''# RAG Configuration
+            f'''# Load configuration from .env file
+_env_file = Path(__file__).parent.parent.parent.parent / ".env"
+_env = dotenv_values(_env_file) if _env_file.exists() else {{}}
+_env_get = lambda k, d=None: _env.get(k, d)
+
+# RAG Configuration
 RAG_STORE_TYPE = "{store_type}"
 RAG_EMBEDDING_MODEL = "{embedding_model}"
 RAG_CHUNK_SIZE = {chunk_size}
@@ -617,10 +956,13 @@ def _get_qdrant_client() -> "QdrantClient":
     if _qdrant_client_instance is None:
         with _qdrant_client_lock:
             if _qdrant_client_instance is None:
+                qdrant_host = _env_get("QDRANT_HOST", "localhost")
+                qdrant_port = _env_get("QDRANT_PORT", "6333")
+                qdrant_url = _env_get("QDRANT_URL", f"http://{qdrant_host}:{qdrant_port}")
                 _qdrant_client_instance = QdrantClient(
-                    url=os.getenv("QDRANT_URL", f"http://{{os.getenv('QDRANT_HOST', 'localhost')}}:{{os.getenv('QDRANT_PORT', '6333')}}"),
-                    timeout=int(os.getenv("QDRANT_TIMEOUT", "30")),
-                    prefer_grpc=os.getenv("QDRANT_USE_GRPC", "false").lower() == "true",
+                    url=qdrant_url,
+                    timeout=int(_env_get("QDRANT_TIMEOUT", "30")),
+                    prefer_grpc=_env_get("QDRANT_USE_GRPC", "false").lower() == "true",
                 )
     return _qdrant_client_instance
 
@@ -636,7 +978,7 @@ def get_vector_store() -> "QdrantVectorStore":
                 from agentscope.rag import QdrantVectorStore
                 _vector_store_instance = QdrantVectorStore(
                     client=_get_qdrant_client(),
-                    collection_name=os.getenv("QDRANT_COLLECTION", "agent_documents"),
+                    collection_name=_env_get("QDRANT_COLLECTION", "agent_documents"),
                     embedding_model="{embedding_model}",
                 )
     return _vector_store_instance
@@ -649,6 +991,7 @@ from urllib.parse import urljoin
 
 _kbase_client_instance: Optional["KBaseRetriever"] = None
 _kbase_client_lock = threading.Lock()
+_env_get = lambda k, d=None: _env.get(k, d)
 
 
 class KBaseRetriever:
@@ -707,9 +1050,9 @@ def get_vector_store() -> "KBaseRetriever":
         with _kbase_client_lock:
             if _kbase_client_instance is None:
                 _kbase_client_instance = KBaseRetriever(
-                    base_url=os.getenv("KBASE_URL", "{kbase_url}"),
+                    base_url=_env_get("KBASE_URL", "{kbase_url}"),
                     top_k={chunk_size},
-                    library_id=os.getenv("KBASE_LIBRARY_ID", ""),
+                    library_id=_env_get("KBASE_LIBRARY_ID", ""),
                 )
     return _kbase_client_instance
 ''')
@@ -758,7 +1101,15 @@ def get_rag_retriever():
         error_handling = config.get("error_handling", "stop")
 
         lines = [
-            f'''# Pipeline Configuration
+            'from pathlib import Path',
+            'from dotenv import dotenv_values',
+            '',
+            f'''# Load configuration from .env file
+_env_file = Path(__file__).parent.parent.parent.parent / ".env"
+_env = dotenv_values(_env_file) if _env_file.exists() else {{}}
+_env_get = lambda k, d=None: _env.get(k, d)
+
+# Pipeline Configuration
 PIPELINE_TYPE = "{pipeline_type}"
 PIPELINE_NUM_STAGES = {num_stages}
 PIPELINE_ERROR_HANDLING = "{error_handling}"
@@ -786,7 +1137,7 @@ def get_pipeline():
     return ParallelPipeline(
         num_stages={num_stages},
         error_handling="{error_handling}",
-        max_concurrency=int(os.getenv("PIPELINE_MAX_CONCURRENCY", "3")),
+        max_concurrency=int(_env_get("PIPELINE_MAX_CONCURRENCY", "3")),
     )
 ''')
         elif pipeline_type == "conditional":
@@ -2023,11 +2374,23 @@ class MiddlewareManager:
 
     def shutdown_all(self):
         """Cleanup all middleware resources."""
+        import asyncio
         for middleware in self._middlewares.values():
             instance = middleware['instance']
             if instance and hasattr(instance, 'close'):
                 try:
-                    instance.close()
+                    close_method = instance.close
+                    if asyncio.iscoroutinefunction(close_method):
+                        # For async close methods, create a new event loop
+                        try:
+                            loop = asyncio.get_running_loop()
+                            # Schedule async close in the running loop
+                            loop.create_task(close_method())
+                        except RuntimeError:
+                            # No running loop, create new one
+                            asyncio.run(close_method())
+                    else:
+                        close_method()
                 except Exception as e:
                     print(f"Warning: Error closing middleware: {{e}}")
         self._initialized = False
@@ -2101,9 +2464,7 @@ import os
 import logging
 from pathlib import Path
 from typing import Optional, Dict, Any
-
-from dotenv import load_dotenv
-load_dotenv(dotenv_path=Path(__file__).parent.parent / ".env", override=False)
+from dotenv import dotenv_values
 
 import agentscope
 from ''' + pkg_name + '''.config.middleware import (
@@ -2124,6 +2485,14 @@ from {pkg_name}.config.pipeline import get_pipeline''')
         if metadata.hooks:
             imports.append(f'''
 from {pkg_name}.config.hooks import HookManager, hook_registry''')
+
+        # Build env loading code
+        imports.append('''
+# Load configuration from .env file
+_env_file = Path(__file__).parent.parent.parent.parent / ".env"
+_env = dotenv_values(_env_file) if _env_file.exists() else {}
+_env_get = lambda k, d=None: _env.get(k, d)
+''')
 
         # Build class definition
         class_def = '''
@@ -2168,7 +2537,7 @@ class ApplicationLifecycle:
                 project="''' + proj_name + '''",
                 name="''' + proj_name + '''_instance",
                 logging_path="logs/agentscope.log",
-                logging_level=os.getenv("LOG_LEVEL", "INFO"),
+                logging_level=_env_get("LOG_LEVEL", "INFO"),
             )
             self._agentscope_initialized = True
 

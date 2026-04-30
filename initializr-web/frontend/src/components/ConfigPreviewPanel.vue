@@ -358,9 +358,16 @@ const envPreview = computed(() => {
       // Redis specific config
       if (form.value.short_term_memory === 'redis') {
         const redisConfig = form.value.redis_config || {}
-        lines.push(`REDIS_HOST=${redisConfig.redis_host || '203.1.173.220'}`)
-        lines.push(`REDIS_PORT=${redisConfig.redis_port || 6379}`)
-        lines.push(`REDIS_DB=${redisConfig.redis_db || 0}`)
+        const mode = redisConfig.redis_mode || 'cluster'
+        lines.push(`REDIS_MODE=${mode}`)
+        if (mode === 'cluster') {
+          const nodes = (redisConfig.redis_cluster_nodes || '203.1.173.64:6379\n203.1.173.65:6379\n203.1.173.66:6379').split('\n').map((n: string) => n.trim()).filter(Boolean).join(',')
+          lines.push(`REDIS_CLUSTER_NODES=${nodes}`)
+        } else {
+          lines.push(`REDIS_HOST=${redisConfig.redis_host || '203.1.173.64'}`)
+          lines.push(`REDIS_PORT=${redisConfig.redis_port || 6379}`)
+          lines.push(`REDIS_DB=${redisConfig.redis_db || 0}`)
+        }
         lines.push(`REDIS_KEY_PREFIX=${redisConfig.redis_key_prefix || 'agent:'}`)
         if (redisConfig.redis_password) {
           lines.push(`REDIS_PASSWORD=${redisConfig.redis_password}`)
@@ -460,10 +467,8 @@ const structurePreview = computed(() => {
 │   └── ${packageName}/
 │       ├── __init__.py
 │       ├── main.py                 # 主入口
-│       ├── example_usage.py        # 使用示例
-│       ├── agent_factory.py        # Agent 创建工厂
 │       ├── agents/
-│       │   └── agent.py
+│       │   └── react_agent.py       # Agent 创建函数
 │       ├── config/
 │       │   ├── __init__.py
 │       │   ├── settings.py
